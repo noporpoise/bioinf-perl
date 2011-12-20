@@ -11,29 +11,29 @@ sub print_usage
     print "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_header.pl [vcf] [-entries] [extra_header1 ...]\n";
+  print STDERR "Usage: ./vcf_header.pl [--entries] [vcf] [extra_header1 ...]\n";
   print STDERR "  Print vcf file header (reads from STDIN if <file> is '-').\n";
   print STDERR "  Adds extra headers if passed after file.\n";
   print STDERR "  -entries => print VCF entries as well as header\n";
   exit;
 }
 
-my $vcf_file = shift;
-
-if(!defined($vcf_file)) {
-  print_usage();
-}
-
-if($vcf_file =~ /-?-h(elp)?/i) {
-  print_usage();
-}
-
 my $print_entries = 0;
 
-if(@ARGV > 0 && $ARGV[0] =~ /^-?-e(ntries)?/i) {
-  $print_entries = 1;
-  shift;
+if(@ARGV > 0)
+{
+  if($ARGV[0] =~ /^-?-e(ntries)?/i)
+  {
+    $print_entries = 1;
+    shift;
+  }
+  elsif($ARGV[0] =~ /-?-h(elp)?/i)
+  {
+    print_usage();
+  }
 }
+
+my $vcf_file = shift;
 
 my @extra_header_lines = @ARGV;
 

@@ -11,12 +11,13 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
   
-  print STDERR "Usage: ./vcf_filter_by_homopolymer.pl <max_run> <in.vcf>\n";
+  print STDERR "Usage: ./vcf_filter_by_homopolymer.pl <max_run> [in.vcf]\n";
   print STDERR "  Filter out homopolymer runs LONGER than <max_run> (min = 1)\n";
   exit;
 }
 
-if(@ARGV < 1) {
+if(@ARGV < 1 || @ARGV > 2)
+{
   print_usage();
 }
 
