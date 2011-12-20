@@ -14,7 +14,7 @@ sub print_usage
   print STDERR "Usage: ./vcf_header.pl [--entries] [vcf] [extra_header1 ...]\n";
   print STDERR "  Print vcf file header (reads from STDIN if <file> is '-').\n";
   print STDERR "  Adds extra headers if passed after file.\n";
-  print STDERR "  -entries => print VCF entries as well as header\n";
+  print STDERR "  --entries  Print VCF entries as well as header\n";
   exit;
 }
 
@@ -22,12 +22,12 @@ my $print_entries = 0;
 
 if(@ARGV > 0)
 {
-  if($ARGV[0] =~ /^-?-e(ntries)?/i)
+  if($ARGV[0] =~ /^-?-e(ntries)?$/i)
   {
     $print_entries = 1;
     shift;
   }
-  elsif($ARGV[0] =~ /-?-h(elp)?/i)
+  elsif($ARGV[0] =~ /^-?-h(elp)?$/i)
   {
     print_usage();
   }

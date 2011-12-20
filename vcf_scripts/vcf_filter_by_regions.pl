@@ -12,12 +12,17 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_filter_by_regions.pl [chr:range ..] [in.vcf]\n";
-  print STDERR "  Filter by regions.  Range is inclusive.  \n";
-  print STDERR "  Does not assume VCF is sorted.  \n";
+  print STDERR "Usage: ./vcf_filter_by_regions.pl <OPTIONS> [in.vcf]\n";
+  print STDERR "  Filter by regions.  Range is inclusive. " .
+               "Does not assume VCF is sorted.  \n";
+  print STDERR "  OPTIONS:\n";
+  print STDERR "   chr:*          an entire chromosome\n";
+  print STDERR "   chr:start-end  a region of a chromosome\n";
+  print STDERR "   --file         file containing one arg per line as above\n";
   print STDERR "\n";
   print STDERR "  Examples:\n";
   print STDERR "  \$ ./vcf_regions.pl chr1:10,000-12,000 data.vcf\n";
+  print STDERR "  \$ ./vcf_regions.pl --file regions.txt data.vcf\n";
   print STDERR "  \$ cat data.vcf | ./vcf_regions.pl chr1:* chr2:500-1000\n";
   exit;
 }
@@ -153,19 +158,16 @@ sub parse_region
     my $chr = $1;
     my $start = $2;
     my $end = $3;
-    
-    # Remove commas
+
     if(defined($start))
     {
+      # Remove commas
       $start =~ s/,//g;
       $end =~ s/,//g;
     
       if($end < $start)
       {
-        print STDERR "Warning: reversing start/end coords\n";
-        my $swap = $start;
-        $start = $end;
-        $end = $swap;
+        print_usage("end position is less than start position in: '$arg'\n");
       }
 
       if($start <= 0 || $end <= 0)
@@ -178,7 +180,7 @@ sub parse_region
         $regions_by_chr{$chr} = [];
       }
 
-      push(@{$regions_by_chr{$chr}}, [$start,$end+1]);
+      push(@{$regions_by_chr{$chr}}, [$start, $end+1]);
     }
     else
     {
