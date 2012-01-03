@@ -7,6 +7,7 @@ use List::Util qw(max);
 
 use FASTNFile;
 use VCFFile;
+use UsefulModule;
 
 sub print_usage
 {
@@ -83,11 +84,16 @@ my $vcf = new VCFFile($vcf_handle);
 
 print $vcf->get_header();
 
+my $num_of_filtered_entries = 0;
+my $total_num_entries = 0;
+
 my $vcf_entry;
 my %chrom_not_in_ref = ();
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
+  $total_num_entries++;
+
   my $chr = $vcf_entry->{'CHROM'};
   my $start = $vcf_entry->{'true_POS'} - $flank_size - 1;
   my $length = $flank_size + length($vcf_entry->{'true_REF'}) + $flank_size; 
@@ -111,8 +117,18 @@ while(defined($vcf_entry = $vcf->read_entry()))
   elsif($start + $length <= length($ref_genomes{$chr}) &&
         substr($ref_genomes{$chr}, $start, $length) =~ /^[acgt]*$/i)
   {
+    $num_of_filtered_entries++;
+
     $vcf->print_entry($vcf_entry);
   }
 }
+
+# Print filtered rate
+my $printed_percent = $num_of_filtered_entries / $total_num_entries;
+$printed_percent = sprintf("%.2f", $printed_percent);
+
+print STDERR "vcf_filter_by_ref.pl: " . num2str($num_of_filtered_entries) .
+             " / " . num2str($total_num_entries) . " " .
+             "(" . $printed_percent . "%) variants printed\n";
 
 close($vcf_handle);

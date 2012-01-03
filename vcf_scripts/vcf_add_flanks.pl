@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use GeneticsModule;
-use UsefulModule;
+use UsefulModule; # num2str
 use VCFFile;
 use FASTNFile;
 
@@ -23,7 +23,7 @@ sub print_usage
   print STDERR "  Adds the flanking sequence to VCF files\n";
   print STDERR "  --filter_ref_match: remove variants where ref allele " .
                "doesn't match\n";
-  print STDERR "  --filter_flanks: remove variants where flank+ref+flank " .
+  print STDERR "  --filter_Ns: remove variants where flank+[ref/alt]+flank " .
                "contains Ns or flanks aren't long enough\n";
   print STDERR "  - <ref_name> is used in the VCF header\n";
   print STDERR "  - If <in.vcf> is '-', reads from stdin\n";
@@ -36,7 +36,7 @@ if(@ARGV < 4)
 }
 
 my $filter_by_ref_match = 0;
-my $filter_by_flanks = 0;
+my $filter_Ns = 0;
 
 for my $i (1,2)
 {
@@ -45,10 +45,10 @@ for my $i (1,2)
     shift(@ARGV);
     $filter_by_ref_match = 1;
   }
-  elsif($ARGV[0] =~ /^-?-filter_flanks$/i)
+  elsif($ARGV[0] =~ /^-?-filter_ns$/i)
   {
     shift(@ARGV);
-    $filter_by_flanks = 1;
+    $filter_Ns = 1;
   }
 }
 
@@ -132,7 +132,8 @@ $add_header .= "##INFO=<ID=right_flank,Number=1,Type=String," .
 print vcf_add_to_header($vcf->get_header(), $add_header);
 
 my $num_ref_mismatch = 0;
-my $num_ns_in_flanks = 0;
+my $num_ns_in_alleles_or_flanks = 0;
+my $num_printed = 0;
 my $total_num_entries = 0;
 
 my $vcf_entry;
@@ -196,39 +197,56 @@ while(defined($vcf_entry = $vcf->read_entry()))
   if($filter_by_ref_match && $ref_seq ne uc($ref_allele))
   {
     $num_ref_mismatch++;
-    #print STDERR "Warning: removed variant " . $vcf_entry->{'ID'} . " - " .
-    #             "does not match ref\n";
   }
-  elsif($filter_by_flanks &&
-        ($vcf_info->{'left_flank'} =~ /n/i ||
+  elsif($filter_Ns &&
+        ($vcf_entry->{'REF'} =~ /n/i ||
+         $vcf_entry->{'ALT'} =~ /n/i ||
+         $vcf_info->{'left_flank'} =~ /n/i ||
          $vcf_info->{'right_flank'} =~ /n/i ||
-         $ref_seq =~ /n/i ||
          $left_flank_length < $flank_size ||
          $right_flank_length < $flank_size))
   {
-    $num_ns_in_flanks++;
-    #print STDERR "Warning: removed variant " . $vcf_entry->{'ID'} . " - " .
-    #             "contains Ns in ref or flanks too short\n";
+    $num_ns_in_alleles_or_flanks++;
   }
   else
   {
     # No filtering or passed filtering
+    $num_printed++;
     $vcf->print_entry($vcf_entry);
   }
 }
 
-close($vcf_handle);
-
 if($num_ref_mismatch > 0)
 {
-  print STDERR "Warning: (" . num2str($num_ref_mismatch) . " / " .
-               num2str($total_num_entries) . ") " .
+  my $mismatch_percent = $num_ref_mismatch / $total_num_entries;
+  $mismatch_percent = sprintf("%.2f", $mismatch_percent);
+
+  print STDERR "vcf_add_flanks.pl: " .
+               num2str($num_ref_mismatch) . " / " .
+               num2str($total_num_entries) . " (" . $mismatch_percent . "%) " .
                "variants removed for not matching the reference\n";
 }
 
-if($num_ns_in_flanks > 0)
+if($num_ns_in_alleles_or_flanks > 0)
 {
-  print STDERR "Warning: (" . num2str($num_ns_in_flanks) . " / " .
-               num2str($total_num_entries) . ") " .
-               "variants removed for contains Ns in ref or flanks too short\n";
+  my $ns_percent = $num_ns_in_alleles_or_flanks / $total_num_entries;
+  $ns_percent = sprintf("%.2f", $ns_percent);
+
+  print STDERR "vcf_add_flanks.pl: " .
+               num2str($num_ns_in_alleles_or_flanks) . " / " .
+               num2str($total_num_entries) . " (" . $mismatch_percent . "%) " .
+               " variants removed for containing Ns in ref/alt allele or " .
+               "flanks too short\n";
 }
+
+if($filter_by_ref_match || $filter_Ns)
+{
+  my $printed_percent = $num_printed / $total_num_entries;
+  $printed_percent = sprintf("%.2f", $printed_percent);
+
+  print STDERR "vcf_filter_by_checks.pl: " . num2str($num_printed) .
+               " / " . num2str($total_num_entries) . " " .
+               "(" . $printed_percent . "%) variants printed\n";
+}
+
+close($vcf_handle);

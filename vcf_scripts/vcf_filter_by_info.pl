@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use VCFFile;
+use UsefulModule;
 
 sub print_usage
 {
@@ -59,10 +60,15 @@ else
 my $vcf = new VCFFile($vcf_handle);
 print $vcf->get_header();
 
+my $num_of_filtered_entries = 0;
+my $total_num_entries = 0;
+
 my $vcf_entry;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
+  $total_num_entries++;
+
   my $info_hashref = $vcf_entry->{'INFO'};
   my $flags_hashref = $vcf_entry->{'INFO_flags'};
 
@@ -81,9 +87,19 @@ while(defined($vcf_entry = $vcf->read_entry()))
     }
   }
 
-  if($match == 1) {
+  if($match == 1)
+  {
+    $num_of_filtered_entries++;
     $vcf->print_entry($vcf_entry);
   }
 }
+
+# Print stats
+my $printed_percent = $num_of_filtered_entries / $total_num_entries;
+$printed_percent = sprintf("%.2f", $printed_percent);
+
+print STDERR "vcf_filter_by_info.pl: " . num2str($num_of_filtered_entries) .
+             " / " . num2str($total_num_entries) . " " .
+             "(" . $printed_percent . "%) variants printed\n";
 
 close($vcf_handle);

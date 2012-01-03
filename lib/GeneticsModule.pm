@@ -64,13 +64,15 @@ sub rev_comp
   my $rev = reverse($seq);
   
   # Complement
-  for(my $i = 0; $i < length($rev); $i++) {
+  for(my $i = 0; $i < length($rev); $i++)
+  {
     my $complement = $mapping{substr($rev,$i,1)};
-    
-    if(!defined($complement)) {
-      croak("rev_comp: Cannot complement base '".substr($rev,$i,1)."'");
+
+    if(!defined($complement))
+    {
+      carp("rev_comp: Cannot complement base '".substr($rev,$i,1)."'");
     }
-    
+
     substr($rev,$i,1) = $complement;
   }
 

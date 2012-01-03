@@ -5,6 +5,7 @@ use warnings;
 
 use VCFFile;
 use IntervalList;
+use UsefulModule; # for num2str
 
 sub print_usage
 {
@@ -140,14 +141,26 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   if($print)
   {
-    $vcf->print_entry($vcf_entry);
     $num_of_filtered_entries++;
+    $vcf->print_entry($vcf_entry);
   }
 }
 
+# Print filtered rate
+my $printed_percent = $num_of_filtered_entries / $total_num_entries;
+$printed_percent = sprintf("%.2f", $printed_percent);
+
+print STDERR "vcf_filter_by_regions.pl: " . num2str($num_of_filtered_entries) .
+             " / " . num2str($total_num_entries) . " " .
+             "(" . $printed_percent . "%) variants printed\n";
+
 close($vcf_handle);
 
-print STDERR "$num_of_filtered_entries / $total_num_entries printed\n";
+
+
+#
+# Methods
+#
 
 sub parse_region
 {

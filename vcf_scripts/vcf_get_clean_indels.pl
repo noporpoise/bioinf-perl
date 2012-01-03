@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use VCFFile;
+use UsefulModule; # for num2str
 
 sub print_usage
 {
@@ -51,10 +52,15 @@ $add_header .= "##ALT=<ID=DELETE,Description=\"Deletion\">\n";
 
 print vcf_add_to_header($vcf->get_header(), $add_header);
 
+my $num_of_variants = 0;
+my $num_of_clean = 0;
+
 my $vcf_entry;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
+  $num_of_variants++;
+
   if(length($vcf_entry->{'true_REF'}) == 0 ||
      length($vcf_entry->{'true_ALT'}) == 0)
   {
@@ -82,8 +88,18 @@ while(defined($vcf_entry = $vcf->read_entry()))
       }
     }
 
+    $num_of_clean++;
+
     $vcf->print_entry($vcf_entry);
   }
 }
+
+# Print filtered rate
+my $printed_percent = $num_of_clean / $num_of_variants;
+$printed_percent = sprintf("%.2f", $printed_percent);
+
+print STDERR "vcf_get_clean_indels.pl: " .
+             num2str($num_of_clean) . " / " . num2str($num_of_variants) . " " .
+             "(" . $printed_percent . "%) variants printed\n";
 
 close($vcf_handle);

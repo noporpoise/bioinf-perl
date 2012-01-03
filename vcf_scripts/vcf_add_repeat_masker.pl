@@ -6,6 +6,7 @@ use warnings;
 use VCFFile;
 use GeneticsModule;
 use IntervalList;
+use UsefulModule; # num2str
 
 sub print_usage
 {
@@ -19,7 +20,8 @@ sub print_usage
   print STDERR "  - rmsk, rmsk_left, rmsk_right\n";
   print STDERR "    => repeat classes variant is in OR " .
                "classes to the left/right of variant\n";
-  print STDERR "  - rmsk_left_dist, rmsk_right_dist => distances to the left/right\n";
+  print STDERR "  - rmsk_left_dist, rmsk_right_dist => distances to the " .
+               "left/right\n";
   exit;
 }
 
@@ -177,12 +179,17 @@ while(defined($vcf_entry = $vcf->read_entry()))
   $vcf->print_entry($vcf_entry);
 }
 
-close($vcf_handle);
 
-print STDERR "Of $total_num_entries VCF entries:";
+print STDERR "vcf_add_repeat_masker.pl: of " .
+             num2str($total_num_entries) . " VCF entries:\n";
 
 for my $class (sort {$a cmp $b} keys %num_in_repeat_class)
 {
-  print STDERR "  $num_in_repeat_class{$class} are in repeat class $class\n";
+  my $percent = $num_in_repeat_class{$class} / $total_num_entries;
+  
+  print STDERR "  " . num2str($num_in_repeat_class{$class}) .
+               " (" . sprintf("%.2f", $percent) . ") "
+               " are in repeat class $class\n";
 }
 
+close($vcf_handle);
