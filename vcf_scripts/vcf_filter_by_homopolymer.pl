@@ -33,7 +33,8 @@ if($max_run !~ /^\d+$/ || $max_run < 1) {
 #
 my $vcf_handle;
 
-if(defined($vcf_file) && $vcf_file ne "-") {
+if(defined($vcf_file) && $vcf_file ne "-")
+{
   open($vcf_handle, $vcf_file) or die("Cannot open VCF file '$vcf_file'\n");
 }
 elsif(-p STDIN) {

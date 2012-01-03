@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use VCFFile;
+use GeneticsModule;
 use IntervalList;
 
 sub print_usage
@@ -14,6 +15,11 @@ sub print_usage
 
   print STDERR "Usage: ./vcf_add_repeat_masker.pl <rmsk.txt> [in.vcf]\n";
   print STDERR "  Add repeat annoations to variants\n";
+  print STDERR "  Adds INFO values to VCF (all comma-separated lists):\n";
+  print STDERR "  - rmsk, rmsk_left, rmsk_right\n";
+  print STDERR "    => repeat classes variant is in OR " .
+               "classes to the left/right of variant\n";
+  print STDERR "  - rmsk_left_dist, rmsk_right_dist => distances to the left/right\n";
   exit;
 }
 
@@ -116,7 +122,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
   $total_num_entries++;
 
   my $chr = $vcf_entry->{'CHROM'};
-  my $pos = $vcf_entry->{'POS'};
+  my $pos = $vcf_entry->{'true_POS'};
   my $len = length($vcf_entry->{'true_REF'});
 
   my $interval_list = $interval_lists{$chr};
@@ -132,7 +138,9 @@ while(defined($vcf_entry = $vcf->read_entry()))
   }
 
   my ($hits_arr,$left_arr,$right_arr)
-    = $interval_list->fetch_nearest($pos, $pos+$len-1);
+    = $interval_list->fetch_nearest($pos, $pos+$len);
+  
+  # Interval List returns EITHER hits OR nearest to left and right
 
   if(@$hits_arr > 0)
   {

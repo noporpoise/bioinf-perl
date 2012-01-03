@@ -50,9 +50,9 @@ my $vcf = new VCFFile($vcf_handle);
 
 my $vcf_header = $vcf->get_header();
 
-my ($vcf_cols_hash, $vcf_cols_arr) = $vcf->get_columns();
+my @vcf_cols = $vcf->get_columns_array();
 
-my @vcf_cols = grep {$_ !~ /^INFO$/i} @$vcf_cols_arr;
+@vcf_cols = grep {$_ !~ /^INFO$/i} @vcf_cols;
 push(@vcf_cols, ('true_REF','true_ALT','true_POS'));
 
 # Get info fields

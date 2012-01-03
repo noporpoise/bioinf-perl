@@ -3,6 +3,8 @@ package GeneticsModule;
 use strict;
 use warnings;
 
+use Carp;
+
 use base 'Exporter';
 
 our @EXPORT = qw(get_clean_chr_name rev_comp rev_comp_cyclic
@@ -29,14 +31,18 @@ sub get_clean_chr_name
     my $code = $1;
     my $suffix = defined($2) ? $2 : '';
     
-    if($code =~ /^[mxy]$/i) {
+    if($code =~ /^[mxy]$/i)
+    {
       return 'chr'.uc($code).lc($suffix);
     }
-    elsif($code =~ /^\d+$/ && $code > 22) {
-      print STDERR "Warning: Cannot resolve chromosome '$chr' - chr '$code' number too high\n";
+    elsif($code =~ /^\d+$/ && $code > 22)
+    {
+      carp "Warning: Cannot resolve chromosome '$chr' - " .
+           "chr '$code' number too high\n";
       return $chr;
     }
-    else {
+    else
+    {
       return 'chr'.lc($code.$suffix);
     }
   }
@@ -62,7 +68,7 @@ sub rev_comp
     my $complement = $mapping{substr($rev,$i,1)};
     
     if(!defined($complement)) {
-      die("rev_comp: Cannot complement base '".substr($rev,$i,1)."'");
+      croak("rev_comp: Cannot complement base '".substr($rev,$i,1)."'");
     }
     
     substr($rev,$i,1) = $complement;

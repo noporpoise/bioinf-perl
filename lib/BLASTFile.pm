@@ -3,6 +3,8 @@ package BLASTFile;
 use strict;
 use warnings;
 
+use Carp;
+
 # Object methods:
 # new read_blast_entries
 
@@ -66,7 +68,7 @@ sub read_blast_entries
   elsif(defined($expected_name) && $line !~ /$expected_name/i)
   {
     chomp($line);
-    die("BLAST entry does not match '$expected_name': '$line'");
+    croak("BLAST entry does not match '$expected_name': '$line'");
   }
   
   my $blast_entry;
@@ -101,7 +103,7 @@ sub split_blast_entry
         $chr_lengths{$curr_chr} = $1;
       }
       else {
-        die("BLAST processing error : $!");
+        croak("BLAST processing error : $!");
       }
     }
     elsif($lines[$i] =~ /Score = (.*) bits \((\d+)\),  Expect = (.*)/i)
@@ -130,7 +132,7 @@ sub split_blast_entry
       {
         my $err_line = $i < @lines ? $lines[$i] : '';
         chomp($err_line);
-        die("BLAST processing error ($i/".scalar(@lines).": '$err_line') : $!");
+        croak("BLAST processing error ($i/".scalar(@lines).": '$err_line') : $!");
       }
       
       $i++; # Look at next line
@@ -141,7 +143,7 @@ sub split_blast_entry
         $new_hit{'subject_strand'} = $2;
       }
       else {
-        die("BLAST processing error : $!");
+        croak("BLAST processing error : $!");
       }
       
       # Read alignments

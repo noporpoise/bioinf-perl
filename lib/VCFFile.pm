@@ -3,7 +3,9 @@ package VCFFile;
 use strict;
 use warnings;
 
-# All methods are object methods - nothing to export
+use Carp;
+
+# All methods are object methods except these:
 use base 'Exporter';
 our @EXPORT = qw(get_standard_vcf_columns vcf_add_to_header);
 
@@ -25,8 +27,9 @@ sub new
 
   if($next_line !~ /#CHROM/)
   {
-    if(length($header) > 0) {
-      die("Invalid VCF - expected column headers");
+    if(length($header) > 0)
+    {
+      croak("Invalid VCF - expected column headers");
     }
     else {
       # Assume some set of standard columns
@@ -34,8 +37,9 @@ sub new
       
       my @expected_cols = get_standard_vcf_columns();
       
-      if(@col_values < @expected_cols) {
-        die("Invalid VCF - missing column headers and too few columns");
+      if(@col_values < @expected_cols)
+      {
+        croak("Invalid VCF - missing column headers and too few columns");
       }
 
       @columns_arr = @expected_cols;
@@ -107,12 +111,16 @@ sub get_header
   return $self->{_header};
 }
 
-sub get_columns
+sub get_columns_array
 {
   my ($self) = @_;
-  my %col_hash = %{$self->{_columns_hash}};
-  my @col_arr = @{$self->{_columns_arr}};
-  return (\%col_hash, \@col_arr);
+  return @{$self->{_columns_arr}};
+}
+
+sub get_columns_hash
+{
+  my ($self) = @_;
+  return %{$self->{_columns_hash}};
 }
 
 sub set_columns_with_hash
@@ -170,13 +178,13 @@ sub read_entry
   
   if(@entry_cols < $num_of_cols)
   {
-    die("Not enough columns in VCF entry " .
-        "(got ".@entry_cols.", expected ".$num_of_cols.")");
+    croak("Not enough columns in VCF entry " .
+          "(got ".@entry_cols.", expected ".$num_of_cols.")");
   }
   elsif(@entry_cols > $num_of_cols)
   {
-    die("Too many columns in VCF entry " .
-        "(got ".@entry_cols.", expected ".$num_of_cols.")");
+    croak("Too many columns in VCF entry " .
+          "(got ".@entry_cols.", expected ".$num_of_cols.")");
   }
 
   my %info_col = ();

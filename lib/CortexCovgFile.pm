@@ -3,6 +3,8 @@ package CortexCovgFile;
 use strict;
 use warnings;
 
+use Carp;
+
 use List::Util qw(min max sum);
 
 
@@ -143,7 +145,7 @@ sub parse_bubble_covgs
 
   if($covg_line ne "branch$branch_num coverages")
   {
-    die("Expected branch1 covgs line ('$covg_line')");
+    croak("Expected branch1 covgs line ('$covg_line')");
   }
 
   while($self->peak_line() =~ /^Covg in Colour (\d+):/)
@@ -154,12 +156,12 @@ sub parse_bubble_covgs
     
     if(!defined($covgs_line = $self->read_line()))
     {
-      die("Missing branch$branch_num covg line (premature file end)");
+      croak("Missing branch$branch_num covg line (premature file end)");
     }
     elsif($covgs_line !~ /^\d+(?:\s+\d+)*\s*$/)
     {
       chomp($covgs_line);
-      die("Invalid branch$branch_num covg line ('$covgs_line')");
+      croak("Invalid branch$branch_num covg line ('$covgs_line')");
     }
     
     my @covgs = split(/\s+/, $covgs_line);
@@ -177,7 +179,7 @@ sub parse_bubble_graphline
   if(!defined($header_line = $self->read_line()) ||
      !defined($seq_line = $self->read_line()))
   {
-    die("Missing cortex bubble lines");
+    croak("Missing cortex bubble lines");
   }
 
   chomp($header_line);
@@ -202,7 +204,7 @@ sub parse_bubble_graphline
   }
   else
   {
-    die("Unexpected bubble line '$header_line'");
+    croak("Unexpected bubble line '$header_line'");
   }
 
   return \%data;
@@ -228,14 +230,14 @@ sub read_align_entry
     $read_name = $1;
   }
   else {
-    die("Unexpected .colour_covgs read name '$read_name': $!");
+    croak("Unexpected .colour_covgs read name '$read_name': $!");
   }
   
   my $sequence = $self->read_line();
   
   if(!defined($sequence))
   {
-    die("Unexpected end of .colour_covgs file (read '$read_name'): $!");
+    croak("Unexpected end of .colour_covgs file (read '$read_name'): $!");
   }
   
   chomp($sequence);
@@ -257,7 +259,7 @@ sub read_align_entry
     my $covg_line = $self->read_line();
 
     if(!defined($covg_line)) {
-      die("Unexpected end of .colour_covgs file (read '$read_name'): $!");
+      croak("Unexpected end of .colour_covgs file (read '$read_name'): $!");
     }
     
     chomp($covg_line);
@@ -279,7 +281,7 @@ sub estimate_contig_rate
       $autosome_depth, $x_depth, $y_depth) = @_;
   
   if(!defined($y_depth)) {
-    die("estimate_contig_rate(..) Missing arguments $!");
+    croak("estimate_contig_rate(..) Missing arguments $!");
   }
   
   my ($num_of_read_arrivals) = get_num_of_read_arrivals($covgs_ptr);
@@ -304,7 +306,7 @@ sub get_num_of_read_arrivals
   my ($covgs_ptr) = @_;
 
   if(!defined($covgs_ptr)) {
-    die("get_num_of_read_arrivals_zam(..) Missing arguments $!");
+    croak("get_num_of_read_arrivals_zam(..) Missing arguments $!");
   }
 
   my $total = $covgs_ptr->[1];

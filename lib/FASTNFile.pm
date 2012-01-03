@@ -3,6 +3,8 @@ package FASTNFile;
 use strict;
 use warnings;
 
+use Carp;
+
 use List::Util qw(min);
 
 # Object methods:
@@ -28,7 +30,7 @@ sub new
     }
     else {
       my $len = min(length($next_line),10);
-      die("Invalid first line '".substr($next_line,0,$len)."...'");
+      croak("Invalid first line '".substr($next_line,0,$len)."...'");
     }
   }
 
@@ -87,7 +89,7 @@ sub read_next_fasta
   elsif($line !~ /^>/)
   {
     chomp($line);
-    die("Fasta file title line does not begin with '>': '$line'");
+    croak("Fasta file title line does not begin with '>': '$line'");
   }
   
   chomp($line);
@@ -123,7 +125,7 @@ sub read_next_fastq
   elsif($line !~ /^@/)
   {
     chomp($line);
-    die("Fastq file title line does not begin with @ ('".substr($line,0,50)."')");
+    croak("Fastq file title line does not begin with @ ('".substr($line,0,50)."')");
   }
   
   chomp($line);
@@ -149,11 +151,11 @@ sub read_next_fastq
 
   if($sequence eq "")
   {
-    die("FASTQ file ended early - expected sequence line");
+    croak("FASTQ file ended early - expected sequence line");
   }
   elsif($sequence !~ /[acgtn]+/i)
   {
-    die("FASTQ file - invalid sequence line '".substr($sequence,0,50)."'");
+    croak("FASTQ file - invalid sequence line '".substr($sequence,0,50)."'");
   }
 
   for(my $i = 0; $i < $num_of_seq_lines && defined($line = $self->read_line()); $i++)
@@ -163,12 +165,12 @@ sub read_next_fastq
   }
   
   if($quality eq "") {
-    die("FASTQ file ended early - expected quality line");
+    croak("FASTQ file ended early - expected quality line");
   }
   elsif(length($sequence) != length($quality))
   {
-    die("FASTQ file: length of sequence (".length($sequence).") does not match " .
-        "length of quality line (".length($quality).") for read '$title'");
+    croak("FASTQ file: length of sequence (".length($sequence).") does not match " .
+          "length of quality line (".length($quality).") for read '$title'");
   }
 
   return ($title, $sequence, $skip, $quality);
@@ -223,7 +225,7 @@ sub read_all_from_files
     my $handle;
 
     open($handle, $file)
-      or die("Cannot open fasta file '$file'");
+      or croak("Cannot open fasta file '$file'");
 
     my $fastn_file = new FASTNFile($handle);
 
@@ -247,14 +249,14 @@ sub estimate_fastq_size
   $read_file =~ s/(.*\.gz)\s*$/gzip -dc < $1|/;
 
   # Read first two lines of file
-  open(FASTQ, $read_file) or die("Can't read file: '$read_file'");
+  open(FASTQ, $read_file) or croak("Can't read file: '$read_file'");
   my $firstLine = <FASTQ>;
   my $secondLine = <FASTQ>;
   close(FASTQ);
 
   if(!defined($firstLine) || !defined($secondLine))
   {
-    die("Can't read first two lines of '$file'");
+    croak("Can't read first two lines of '$file'");
   }
 
   # Get file size
