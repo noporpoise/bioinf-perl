@@ -16,9 +16,9 @@ sub print_usage
 
   print STDERR "Usage: ./vcf_add_repeat_masker.pl <rmsk.txt> [in.vcf]\n";
   print STDERR "  Add repeat annoations to variants\n";
-  print STDERR "  Adds INFO values to VCF (all comma-separated lists):\n";
-  print STDERR "  - rmsk, rmsk_left, rmsk_right\n";
-  print STDERR "    => repeat classes variant is in OR " .
+  print STDERR "  Adds INFO values to VCF :\n";
+  print STDERR "  - rmsk, rmsk_left, rmsk_right (comma-separated lists)\n";
+  print STDERR "    repeat classes variant is in OR " . 
                "classes to the left/right of variant\n";
   print STDERR "  - rmsk_left_dist, rmsk_right_dist => distances to the " .
                "left/right\n";
@@ -183,12 +183,15 @@ while(defined($vcf_entry = $vcf->read_entry()))
 print STDERR "vcf_add_repeat_masker.pl: of " .
              num2str($total_num_entries) . " VCF entries:\n";
 
-for my $class (sort {$a cmp $b} keys %num_in_repeat_class)
+my @sorted_classes = sort {$num_in_repeat_class{$b} <=> $num_in_repeat_class{$a}}
+                     keys %num_in_repeat_class;
+
+for my $class (@sorted_classes)
 {
-  my $percent = $num_in_repeat_class{$class} / $total_num_entries;
-  
+  my $percent = 100 * $num_in_repeat_class{$class} / $total_num_entries;
+
   print STDERR "  " . num2str($num_in_repeat_class{$class}) .
-               " (" . sprintf("%.2f", $percent) . ") "
+               " (" . sprintf("%.2f", $percent) . "%) " .
                " are in repeat class $class\n";
 }
 

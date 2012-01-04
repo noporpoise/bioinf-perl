@@ -8,8 +8,6 @@ use UsefulModule;
 
 ## Config
 my $csvsep = "\t";
-my $use_cds = 0; # Use tx_start
-#my $use_cds = 1; # Use cds_start
 ##
 
 sub print_usage
@@ -18,30 +16,51 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
   
-  print STDERR "Usage: ./vcf_dist_from_genes.pl <ensGene.txt> <chr_lengths.csv> " .
+  print STDERR "Usage: ./vcf_dist_from_genes.pl <ensGene.txt> <CDS/TX> <chr_lengths.csv> " .
                "<binsize> <out> [in.vcf]\n";
   print STDERR "  Get distribution of variants around genes\n";
+  print STDERR "  <CDS/TX> whether to use coding or transcription start\n";
   print STDERR "  <binsize> is the size of bins in kbp\n";
-  print STDERR "  Saves <out>.upstream.csv, <out>.downstream.csv, " .
-               "<out>.intron.csv & <out.exon.csv>\n";
+  print STDERR "  Saves: <out>.upstream.csv, <out>.downstream.csv, " .
+               "<out>.intron.csv, <out>.exon.csv\n";
+  print STDERR "         <out>.preexon.csv & <out>.postexon.csv>\n";
   exit;
 }
 
-if(@ARGV < 4 || @ARGV > 5) {
+if(@ARGV < 5 || @ARGV > 6) {
   print_usage();
 }
 
 my $genes_file = shift;
+my $cds_or_tx = shift;
 my $chr_lengths_file = shift;
 my $bin_size_kbp = shift;
 my $out_base = shift;
 my $vcf_file = shift;
 
-if($bin_size_kbp !~ /^\d+$/) {
+my $use_cds;
+
+if($cds_or_tx =~ /^CDS$/i)
+{
+  $use_cds = 1;
+}
+elsif($cds_or_tx =~ /^TX$/i)
+{
+  $use_cds = 0;
+}
+else
+{
+  print_usage("Invalid cds/tx option: '$cds_or_tx' - should be 'CDS' or 'TX'");
+}
+
+
+if($bin_size_kbp !~ /^\d+$/)
+{
   print_usage("Invalid <binsize> value ('$bin_size_kbp')");
 }
-elsif($bin_size_kbp >= 10000) {
-  print_usage("<binsize> units are kbp - $bin_size_kbp kbp is probably too large");
+elsif($bin_size_kbp >= 10000)
+{
+  warn("<binsize> units are kbp - $bin_size_kbp kbp is probably too large");
 }
 
 #
@@ -54,8 +73,9 @@ open(CHRS, $chr_lengths_file)
 
 my $line;
 
-if(!defined($line = <CHRS>)) {
-  die("Empty file!");
+if(!defined($line = <CHRS>))
+{
+  print_usage("Empty rmsk.txt file! (file: $chr_lengths_file)");
 }
 
 if($line !~ /^\w+,\s*\d+$/)
@@ -168,9 +188,7 @@ while(defined($genes_line = <$genes_handle>))
   my @exon_starts = split(/,/, $exonStarts);
   my @exon_ends = split(/,/, $exonEnds);
 
-  my %gene_entry = (#'tx_start' => $txStart, 'tx_end' => $txEnd,
-                    #'cds_start' => $cdsStart, 'cds_end' => $cdsEnd,
-                    'start' => $use_cds ? $cdsStart : $txStart,
+  my %gene_entry = ('start' => $use_cds ? $cdsStart : $txStart,
                     'end' => $use_cds ? $cdsEnd : $txEnd,
                     'strand' => $strand,
                     'exon_starts' => \@exon_starts,

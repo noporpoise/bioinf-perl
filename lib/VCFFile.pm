@@ -15,6 +15,11 @@ sub new
   my $handle = shift;
   my $next_line = <$handle>;
   
+  if(!defined($next_line))
+  {
+    croak("VCF file is empty");
+  }
+  
   my $header = '';
   my %columns_hash = ();
   my @columns_arr = ();
@@ -25,7 +30,7 @@ sub new
     $next_line = <$handle>;
   }
 
-  if($next_line !~ /#CHROM/)
+  if(!defined($next_line) || $next_line !~ /#CHROM/)
   {
     if(length($header) > 0)
     {
@@ -310,8 +315,7 @@ sub vcf_add_to_header
 
   if($curr_lines[$#curr_lines] !~ /#CHROM/i)
   {
-    print STDERR "Warning: VCFFile.pm - " .
-                 "header does not end with '#CHROM ..' line\n";
+    carp("Warning: VCFFile.pm - header does not end with '#CHROM ..' line\n");
   }
 
   my $last_header_line = pop(@curr_lines);
@@ -323,8 +327,7 @@ sub vcf_add_to_header
     if($new_line !~ /^##/)
     {
       $new_line = '##'.$new_line;
-      print STDERR "Warning: VCFFile.pm - " .
-                   "adding hash characters to new header line\n";
+      carp("Warning: VCFFile.pm - adding hashes to header line\n");
     }
 
     push(@curr_lines, $new_line);

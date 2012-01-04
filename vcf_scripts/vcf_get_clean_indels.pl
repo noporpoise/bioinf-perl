@@ -95,11 +95,10 @@ while(defined($vcf_entry = $vcf->read_entry()))
 }
 
 # Print filtered rate
-my $printed_percent = $num_of_clean / $num_of_variants;
-$printed_percent = sprintf("%.2f", $printed_percent);
+my $printed_percent = 100 * $num_of_clean / $num_of_variants;
 
 print STDERR "vcf_get_clean_indels.pl: " .
              num2str($num_of_clean) . " / " . num2str($num_of_variants) . " " .
-             "(" . $printed_percent . "%) variants printed\n";
+             "(" . sprintf("%.2f", $printed_percent) . "%) variants printed\n";
 
 close($vcf_handle);

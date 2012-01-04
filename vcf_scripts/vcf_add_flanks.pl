@@ -218,35 +218,36 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
 if($num_ref_mismatch > 0)
 {
-  my $mismatch_percent = $num_ref_mismatch / $total_num_entries;
-  $mismatch_percent = sprintf("%.2f", $mismatch_percent);
+  my $mismatch_percent = 100 * $num_ref_mismatch / $total_num_entries;
 
   print STDERR "vcf_add_flanks.pl: " .
                num2str($num_ref_mismatch) . " / " .
-               num2str($total_num_entries) . " (" . $mismatch_percent . "%) " .
+               num2str($total_num_entries) . " " .
+               "(" . sprintf("%.2f", $mismatch_percent) . "%) " .
                "variants removed for not matching the reference\n";
 }
 
 if($num_ns_in_alleles_or_flanks > 0)
 {
-  my $ns_percent = $num_ns_in_alleles_or_flanks / $total_num_entries;
-  $ns_percent = sprintf("%.2f", $ns_percent);
+  my $ns_percent = 100 * $num_ns_in_alleles_or_flanks / $total_num_entries;
 
   print STDERR "vcf_add_flanks.pl: " .
                num2str($num_ns_in_alleles_or_flanks) . " / " .
-               num2str($total_num_entries) . " (" . $mismatch_percent . "%) " .
+               num2str($total_num_entries) . " " .
+               "(" . sprintf("%.2f", $ns_percent) . "%) " .
                " variants removed for containing Ns in ref/alt allele or " .
                "flanks too short\n";
 }
 
 if($filter_by_ref_match || $filter_Ns)
 {
-  my $printed_percent = $num_printed / $total_num_entries;
-  $printed_percent = sprintf("%.2f", $printed_percent);
+  my $printed_percent = 100 * $num_printed / $total_num_entries;
 
-  print STDERR "vcf_filter_by_checks.pl: " . num2str($num_printed) .
-               " / " . num2str($total_num_entries) . " " .
-               "(" . $printed_percent . "%) variants printed\n";
+  print STDERR "vcf_filter_by_checks.pl: " .
+               num2str($num_printed) . " / " .
+               num2str($total_num_entries) . " " .
+               "(" . sprintf("%.2f", $printed_percent) . "%) " .
+               "variants printed\n";
 }
 
 close($vcf_handle);

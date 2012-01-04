@@ -84,11 +84,10 @@ while(defined($vcf_entry = $vcf->read_entry))
 }
 
 # Print filtered rate
-my $printed_percent = $num_of_filtered_entries / $total_num_entries;
-$printed_percent = sprintf("%.2f", $printed_percent);
+my $printed_percent = 100 * $num_of_filtered_entries / $total_num_entries;
 
 print STDERR "vcf_filter_by_checks.pl: " . num2str($num_of_filtered_entries) .
              " / " . num2str($total_num_entries) . " " .
-             "(" . $printed_percent . "%) variants printed\n";
+             "(" . sprintf("%.2f", $printed_percent) . "%) variants printed\n";
 
 close($vcf_handle);
