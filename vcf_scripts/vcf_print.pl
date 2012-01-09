@@ -11,7 +11,7 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_add_svlen.pl [file.vcf]\n";
+  print STDERR "Usage: ./vcf_print.pl [file.vcf]\n";
   print STDERR "  Add (or correct) SVLEN= INFO tag in a VCF file\n";
   exit;
 }
@@ -50,9 +50,6 @@ my $vcf_entry;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
-  $vcf_entry->{'INFO'}->{'SVLEN'} = length($vcf_entry->{'ALT'}) -
-                                    length($vcf_entry->{'REF'});
-
   $vcf->print_entry($vcf_entry);
 }
 
