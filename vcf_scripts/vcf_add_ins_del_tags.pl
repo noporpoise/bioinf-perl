@@ -5,9 +5,6 @@ use warnings;
 
 use VCFFile;
 
-my $ins_tag = 'INSERTION';
-my $del_tag = 'DELETION';
-
 sub print_usage
 {
   for my $err (@_) {
@@ -15,8 +12,7 @@ sub print_usage
   }
 
   print STDERR "Usage: ./vcf_add_ins_del_tags.pl [file.vcf]\n";
-  print STDERR "  Uses AA tag to label indels in the INFO field\n";
-  print STDERR "  Tags with: $ins_tag & $del_tag\n";
+  print STDERR "  Adds INDEL=INS|DEL INFO tag using AA and SVLEN tags\n";
   exit;
 }
 
@@ -51,9 +47,8 @@ else
 #
 my $vcf = new VCFFile($vcf_handle);
 
-my $add_header
-  = "##INFO=<ID=$ins_tag,Number=1,Type=Flag,Description=\"An insertion\">\n" .
-    "##INFO=<ID=$del_tag,Number=1,Type=Flag,Description=\"A deletion\">";
+my $add_header = "##INFO=<ID=INDEL,Number=1,Type=String,Description=\"" .
+                 "INS=insertion, DEL=deletion or .=unknown\">";
 
 print vcf_add_to_header($vcf->get_header(), $add_header);
 
@@ -61,40 +56,22 @@ my $vcf_entry;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
-  my $ins = 0;
-  my $set = 0;
-
   # SVLEN is length(alt) - length(ref)
   if($vcf_entry->{'INFO'}->{'AA'} eq "0")
   {
     # ref allele is ancestral
-    $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} > 0);
-    $set = 1;
+    my $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} > 0);
+    $vcf_entry->{'INFO'}->{'INDEL'} = $ins ? 'INS' : 'DEL';
   }
   elsif($vcf_entry->{'INFO'}->{'AA'} eq "1")
   {
     # alt allele is ancestral
-    $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} < 0);
-    $set = 1;
-  }
-
-  if($set)
-  {
-    if($ins)
-    {
-      $vcf_entry->{'INFO_flags'}->{$ins_tag} = 1;
-      delete($vcf_entry->{'INFO_flags'}->{$del_tag});
-    }
-    else
-    {
-      $vcf_entry->{'INFO_flags'}->{$del_tag} = 1;
-      delete($vcf_entry->{'INFO_flags'}->{$ins_tag});
-    }
+    my $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} < 0);
+    $vcf_entry->{'INFO'}->{'INDEL'} = $ins ? 'INS' : 'DEL';
   }
   else
   {
-    delete($vcf_entry->{'INFO_flags'}->{$del_tag});
-    delete($vcf_entry->{'INFO_flags'}->{$ins_tag});
+    $vcf_entry->{'INFO'}->{'INDEL'} = '.';
   }
 
   $vcf->print_entry($vcf_entry);
