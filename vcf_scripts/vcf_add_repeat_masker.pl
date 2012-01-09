@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use List::MoreUtils qw(uniq);
+
 use VCFFile;
 use GeneticsModule;
 use IntervalList;
@@ -84,19 +86,34 @@ while($rmsk_line = <RMSK>)
                 'end' => $rmsk_end,
                 'class' => $rmsk_class};
 
-  push(@{$repeat_elements_by_chr{$rmsk_chr}}, [$rmsk_start, $rmsk_end+1, $repeat]);
+  if(!defined($repeat_elements_by_chr{$rmsk_chr}))
+  {
+    $repeat_elements_by_chr{$rmsk_chr} = {};
+  }
+  
+  if(!defined($repeat_elements_by_chr{$rmsk_chr}->{$rmsk_class}))
+  {
+    $repeat_elements_by_chr{$rmsk_chr}->{$rmsk_class} = [];
+  }
+
+  push(@{$repeat_elements_by_chr{$rmsk_chr}->{$rmsk_class}},
+       [$rmsk_start, $rmsk_end+1, $repeat]);
 }
 
 close(RMSK);
 
+my @rmsk_classes = sort {$a cmp $b} keys %num_per_class;
+
 my %interval_lists = ();
 
-for my $chr (keys %repeat_elements_by_chr)
+for my $rmsk_chr (keys %repeat_elements_by_chr)
 {
-  $interval_lists{$chr} = new IntervalList(@{$repeat_elements_by_chr{$chr}});
+  for my $rmsk_class (@rmsk_classes)
+  {
+    $interval_lists{$rmsk_chr}->{$rmsk_class}
+      = new IntervalList(@{$repeat_elements_by_chr{$rmsk_chr}->{$rmsk_class}});
+  }
 }
-
-my @rmsk_repeat_classes = sort {$a cmp $b} keys %num_per_class;
 
 #
 # Read VCF
@@ -105,7 +122,7 @@ my $vcf = new VCFFile($vcf_handle);
 
 my $additional_header = '';
 
-for my $class (@rmsk_repeat_classes)
+for my $class (@rmsk_classes)
 {
   $additional_header .= '##INFO=<ID=rmsk_'.$class.',Number=0,Type=Flag,' .
                         'Description="In repeat masker element">' . "\n";
@@ -124,12 +141,13 @@ while(defined($vcf_entry = $vcf->read_entry()))
   $total_num_entries++;
 
   my $chr = $vcf_entry->{'CHROM'};
-  my $pos = $vcf_entry->{'true_POS'};
-  my $len = length($vcf_entry->{'true_REF'});
 
-  my $interval_list = $interval_lists{$chr};
+  my $var_start = $vcf_entry->{'true_POS'};
+  my $var_end = $var_start + length($vcf_entry->{'true_REF'});
 
-  if(!defined($interval_list))
+  my $interval_lists_hashref = $interval_lists{$chr};
+
+  if(!defined($interval_lists_hashref))
   {
     if(!defined($missing_chrs{$chr}))
     {
@@ -139,15 +157,26 @@ while(defined($vcf_entry = $vcf->read_entry()))
     next;
   }
 
-  my ($hits_arr,$left_arr,$right_arr)
-    = $interval_list->fetch_nearest($pos, $pos+$len);
-  
-  # Interval List returns EITHER hits OR nearest to left and right
+  my @hits = ();
+  my @hits_left = ();
+  my @hits_right = ();
 
-  if(@$hits_arr > 0)
+  for my $rmsk_class (@rmsk_classes)
   {
-    my @classes = map {$_->{'class'}} @$hits_arr;
-    $vcf_entry->{'INFO'}->{'rmsk'} = join(",",@classes);
+    my ($hits_arr, $left_arr, $right_arr)
+      = $interval_lists_hashref->{$rmsk_class}->fetch_nearest($var_start,
+                                                              $var_end);
+
+    # Interval List returns EITHER hits OR nearest to left and right
+    push(@hits, @$hits_arr);
+    push(@hits_left, @$left_arr);
+    push(@hits_right, @$right_arr);
+  }
+
+  if(@hits > 0)
+  {
+    my @classes = map {$_->{'class'}} @hits;
+    $vcf_entry->{'INFO'}->{'rmsk'} = join(",", @classes);
   
     for my $class (@classes)
     {
@@ -156,25 +185,40 @@ while(defined($vcf_entry = $vcf->read_entry()))
   }
   else
   {
-    if(@$left_arr > 0)
-    {
-      my @classes = map {$_->{'class'}} @$left_arr;
-      my $dist = $pos - $left_arr->[0]->{'end'};
-
-      $vcf_entry->{'INFO'}->{'rmsk_left'} = join(",", @classes);
-      $vcf_entry->{'INFO'}->{'rmsk_left_dist'} = $dist;
-    }
-
-    if(@$right_arr > 0)
-    {
-      my @classes = map {$_->{'class'}} @$right_arr;
-      my $dist = $right_arr->[0]->{'start'} - $pos;
-
-      $vcf_entry->{'INFO'}->{'rmsk_right'} = join(",", @classes);
-      $vcf_entry->{'INFO'}->{'rmsk_right_dist'} = $dist;
-    }
-    
+    # Unset any existing values
+    delete($vcf_entry->{'INFO'}->{'rmsk'});
   }
+
+  if(@hits_left > 0)
+  {
+    my @classes = map {$_->{'class'}} @hits_left;
+    my @dists = map {$var_start - $_->{'end'}} @hits_left;
+
+    $vcf_entry->{'INFO'}->{'rmsk_left'} = join(",", @classes);
+    $vcf_entry->{'INFO'}->{'rmsk_left_dist'} = join(",", @dists);
+  }
+  else
+  {
+    # Unset any existing values
+    delete($vcf_entry->{'INFO'}->{'rmsk_left'});
+    delete($vcf_entry->{'INFO'}->{'rmsk_left_dist'});
+  }
+
+  if(@hits_right > 0)
+  {
+    my @classes = map {$_->{'class'}} @hits_right;
+    my @dists = map {$_->{'start'} - $var_end} @hits_right;
+
+    $vcf_entry->{'INFO'}->{'rmsk_right'} = join(",", @classes);
+    $vcf_entry->{'INFO'}->{'rmsk_right_dist'} = join(",", @dists);
+  }
+  else
+  {
+    # Unset any existing values
+    delete($vcf_entry->{'INFO'}->{'rmsk_right'});
+    delete($vcf_entry->{'INFO'}->{'rmsk_right_dist'});
+  }
+
 
   $vcf->print_entry($vcf_entry);
 }
@@ -186,11 +230,20 @@ print STDERR "vcf_add_repeat_masker.pl: of " .
 my @sorted_classes = sort {$num_in_repeat_class{$b} <=> $num_in_repeat_class{$a}}
                      keys %num_in_repeat_class;
 
+@sorted_classes = uniq(@sorted_classes, @rmsk_classes);
+
 for my $class (@sorted_classes)
 {
-  my $percent = 100 * $num_in_repeat_class{$class} / $total_num_entries;
+  my $count = $num_in_repeat_class{$class};
 
-  print STDERR "  " . num2str($num_in_repeat_class{$class}) .
+  if(!defined($count))
+  {
+    $count = 0;
+  }
+  
+  my $percent = 100 * $count / $total_num_entries;
+
+  print STDERR "  " . num2str($count) .
                " (" . sprintf("%.2f", $percent) . "%) " .
                " are in repeat class $class\n";
 }

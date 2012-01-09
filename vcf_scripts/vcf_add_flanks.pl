@@ -8,8 +8,6 @@ use UsefulModule; # num2str
 use VCFFile;
 use FASTNFile;
 
-use List::Util qw(min max);
-
 #   Isaac Turner <isaac.turner\@dtc.ox.ac.uk> 2011/09/21
 
 sub print_usage

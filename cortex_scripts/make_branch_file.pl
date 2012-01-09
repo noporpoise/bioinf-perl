@@ -17,13 +17,13 @@ sub print_usage
   print STDERR "  When called with no OPTIONS branch1 is printed\n";
   print STDERR "\n";
   print STDERR "  OTPIONS:\n";
-  print STDERR "    --print5p        Print 5p flank\n";
-  print STDERR "    --print3p        Print 3p flank\n";
-  print STDERR "    --ref <ref_col>  always prints a branch with covg on ref_col >= 1\n";
-  print STDERR "    --branch <1|2|1,2> print branch 1 or 2 or BOTH\n";
-  print STDERR "    --trim <t>       trim sequences longer than <t>\n";
+  print STDERR "    --print5p           Print 5p flank\n";
+  print STDERR "    --print3p           Print 3p flank\n";
+  print STDERR "    --ref <ref_col>     always prints a branch with covg on ref_col >= 1\n";
+  print STDERR "    --branch <1|2|1,2>  print branch 1 or 2 or BOTH\n";
+  print STDERR "    --trim <t>          trim sequences longer than <t>\n";
   print STDERR "\n";
-  print STDERR "    Note: when both --ref and --branch are used, will print --branch\n";
+  print STDERR "    Note: when both --ref and --branch are specified, will print --branch\n";
   print STDERR "          when no branch has covgs on ref_col >= 1\n";
   
   exit;
@@ -31,7 +31,9 @@ sub print_usage
 
 my $covgs_file;
 
-my ($trim, $ref_col, $branch_to_print);
+my $trim;
+my $ref_col;
+my $branch_to_print;
 
 my $print5p = 0;
 my $print3p = 0;

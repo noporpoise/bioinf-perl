@@ -86,7 +86,8 @@ sub new
       _next_line => $next_line,
       _header => $header,
       _columns_hash => \%columns_hash,
-      _columns_arr => \@columns_arr
+      _columns_arr => \@columns_arr,
+      _unread_entries => []
   };
 
   bless $self, $class;
@@ -154,9 +155,21 @@ sub set_columns_with_arr
   $self->{_columns_arr} = $cols_arrref;
 }
 
+sub unread_entry
+{
+  my ($self, $entry) = @_;
+
+  push(@{$self->{_unread_entries}}, $entry);
+}
+
 sub read_entry
 {
   my ($self) = @_;
+  
+  if(@{$self->{_unread_entries}} > 0)
+  {
+    return pop(@{$self->{_entry_buffered}});
+  }
   
   my $vcf_line = $self->read_line();
   
@@ -183,13 +196,13 @@ sub read_entry
   
   if(@entry_cols < $num_of_cols)
   {
-    croak("Not enough columns in VCF entry " .
-          "(got ".@entry_cols.", expected ".$num_of_cols.")");
+    croak("Not enough columns in VCF entry (ID: ".$entry{'ID'}."; " .
+          "got " . @entry_cols . " columns, expected " . $num_of_cols . ")");
   }
   elsif(@entry_cols > $num_of_cols)
   {
-    croak("Too many columns in VCF entry " .
-          "(got ".@entry_cols.", expected ".$num_of_cols.")");
+    croak("Too many columns in VCF entry (ID: ".$entry{'ID'}."; " .
+          "got " . @entry_cols . " columns, expected " . $num_of_cols . ")");
   }
 
   my %info_col = ();
@@ -217,7 +230,7 @@ sub read_entry
   # Auto-correct chromosome names
   if($entry{'CHROM'} !~ /^chr/)
   {
-    if($entry{'CHROM'} =~ /^chr(.*)/i) { # matches only with case-insensitive
+    if($entry{'CHROM'} =~ /^chr(.*)$/i) { # matches only with case-insensitive
       $entry{'CHROM'} = 'chr'.$1;
     }
     else {
@@ -289,7 +302,7 @@ sub get_list_of_sample_names
 {
   my ($self) = @_;
 
-  my ($cols_hashref, $cols_arrref) = $self->get_columns();
+  my @cols_array = $self->get_columns_array();
 
   my %usual_fields = ();
   my @standard_cols = get_standard_vcf_columns();
@@ -298,7 +311,7 @@ sub get_list_of_sample_names
     $usual_fields{uc($standard_col)} = 1;
   }
 
-  my @samples = grep {!defined($usual_fields{uc($_)})} @$cols_arrref;
+  my @samples = grep {!defined($usual_fields{uc($_)})} @cols_array;
   return @samples;
 }
 

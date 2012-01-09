@@ -20,12 +20,37 @@ sub print_usage
   print STDERR "  - If <in.vcf> is '-', reads from stdin\n";
   print STDERR "  - <K> is max flank size\n";
   print STDERR "  - If [ref.files] omitted, uses INFO flank tags\n";
+  print STDERR "\n";
+  print STDERR "  OTPIONS:\n";
+  print STDERR "    --trim <t>          trim sequences longer than <t>\n";
   exit;
 }
 
-if(@ARGV < 1)
+if(@ARGV < 2 || @ARGV > 5)
 {
   print_usage();
+}
+
+my $trim;
+
+while(@ARGV > 2 && $ARGV[0] =~ /^--/)
+{
+  my $arg = shift(@ARGV);
+
+  if($arg =~ /^-?-trim$/i)
+  {
+    $trim = shift(@ARGV);
+
+    if($trim !~ /^\d+$/ || $trim == 0)
+    {
+      print_usage("Invalid trim value ('$trim') - " .
+                  "must be positive integer (>0)");
+    }
+  }
+  else
+  {
+    last;
+  }
 }
 
 my $max_flank_size = shift;
@@ -86,48 +111,67 @@ while(defined($vcf_entry = $vcf->read_entry()))
   my $ref_allele = $vcf_entry->{'true_REF'};
   my $alt_allele = $vcf_entry->{'true_ALT'};
 
-  my ($left_flank, $right_flank);
+  my $left_flank = "";
+  my $right_flank = "";
 
-  if(@ref_files == 0)
+  if($max_flank_size > 0)
   {
-    if(!defined($vcf_entry->{'INFO'}->{'left_flank'}) ||
-       !defined($vcf_entry->{'INFO'}->{'right_flank'}))
+    if(@ref_files == 0)
     {
-      print_usage("Flanks missing on entry $vcf_entry->{'ID'}");
-    }
+      if(!defined($vcf_entry->{'INFO'}->{'left_flank'}) ||
+         !defined($vcf_entry->{'INFO'}->{'right_flank'}))
+      {
+        print_usage("Flanks missing on entry $vcf_entry->{'ID'}");
+      }
 
-    $left_flank = $vcf_entry->{'INFO'}->{'left_flank'};
-    $right_flank = $vcf_entry->{'INFO'}->{'right_flank'};
+      $left_flank = $vcf_entry->{'INFO'}->{'left_flank'};
+      $right_flank = $vcf_entry->{'INFO'}->{'right_flank'};
   
-    if(length($left_flank) > $max_flank_size)
-    {
-      $left_flank = substr($left_flank, 0, $max_flank_size);
-    }
+      if(length($left_flank) > $max_flank_size)
+      {
+        $left_flank = substr($left_flank, 0, $max_flank_size);
+      }
     
-    if(length($left_flank) > $max_flank_size)
+      if(length($left_flank) > $max_flank_size)
+      {
+        $right_flank = substr($right_flank, -$max_flank_size);
+      }
+    }
+    elsif(defined($ref_genomes{$vcf_entry->{'CHROM'}}))
     {
-      $right_flank = substr($right_flank, -$max_flank_size);
+      ($left_flank, $right_flank) = get_flanks_from_ref_genome($vcf_entry);
+    }
+    else
+    {
+      die("Chromosome '$vcf_entry->{'CHROM'}' not in reference " .
+          "(".join(",",sort keys %ref_genomes).")");
     }
   }
-  elsif(defined($ref_genomes{$vcf_entry->{'CHROM'}}))
-  {
-    ($left_flank, $right_flank) = get_flanks_from_ref_genome($vcf_entry);
-  }
-  else
-  {
-    die("Chromosome '$vcf_entry->{'CHROM'}' not in reference " .
-        "(".join(",",sort keys %ref_genomes).")");
-  }
 
-  print ">".$vcf_entry->{'ID'}."_ref\n";
-  print $left_flank . $ref_allele . $right_flank . "\n";
+  print_to_fasta($vcf_entry->{'ID'}."_ref",
+                 $left_flank . $ref_allele . $right_flank);
 
-  print ">".$vcf_entry->{'ID'}."_alt\n";
-  print $left_flank . $alt_allele . $right_flank . "\n";
+  print_to_fasta($vcf_entry->{'ID'}."_alt",
+                 $left_flank . $alt_allele . $right_flank);
 }
 
 close($vcf_handle);
 
+sub print_to_fasta
+{
+  my ($fasta_name,$fasta_seq) = @_;
+
+  print ">$fasta_name\n";
+  
+  if(defined($trim))
+  {
+    print substr($fasta_seq,0,$trim) . "\n";
+  }
+  else
+  {
+    print "$fasta_seq\n";
+  }
+}
 
 sub get_flanks_from_ref_genome
 {

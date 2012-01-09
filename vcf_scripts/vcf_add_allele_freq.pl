@@ -13,11 +13,12 @@ sub print_usage
 
   print STDERR "Usage: ./vcf_add_allele_freq.pl [file.vcf]\n";
   print STDERR "  Add (or correct) allele frequency INFO tag in a VCF file\n";
-  print STDERR "  Uses AF (Alt allele Frequency) tag: 0..1\n";
+  print STDERR "  Adds AF (Alt allele Frequency) INFO tag: 0..1\n";
   exit;
 }
 
-if(@ARGV > 1) {
+if(@ARGV > 1)
+{
   print_usage();
 }
 
@@ -28,8 +29,10 @@ my $vcf_file = shift;
 #
 my $vcf_handle;
 
-if(defined($vcf_file) && $vcf_file ne "-") {
-  open($vcf_handle, $vcf_file) or print_usage("Cannot open VCF file '$vcf_file'\n");
+if(defined($vcf_file) && $vcf_file ne "-")
+{
+  open($vcf_handle, $vcf_file)
+    or print_usage("Cannot open VCF file '$vcf_file'\n");
 }
 elsif(-p STDIN) {
   # STDIN is connected to a pipe
