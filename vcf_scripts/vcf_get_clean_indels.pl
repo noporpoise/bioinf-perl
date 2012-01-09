@@ -45,12 +45,7 @@ else
 #
 my $vcf = new VCFFile($vcf_handle);
 
-my $add_header = "##INFO=<ID=AA_INDEL,Number=1,Type=String," .
-                 "Description=\"Whether indel is ins/del using outgroup\">\n";
-$add_header .= "##ALT=<ID=INSERT,Description=\"Insertion\">\n";
-$add_header .= "##ALT=<ID=DELETE,Description=\"Deletion\">\n";
-
-print vcf_add_to_header($vcf->get_header(), $add_header);
+print $vcf->get_header();
 
 my $num_of_variants = 0;
 my $num_of_clean = 0;
@@ -61,35 +56,11 @@ while(defined($vcf_entry = $vcf->read_entry()))
 {
   $num_of_variants++;
 
-  if(length($vcf_entry->{'true_REF'}) == 0 ||
-     length($vcf_entry->{'true_ALT'}) == 0)
+  if($vcf_entry->{'INFO'}->{'SVLEN'} > 0 &&
+     (length($vcf_entry->{'true_REF'}) == 0 ||
+      length($vcf_entry->{'true_ALT'}) == 0))
   {
-    my $ancestor = $vcf_entry->{'INFO'}->{'AA'};
-    # $ancestor is 0 for ref allele, 1 for alt allele
-
-    if(defined($ancestor) && $ancestor ne ".")
-    {
-      # Add clearer ancestral annotation to variants
-      # (only meaningful on clean indels)
-
-      my $svlen = length($vcf_entry->{'true_ALT'}) -
-                  length($vcf_entry->{'true_REF'});
-
-      if($ancestor == 0 && $svlen > 0 ||
-         $ancestor == 1 && $svlen < 0)
-      {
-        $vcf_entry->{'INFO'}->{'AA_INDEL'} = 'INSERT';
-      }
-      
-      if($ancestor == 0 && $svlen < 0 ||
-         $ancestor == 1 && $svlen > 0)
-      {
-        $vcf_entry->{'INFO'}->{'AA_INDEL'} = 'DELETE';
-      }
-    }
-
     $num_of_clean++;
-
     $vcf->print_entry($vcf_entry);
   }
 }
