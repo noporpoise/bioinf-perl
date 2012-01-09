@@ -229,10 +229,21 @@ while(defined($mapping_line = <$mapping_handle>))
   }
 }
 
-my $percent = 100 * $num_of_ancestral / $num_of_variants;
-print STDERR num2str($num_of_ancestral) . " / " . num2str($num_of_variants) .
+my $percent = 100 * $num_of_indels / $num_of_variants;
+
+print STDERR num2str($num_of_indels) . " / " . num2str($num_of_variants) .
+             " (" . sprintf("%.2f", $percent) . "%) of variants are indels\n";
+
+$percent = 100 * $num_of_ancestral / $num_of_indels;
+print STDERR num2str($num_of_ancestral) . " / " . num2str($num_of_indels) .
              " (" . sprintf("%.2f", $percent) . "%) " .
-             "polarised using '$outgroup_name'\n";
+             "of indels polarised using '$outgroup_name'\n";
+
+$percent = 100 * $num_of_ancestral / $num_of_variants;
+print STDERR "Therefore assigned " .
+             num2str($num_of_ancestral) . " / " . num2str($num_of_variants) .
+             " (" . sprintf("%.2f", $percent) . "%) " .
+             "of variants an ancestral allele\n";
 
 close($vcf_handle);
 close($mapping_handle);
