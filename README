@@ -1,3 +1,9 @@
 Bioinformatics perl scripts
 20 Dec 2011
 Isaac Turner
+
+Move lib/*.pm files to a directory in perl's @INC.  To add a directory to perl's
+@INC paths, add the following lines to ~/.profile
+
+PERL5LIB=${PERL5LIB}:${HOME}/perl/lib/
+export PERL5LIB
