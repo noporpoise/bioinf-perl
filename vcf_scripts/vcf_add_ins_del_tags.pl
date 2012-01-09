@@ -82,19 +82,19 @@ while(defined($vcf_entry = $vcf->read_entry()))
   {
     if($ins)
     {
-      $vcf_entry->{'INFO'}->{$ins_tag} = 1;
-      delete($vcf_entry->{'INFO'}->{$del_tag});
+      $vcf_entry->{'INFO_flags'}->{$ins_tag} = 1;
+      delete($vcf_entry->{'INFO_flags'}->{$del_tag});
     }
     else
     {
-      $vcf_entry->{'INFO'}->{$del_tag} = 1;
-      delete($vcf_entry->{'INFO'}->{$ins_tag});
+      $vcf_entry->{'INFO_flags'}->{$del_tag} = 1;
+      delete($vcf_entry->{'INFO_flags'}->{$ins_tag});
     }
   }
   else
   {
-    delete($vcf_entry->{'INFO'}->{$del_tag});
-    delete($vcf_entry->{'INFO'}->{$ins_tag});
+    delete($vcf_entry->{'INFO_flags'}->{$del_tag});
+    delete($vcf_entry->{'INFO_flags'}->{$ins_tag});
   }
 
   $vcf->print_entry($vcf_entry);
