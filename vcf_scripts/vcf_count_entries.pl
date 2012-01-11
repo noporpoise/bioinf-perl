@@ -5,16 +5,14 @@ use warnings;
 
 use VCFFile;
 
-# dev: add merge
-
 sub print_usage
 {
   for my $err (@_) {
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_print.pl [file.vcf]\n";
-  print STDERR "  Read and print a VCF file\n";
+  print STDERR "Usage: ./vcf_count_entries.pl [file.vcf]\n";
+  print STDERR "  Count the number of entries in a VCF file\n";
   exit;
 }
 
@@ -48,13 +46,15 @@ else
 #
 my $vcf = new VCFFile($vcf_handle);
 
-print $vcf->get_header();
-
 my $vcf_entry;
+
+my $num_of_entries = 0;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
-  $vcf->print_entry($vcf_entry);
+  $num_of_entries++;
 }
+
+print "$num_of_entries\n";
 
 close($vcf_handle);

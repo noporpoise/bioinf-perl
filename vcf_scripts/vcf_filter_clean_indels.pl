@@ -11,8 +11,8 @@ sub print_usage
   for my $err (@_) {
     print STDERR "Error: $err\n";
   }
-  
-  print STDERR "Usage: ./vcf_get_clean_indels.pl [in.vcf]\n";
+
+  print STDERR "Usage: ./vcf_filter_clean_indels.pl [in.vcf]\n";
   print STDERR "  Prints variants were one allele is 0bp and the other is >0bp\n";
   exit;
 }
