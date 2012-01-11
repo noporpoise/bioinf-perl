@@ -99,14 +99,29 @@ sub print_set
   if(@tag_values == @tags)
   {
     # print tags
-    print join($csvsep, @tag_values) . $csvsep .
-          $hashref->{$tag_values[$#tags]} . "\n";
+    print join($csvsep, @tag_values) . $csvsep . $hashref . "\n";
   }
   else
   {
-    for my $value (sort keys %{$hashref})
+    my @keys = keys %{$hashref};
+    
+    # Check if all numbers
+    my $all_nums = 1;
+    
+    for my $key (@keys)
     {
-      print_set($hashref, @tag_values, $value);
+      if($key !~ /^(?:\d+\.?\d*|\d*\.?\d+)$/)
+      {
+        $all_nums = 0;
+        last;
+      }
+    }
+    
+    @keys = $all_nums ? sort {$a <=> $b} @keys : sort @keys;
+    
+    for my $value (@keys)
+    {
+      print_set($hashref->{$value}, @tag_values, $value);
     }
   }
 }

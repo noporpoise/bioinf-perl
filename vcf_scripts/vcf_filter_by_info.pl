@@ -12,7 +12,7 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_filter_by_info.pl <file.vcf> " .
+  print STDERR "Usage: ./vcf_filter_by_info.pl [--invert] <file.vcf> " .
                "[<INFO_FIELD> <VALUE_REGEX>] ..\n";
   print STDERR "  Isaac Turner <isaac.turner\@dtc.ox.ac.uk> 2011/03/26\n";
   exit;
@@ -21,6 +21,14 @@ sub print_usage
 if(@ARGV < 1)
 {
   print_usage();
+}
+
+my $invert = 0;
+
+if($ARGV[0] =~ /^-?-invert$/i)
+{
+  $invert = 1;
+  shift;
 }
 
 my $vcf_file = shift;
@@ -87,7 +95,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     }
   }
 
-  if($match == 1)
+  if($match != $invert)
   {
     $num_of_filtered_entries++;
     $vcf->print_entry($vcf_entry);
