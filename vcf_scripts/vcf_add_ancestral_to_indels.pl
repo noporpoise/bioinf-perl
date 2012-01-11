@@ -92,7 +92,8 @@ my $vcf_entry;
 
 my $num_of_indels = 0;
 my $num_of_variants = 0;
-my $num_of_ancestral = 0;
+my $num_of_ref = 0;
+my $num_of_alt = 0;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
@@ -205,9 +206,13 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
     $vcf_entry->{'INFO'}->{'AA'} = $aa;
 
-    if($aa ne '.')
+    if($aa eq '0')
     {
-      $num_of_ancestral++;
+      $num_of_ref++;
+    }
+    elsif($aa eq '1')
+    {
+      $num_of_alt++;
     }
   }
 
@@ -229,7 +234,10 @@ while(defined($mapping_line = <$mapping_handle>))
   }
 }
 
-my $percent = 100 * $num_of_indels / $num_of_variants;
+my $percent;
+my $num_of_ancestral = $num_of_ref + $num_of_alt;
+
+$percent = 100 * $num_of_indels / $num_of_variants;
 
 print STDERR num2str($num_of_indels) . " / " . num2str($num_of_variants) .
              " (" . sprintf("%.2f", $percent) . "%) of variants are indels\n";
@@ -245,6 +253,17 @@ print STDERR "Therefore assigned " .
              " (" . sprintf("%.2f", $percent) . "%) " .
              "of variants an ancestral allele\n";
 
+
+# Percentage of ref / alt
+$percent = 100 * $num_of_ref / $num_of_ancestral;
+print STDERR num2str($num_of_ref) . " / " . num2str($num_of_ancestral) .
+             " (" . sprintf("%.2f", $percent) . "%) assigned ref\n";
+
+$percent = 100 * $num_of_alt / $num_of_ancestral;
+print STDERR num2str($num_of_alt) . " / " . num2str($num_of_ancestral) .
+             " (" . sprintf("%.2f", $percent) . "%) assigned alt\n";
+
+# Done
 close($vcf_handle);
 close($mapping_handle);
 
