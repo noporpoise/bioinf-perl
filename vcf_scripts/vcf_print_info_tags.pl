@@ -15,7 +15,7 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_print_info.pl <file.vcf> [infotag1 ..]\n";
+  print STDERR "Usage: ./vcf_print_info_tags.pl <file.vcf> <infotag1 ..>\n";
   print STDERR "  Prints comma separated info tag values from VCF entries\n";
   print STDERR "  If <file.vcf> is '-' reads from STDIN\n";
   exit;
@@ -35,8 +35,10 @@ my @tags = @ARGV;
 #
 my $vcf_handle;
 
-if(defined($vcf_file) && $vcf_file ne "-") {
-  open($vcf_handle, $vcf_file) or print_usage("Cannot open VCF file '$vcf_file'\n");
+if(defined($vcf_file) && $vcf_file ne "-")
+{
+  open($vcf_handle, $vcf_file)
+    or print_usage("Cannot open VCF file '$vcf_file'\n");
 }
 elsif(-p STDIN) {
   # STDIN is connected to a pipe
@@ -52,7 +54,8 @@ else
 #
 my $vcf = new VCFFile($vcf_handle);
 
-print $vcf->get_header();
+# Print CSV header
+print join($csvsep, @tags)."\n";
 
 my $vcf_entry;
 
@@ -62,7 +65,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   for my $tag (@tags)
   {
-    my $d = defined($vcf->{'INFO'}->{$tag}) ? $vcf->{'INFO'}->{$tag} : "";
+    my $d = defined($vcf_entry->{'INFO'}->{$tag}) ? $vcf_entry->{'INFO'}->{$tag} : "";
     push(@data, $d);
   }
 
