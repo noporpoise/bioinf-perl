@@ -32,6 +32,8 @@ sub new
 
   if(!defined($next_line) || $next_line !~ /#CHROM/)
   {
+    chomp($header);
+
     if(length($header) > 0)
     {
       croak("Invalid VCF - expected column headers");
