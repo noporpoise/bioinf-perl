@@ -53,7 +53,6 @@ else
   print_usage("Must specify or pipe in a VCF file");
 }
 
-
 #
 # Load reference files
 #
@@ -82,7 +81,7 @@ while(my ($key,$value) = each(%ref_genomes))
 #
 my $vcf = new VCFFile($vcf_handle);
 
-print $vcf->get_header();
+$vcf->print_header();
 
 my $num_of_filtered_entries = 0;
 my $total_num_entries = 0;

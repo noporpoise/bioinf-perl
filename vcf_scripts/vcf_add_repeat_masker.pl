@@ -120,13 +120,15 @@ for my $rmsk_chr (keys %repeat_elements_by_chr)
 #
 my $vcf = new VCFFile($vcf_handle);
 
-my $additional_header = '';
-
+# Add header tags
 for my $class (@rmsk_classes)
 {
-  $additional_header .= '##INFO=<ID=rmsk_'.$class.',Number=0,Type=Flag,' .
-                        'Description="In repeat masker element">' . "\n";
+  my $tag_description = "Variant in repeat masker element $class";
+  $vcf->add_header_tag("INFO", "rmsk_".$class, 0, "Flag", $tag_description);
 }
+
+# Print VCF header
+$vcf->print_header();
 
 print vcf_add_to_header($vcf->get_header(), $additional_header);
 

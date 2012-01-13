@@ -50,7 +50,8 @@ for(my $i = 0; $i < @ARGV; $i+=2)
 #
 my $vcf_handle;
 
-if($vcf_file ne "-") {
+if(defined($vcf_file) && $vcf_file ne "-")
+{
   open($vcf_handle, $vcf_file) or die("Cannot open VCF file '$vcf_file'\n");
 }
 elsif(-p STDIN) {
@@ -66,7 +67,8 @@ else
 # Read VCF
 #
 my $vcf = new VCFFile($vcf_handle);
-print $vcf->get_header();
+
+$vcf->print_header();
 
 my $num_of_filtered_entries = 0;
 my $total_num_entries = 0;

@@ -77,15 +77,15 @@ while(defined($mapping_line = <$mapping_handle>) && $mapping_line =~ /^@/) {}
 
 seek($mapping_handle,-length($mapping_line),SEEK_CUR);
 
-# Read VCF
-my $header_add = "##INFO=<ID=AA,Number=1,Type=String," .
-                 "Description=\"Ancestral Allele using outgroup $outgroup_name " .
-                 "(.=unknown, 0=reference, 1=alternate allele)\">\n";
-
-print vcf_add_to_header($vcf->get_header(), $header_add);
-
 my @mapping_columns = qw(name flags chr pos MAPQ CIGAR
                          rnext pnext tlen seq quality);
+
+# Print VCF header
+my $tag_description = "Ancestral Allele using outgroup $outgroup_name " .
+                      "(.=unknown, 0=reference, 1=alternate allele)";
+
+$vcf->add_header_tag("INFO", "AA", 1, "String", $tag_description);
+$vcf->print_header();
 
 # Read VCF entry
 my $vcf_entry;

@@ -53,7 +53,7 @@ else
 #
 my $vcf = new VCFFile($vcf_handle);
 
-print $vcf->get_header();
+$vcf->print_header();
 
 my $num_of_variants = 0;
 my $num_printed = 0;

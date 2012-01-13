@@ -16,8 +16,8 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
   
-  print STDERR "Usage: ./vcf_dist_from_genes.pl <ensGene.txt> <CDS/TX> <chr_lengths.csv> " .
-               "<binsize> <out> [in.vcf]\n";
+  print STDERR "Usage: ./vcf_dist_from_genes.pl <ensGene.txt> <CDS/TX> " .
+               "<chr_lengths.csv> <binsize> <out> [in.vcf]\n";
   print STDERR "  Get distribution of variants around genes\n";
   print STDERR "  <CDS/TX> whether to use coding or transcription start\n";
   print STDERR "  <binsize> is the size of bins in kbp\n";

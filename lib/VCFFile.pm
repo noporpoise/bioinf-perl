@@ -9,9 +9,9 @@ use Carp;
 use base 'Exporter';
 our @EXPORT = qw(get_standard_vcf_columns vcf_add_to_header);
 
-my @header_tag_fields = qw(INFO FILTER FORMAT);
+my @header_tag_columns = qw(ALT FILTER FORMAT INFO);
 my @header_tag_types = qw(Integer Float Character String Flag);
-my @header_tag_hashkeys = qw(Field ID Number Type Description);
+my @header_tag_hashkeys = qw(column ID Number Type Description);
 
 sub new
 {
@@ -49,14 +49,14 @@ sub new
     {
       my $tag;
       # Prints error and returns undef if not valid line
-      if(defined($tag = parse_header_tag($1,$2)))
+      if(defined($tag = _parse_header_tag($1,$2)))
       {
         $header_tags{$tag->{'ID'}} = $tag;
       }
     }
     elsif($next_line =~ /#[^#]/)
     {
-      #CHROM... column header line
+      # column header line (e.g. '#CHROM..')
       my $header_line = substr($next_line, 1);
       chomp($header_line);
 
@@ -133,13 +133,13 @@ sub new
   return $self;
 }
 
-sub peak_line
+sub _peak_line
 {
   my ($self) = @_;
   return $self->{_next_line};
 }
 
-sub read_line
+sub _read_line
 {
   my ($self) = @_;
   my $temp_line = $self->{_next_line};
@@ -154,12 +154,12 @@ sub read_line
 # Headers
 #
 
-sub parse_header_tag
+sub _parse_header_tag
 {
-  # $field=<$tag_str>
-  my ($field,$tag_str) = @_;
+  # $column=<$tag_str>
+  my ($tag_col,$tag_str) = @_;
 
-  my %tag = ();
+  my %tag = ('column' => $tag_col);
 
   my @tag_parts = split(/\s*,\s*/, $tag_str);
 
@@ -196,18 +196,18 @@ sub parse_header_tag
   }
 
   # Check values - print error if needed
-  return check_valid_header_tag(\%tag) ? \%tag : undef;
+  return _check_valid_header_tag(\%tag) ? \%tag : undef;
 }
 
-sub cmp_header_tags
+sub _cmp_header_tags
 {
   my ($a, $b) = @_;
 
   my $cmp;
   
-  for my $field ('Field','ID','Type','Description')
+  for my $tag_field ('column','ID','Type','Description')
   {
-    my $cmp = $a->{$field} cmp $a->{$field};
+    my $cmp = $a->{$tag_field} cmp $a->{$tag_field};
   
     if($cmp != 0)
     {
@@ -239,21 +239,23 @@ sub print_header
   # Print tags
   my $header_tags = $self->{_header_tags};
 
-  for my $key (sort cmp_header_tags keys %$header_tags)
+  for my $key (sort _cmp_header_tags keys %$header_tags)
   {
-    if($header_tags->{'Field'} =~ /FILTER/)
+    my $tag = $header_tags->{$key};
+
+    if($tag->{'column'} =~ /^(?:ALT|FILTER)$/)
     {
-      print $out "##" . $header_tags->{'Field'} . "=<" .
-                 "ID=" . $header_tags->{'ID'} . "," .
-                 "Description=\"" . $header_tags->{'Description'} . "\">\n";
+      print $out "##" . $tag->{'column'} . "=<" .
+                 "ID=" . $tag->{'ID'} . "," .
+                 "Description=\"" . $tag->{'Description'} . "\">\n";
     }
     else
     {
-      print $out "##" . $header_tags->{'Field'} . "=<" .
-                 "ID=" . $header_tags->{'ID'} . "," .
-                 "Number=" . $header_tags->{'Number'} . "," .
-                 "Type=" . $header_tags->{'Type'} . "," .
-                 "Description=\"" . $header_tags->{'Description'} . "\">\n";
+      print $out "##" . $tag->{'column'} . "=<" .
+                 "ID=" . $tag->{'ID'} . "," .
+                 "Number=" . $tag->{'Number'} . "," .
+                 "Type=" . $tag->{'Type'} . "," .
+                 "Description=\"" . $tag->{'Description'} . "\">\n";
     }
   }
 
@@ -266,14 +268,14 @@ sub print_header
   }
 }
 
-sub vcf_add_metainfo_to_header
+sub add_header_metainfo
 {
   my ($self, $key, $value) = @_;
 
   $self->{_header_metainfo}->{$key} = $value;
 }
 
-sub vcf_remove_metainfo_from_header
+sub remove_header_metainfo
 {
   my ($self, $key) = @_;
 
@@ -281,20 +283,20 @@ sub vcf_remove_metainfo_from_header
 }
 
 # Returns 0 if invalid, 1 if valid
-sub check_valid_header_tag
+sub _check_valid_header_tag
 {
   my ($tag) = @_;
 
   # Check all the things!
 
-  # Field
-  if(!defined($tag->{'Field'}))
+  # column
+  if(!defined($tag->{'column'}))
   {
-    die("VCF header tag 'Field' not set");
+    die("VCF header tag 'column' not set");
   }
-  elsif(!grep(/^$tag->{'Field'}$/, @header_tag_fields))
+  elsif(!grep(/^$tag->{'column'}$/, @header_tag_columns))
   {
-    carp("VCF header tag field not one of ".join(",", @header_tag_types)."\n");
+    carp("VCF header tag column not one of ".join(",", @header_tag_types)."\n");
     return 0;
   }
 
@@ -310,7 +312,7 @@ sub check_valid_header_tag
     return 0;
   }
 
-  if($tag->{'Field'} ne "FILTER")
+  if($tag->{'column'} !~ /^(?:ALT|FILTER)$/)
   {
     # Number
     if(!defined($tag->{'Number'}))
@@ -338,12 +340,13 @@ sub check_valid_header_tag
   }
   elsif(defined($tag->{'Number'}) || defined($tag->{'Type'}))
   {
-    carp("VCF header FILTER tag cannot have Number or Type attributes\n");
+    carp("VCF header ALT/FILTER tags cannot have Number or Type attributes\n");
     return 0;
   }
 
   # Combinations
-  if($tag->{'Type'} eq "Flag" && $tag->{'Number'} ne "0")
+  if(defined($tag->{'Type'}) && $tag->{'Type'} eq "Flag" &&
+     $tag->{'Number'} ne "0")
   {
     carp("VCF header type 'Flag' cannot have 'Number' other than 0");
     return 0;
@@ -352,31 +355,39 @@ sub check_valid_header_tag
   return 1;
 }
 
-sub vcf_add_tag_to_header
+sub add_header_tag
 {
-  my ($self, $tag_field, $tag_id, $tag_number, $tag_type, $tag_description)
+  my ($self, $tag_col, $tag_id, $tag_number, $tag_type, $tag_description)
     = @_;
 
-  # INFO, FILTER, FORMAT.. field is in upper case
-  $tag_field = uc($tag_field);
+  # INFO, FILTER, FORMAT.. column is in upper case
+  $tag_col = uc($tag_col);
 
   # Integer, String.. lowercase with uppercase first letter
   $tag_type = lc($tag_type);
   substr($tag_type,0,1) = uc(substr($tag_type,0,1));
 
-  my $tag = {'Field' => $tag_field,
+  my $tag = {'column' => $tag_col,
              'ID' => $tag_id,
-             'Number' => $tag_number,
-             'Type' => $tag_type,
              'Description' => $tag_description};
 
-  if(check_valid_header_tag($tag))
+  if(defined($tag_number))
+  {
+    $tag->{'Number'} = $tag_number;
+  }
+
+  if(defined($tag_number))
+  {
+    $tag->{'Type'} = $tag_type;
+  }
+
+  if(_check_valid_header_tag($tag))
   {
     $self->{_header_tags}->{$tag_id} = $tag;
   }
 }
 
-sub vcf_remove_tag_from_header
+sub remove_header_tag
 {
   my ($self,$tag_id) = @_;
 
@@ -480,18 +491,23 @@ sub unread_entry
 sub read_entry
 {
   my ($self) = @_;
-  
+
   if(@{$self->{_unread_entries}} > 0)
   {
     return pop(@{$self->{_entry_buffered}});
   }
-  
-  my $vcf_line = $self->read_line();
-  
-  if(!defined($vcf_line)) {
+
+  my $vcf_line;
+
+  # Read over empty line
+  while(defined($vcf_line = $self->_read_line()) && $vcf_line =~ /^\s*$/) {}
+
+  # no entries found
+  if(!defined($vcf_line))
+  {
     return undef;
   }
-  
+
   chomp($vcf_line);
 
   my %entry = (); # store details in this hash
@@ -508,7 +524,7 @@ sub read_entry
   }
 
   my $num_of_cols = scalar(@{$self->{_columns_arr}});
-  
+
   if(@entry_cols < $num_of_cols)
   {
     croak("Not enough columns in VCF entry (ID: ".$entry{'ID'}."; " .
@@ -541,7 +557,7 @@ sub read_entry
 
   $entry{'INFO'} = \%info_col;
   $entry{'INFO_flags'} = \%info_flags;
-  
+
   # Auto-correct chromosome names
   if($entry{'CHROM'} !~ /^chr/)
   {
@@ -552,13 +568,10 @@ sub read_entry
       $entry{'CHROM'} = 'chr'.$entry{'CHROM'};
     }
   }
-  
-  # OR use complex method in UsefulModule:
-  #$entry{'CHROM'} = get_clean_chr_name($entry{'CHROM'});
-  
+
   # Correct SVLEN
   $entry{'INFO'}->{'SVLEN'} = length($entry{'ALT'}) - length($entry{'REF'});
-  
+
   if(length($entry{'REF'}) != 1 || length($entry{'ALT'}) != 1)
   {
     # variant is not a SNP
@@ -573,7 +586,7 @@ sub read_entry
     $entry{'true_ALT'} = $entry{'ALT'};
     $entry{'true_POS'} = $entry{'POS'};
   }
-  
+
   return \%entry;
 }
 

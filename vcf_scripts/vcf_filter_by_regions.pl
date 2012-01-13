@@ -112,7 +112,7 @@ else
 #
 my $vcf = new VCFFile($vcf_handle);
 
-print $vcf->get_header();
+$vcf->print_header();
 
 my $num_of_filtered_entries = 0;
 my $total_num_entries = 0;

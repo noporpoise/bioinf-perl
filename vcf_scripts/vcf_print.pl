@@ -48,7 +48,7 @@ else
 #
 my $vcf = new VCFFile($vcf_handle);
 
-print $vcf->get_header();
+$vcf->print_header();
 
 my $vcf_entry;
 

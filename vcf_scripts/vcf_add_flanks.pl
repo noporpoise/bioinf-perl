@@ -119,15 +119,11 @@ while(my ($key,$value) = each(%ref_genomes))
 #
 my $vcf = new VCFFile($vcf_handle);
 
-my $add_header = "##INFO=<ID=left_flank,Number=1,Type=String," .
-                 "Description=\"$flank_size bp adjacent in ref genome ".
-                 "'$ref_name'\">\n";
-
-$add_header .= "##INFO=<ID=right_flank,Number=1,Type=String," .
-               "Description=\"$flank_size bp adjacent in ref genome " .
-               "'$ref_name'\">\n";
-
-print vcf_add_to_header($vcf->get_header(), $add_header);
+# Add tags to header and print
+my $tag_description = "$flank_size bp adjacent in ref genome '$ref_name'";
+$vcf->add_header_tag("INFO", "left_flank", 1, "String", $tag_description);
+$vcf->add_header_tag("INFO", "right_flank", 1, "String", $tag_description);
+$vcf->print_header();
 
 my $num_ref_mismatch = 0;
 my $num_ns_in_alleles_or_flanks = 0;

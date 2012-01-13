@@ -83,16 +83,12 @@ my $vcf = new VCFFile($vcf_handle);
 
 if(defined($flag))
 {
-  my $add_header = "##INFO=<ID=$flag,Number=0,Type=Flag, Description=\"" .
-                   ($invert ? "Not slippage indels" : "Slippage indels") .
-                   "\">\n";
+  # Add tag to VCF header
+  my $description = $invert ? "Not slippage indels" : "Slippage indels";
+  $vcf->vcf_add_header_tag("INFO", $flag, 0, "Flag", $description);
+}
 
-  print vcf_add_to_header($vcf->get_header(), $add_header);
-}
-else
-{
-  print $vcf->get_header();
-}
+$vcf->print_header();
 
 my $vcf_entry;
 

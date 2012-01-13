@@ -56,10 +56,10 @@ if(@sample_names == 0)
   print_usage("VCF doesn't have any genotyped samples in it");
 }
 
-my $additional_header = '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele ' .
-                        'Frequency, for each ALT allele, in the same order as listed">';
+my $tag = "Allele Frequency, for each ALT allele, in the same order as listed";
 
-print vcf_add_to_header($vcf->get_header(), $additional_header);
+$vcf->add_header_tag("INFO", "AF", 1, "Float", $tag);
+$vcf->print_header();
 
 my $vcf_entry;
 

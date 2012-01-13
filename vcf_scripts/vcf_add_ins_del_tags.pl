@@ -48,10 +48,10 @@ else
 #
 my $vcf = new VCFFile($vcf_handle);
 
-my $add_header = "##INFO=<ID=INDEL,Number=1,Type=String,Description=\"" .
-                 "INS=insertion, DEL=deletion or .=unknown\">";
-
-print vcf_add_to_header($vcf->get_header(), $add_header);
+# Add tag and print header
+my $tag_description = "Indel mutation: INS=insertion, DEL=deletion or .=unknown";
+$vcf->add_header_tag("INFO", "INDEL", 1, "String", $tag_description);
+$vcf->print_header();
 
 my $vcf_entry;
 
