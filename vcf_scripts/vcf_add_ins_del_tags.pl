@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use VCFFile;
+use List::Util qw(min max);
 
 sub print_usage
 {
@@ -56,22 +57,28 @@ my $vcf_entry;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
-  # SVLEN is length(alt) - length(ref)
-  if($vcf_entry->{'INFO'}->{'AA'} eq "0")
+  my $ref_len = length($vcf_entry->{'true_REF'});
+  my $alt_len = length($vcf_entry->{'true_ALT'});
+  
+  if(min($ref_len, $alt_len) == 0 && max($ref_len, $alt_len) > 0)
   {
-    # ref allele is ancestral
-    my $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} > 0);
-    $vcf_entry->{'INFO'}->{'INDEL'} = $ins ? 'INS' : 'DEL';
-  }
-  elsif($vcf_entry->{'INFO'}->{'AA'} eq "1")
-  {
-    # alt allele is ancestral
-    my $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} < 0);
-    $vcf_entry->{'INFO'}->{'INDEL'} = $ins ? 'INS' : 'DEL';
-  }
-  else
-  {
-    $vcf_entry->{'INFO'}->{'INDEL'} = '.';
+    # SVLEN is length(alt) - length(ref)
+    if($vcf_entry->{'INFO'}->{'AA'} eq "0")
+    {
+      # ref allele is ancestral
+      my $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} > 0);
+      $vcf_entry->{'INFO'}->{'INDEL'} = $ins ? 'INS' : 'DEL';
+    }
+    elsif($vcf_entry->{'INFO'}->{'AA'} eq "1")
+    {
+      # alt allele is ancestral
+      my $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} < 0);
+      $vcf_entry->{'INFO'}->{'INDEL'} = $ins ? 'INS' : 'DEL';
+    }
+    else
+    {
+      $vcf_entry->{'INFO'}->{'INDEL'} = '.';
+    }
   }
 
   $vcf->print_entry($vcf_entry);

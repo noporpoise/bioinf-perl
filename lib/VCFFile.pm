@@ -9,6 +9,10 @@ use Carp;
 use base 'Exporter';
 our @EXPORT = qw(get_standard_vcf_columns vcf_add_to_header);
 
+my @header_tag_fields = qw(INFO FILTER FORMAT);
+my @header_tag_types = qw(Integer Float Character String Flag);
+my @header_tag_hashkeys = qw(Field ID Number Type Description);
+
 sub new
 {
   my $class = shift;
@@ -19,74 +23,107 @@ sub new
   {
     croak("VCF file is empty");
   }
-  
-  my $header = '';
-  my %columns_hash = ();
+
+  #
+  # Load header
+  #
+  my %header_metainfo = ();
+  my %header_tags = ();
   my @columns_arr = ();
 
-  while(defined($next_line) && $next_line =~ /^##/)
+  # Example header lines:
+  ##fileDate=20090805
+  ##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+  #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA00001
+
+  while(defined($next_line))
   {
-    $header .= $next_line;
+    if($next_line =~ /##(.*)=(.*)/)
+    {
+      my ($key,$value) = ($1,$2);
+      chomp($value);
+      # header meta info line
+      $header_metainfo{$key} = $value;
+    }
+    elsif($next_line =~ /##(\w+)=<(.*)>/)
+    {
+      my $tag;
+      # Prints error and returns undef if not valid line
+      if(defined($tag = parse_header_tag($1,$2)))
+      {
+        $header_tags{$tag->{'ID'}} = $tag;
+      }
+    }
+    elsif($next_line =~ /#[^#]/)
+    {
+      #CHROM... column header line
+      my $header_line = substr($next_line, 1);
+      chomp($header_line);
+
+      @columns_arr = split(/\t+/, $header_line);
+
+      if(@columns_arr == 0)
+      {
+        carp("VCF columns missing");
+      }
+
+      # Peak at first entry
+      $next_line = <$handle>;
+      last;
+    }
+    elsif($next_line =~ /^##/)
+    {
+      chomp($next_line);
+      carp("VCF header line unrecognised '$next_line'");
+    }
+    elsif($next_line !~ /^\s*$/)
+    {
+      # Assume looking at first entry
+      last;
+    }
+
     $next_line = <$handle>;
   }
 
-  if(!defined($next_line) || $next_line !~ /#CHROM/)
+  if(@columns_arr == 0 && defined($next_line))
   {
-    chomp($header);
+    # No columns given, so assume some set of standard columns
+    # Test this assumption - error if not true
+    my @col_values = split(/\t/, $next_line);
 
-    if(length($header) > 0)
-    {
-      croak("Invalid VCF - expected column headers");
-    }
-    else {
-      # Assume some set of standard columns
-      my @col_values = split(/\t/, $next_line);
-      
-      my @expected_cols = get_standard_vcf_columns();
-      
-      if(@col_values < @expected_cols)
-      {
-        croak("Invalid VCF - missing column headers and too few columns");
-      }
-
-      @columns_arr = @expected_cols;
-      
-      for(my $i = 0; $i < @columns_arr; $i++) {
-        $columns_hash{$columns_arr[$i]} = $i;
-      }
-
-      my $num_of_samples = scalar(@col_values) - scalar(@expected_cols);
-
-      for(my $i = 1; $i <= $num_of_samples; $i++)
-      {
-        my $col_name = 'sample'.$i;
-        push(@columns_arr, $col_name);
-        $columns_hash{$col_name} = $col_name;
-      }
-    }
-  }
-  else
-  {
-    $header .= $next_line;
-  
-    my $header_line = substr($next_line, 1);
-    chomp($header_line);
+    my @expected_cols = get_standard_vcf_columns();
     
-    @columns_arr = split(/\t/, $header_line);
-
-    for(my $i = 0; $i < @columns_arr; $i++)
+    # Can be more columns that standard to include all samples,
+    # but fewer needs to be reported (fatal)
+    if(@col_values < @expected_cols)
     {
-      $columns_hash{$columns_arr[$i]} = $i;
+      croak("Invalid VCF - missing column headers and too few columns");
     }
 
-    # Peak at first entry
-    $next_line = <$handle>;
+    @columns_arr = @expected_cols;
+
+    # Include samples in list of columns
+    my $num_of_samples = scalar(@col_values) - scalar(@expected_cols);
+
+    for(my $i = 1; $i <= $num_of_samples; $i++)
+    {
+      push(@columns_arr, 'sample'.$i);
+    }
   }
-  
+
+  # Create a hash as another way to access headers
+  my %columns_hash = ();
+
+  for(my $i = 0; $i < @columns_arr; $i++)
+  {
+    $columns_hash{$columns_arr[$i]} = $i;
+  }
+
   my $self = {
       _handle => $handle,
       _next_line => $next_line,
-      _header => $header,
+      _header_metainfo => \%header_metainfo,
+      _header_tags => \%header_tags,
       _columns_hash => \%columns_hash,
       _columns_arr => \@columns_arr,
       _unread_entries => []
@@ -113,12 +150,278 @@ sub read_line
   return $temp_line;
 }
 
+#
+# Headers
+#
+
+sub parse_header_tag
+{
+  # $field=<$tag_str>
+  my ($field,$tag_str) = @_;
+
+  my %tag = ();
+
+  my @tag_parts = split(/\s*,\s*/, $tag_str);
+
+  for my $tag_part (@tag_parts)
+  {
+    if($tag_part =~ /^ID\s*=\s*(.*)\s*$/i)
+    {
+      if(defined($tag{'ID'})) {
+        carp("VCF header tag has multiple IDs");
+      }
+      $tag{'ID'} = $1;
+    }
+    elsif($tag_part =~ /^Number\s*=\s*(.*)\s*$/i)
+    {
+      if(defined($tag{'Number'})) {
+        carp("VCF header tag has multiple Number values");
+      }
+      $tag{'Number'} = $1;
+    }
+    elsif($tag_part =~ /^Type\s*=\s*(.*)\s*$/i)
+    {
+      if(defined($tag{'Type'})) {
+        carp("VCF header tag has multiple Type values");
+      }
+      $tag{'Type'} = $1;
+    }
+    elsif($tag_part =~ /^Description\s*=\s*\"(.*)\"\s*$/i)
+    {
+      if(defined($tag{'Description'})) {
+        carp("VCF header tag has multiple Description values");
+      }
+      $tag{'Description'} = $1;
+    }
+  }
+
+  # Check values - print error if needed
+  return check_valid_header_tag(\%tag) ? \%tag : undef;
+}
+
+sub cmp_header_tags
+{
+  my ($a, $b) = @_;
+
+  my $cmp;
+  
+  for my $field ('Field','ID','Type','Description')
+  {
+    my $cmp = $a->{$field} cmp $a->{$field};
+  
+    if($cmp != 0)
+    {
+      return $cmp;
+    }
+  }
+
+  return $a->{'Number'} <=> $b->{'Number'};
+}
+
+sub print_header
+{
+  my ($self, $out) = @_;
+
+  # Open out handle to stdout, if not already defined
+  if(!defined($out))
+  {
+    open($out, ">-");
+  }
+
+  # Print metainfo lines
+  my $header_metainfo = $self->{_header_metainfo};
+
+  for my $key (sort keys %$header_metainfo)
+  {
+    print $out "##$key=$header_metainfo->{$key}\n";
+  }
+
+  # Print tags
+  my $header_tags = $self->{_header_tags};
+
+  for my $key (sort cmp_header_tags keys %$header_tags)
+  {
+    if($header_tags->{'Field'} =~ /FILTER/)
+    {
+      print $out "##" . $header_tags->{'Field'} . "=<" .
+                 "ID=" . $header_tags->{'ID'} . "," .
+                 "Description=\"" . $header_tags->{'Description'} . "\">\n";
+    }
+    else
+    {
+      print $out "##" . $header_tags->{'Field'} . "=<" .
+                 "ID=" . $header_tags->{'ID'} . "," .
+                 "Number=" . $header_tags->{'Number'} . "," .
+                 "Type=" . $header_tags->{'Type'} . "," .
+                 "Description=\"" . $header_tags->{'Description'} . "\">\n";
+    }
+  }
+
+  # Print columns
+  my @columns_arr = @{$self->{_columns_arr}};
+
+  if(@columns_arr > 0)
+  {
+    print $out "#" . join("\t", @columns_arr) . "\n";
+  }
+}
+
+sub vcf_add_metainfo_to_header
+{
+  my ($self, $key, $value) = @_;
+
+  $self->{_header_metainfo}->{$key} = $value;
+}
+
+sub vcf_remove_metainfo_from_header
+{
+  my ($self, $key) = @_;
+
+  delete($self->{_header_metainfo}->{$key});
+}
+
+# Returns 0 if invalid, 1 if valid
+sub check_valid_header_tag
+{
+  my ($tag) = @_;
+
+  # Check all the things!
+
+  # Field
+  if(!defined($tag->{'Field'}))
+  {
+    die("VCF header tag 'Field' not set");
+  }
+  elsif(!grep(/^$tag->{'Field'}$/, @header_tag_fields))
+  {
+    carp("VCF header tag field not one of ".join(",", @header_tag_types)."\n");
+    return 0;
+  }
+
+  # ID
+  if(!defined($tag->{'ID'}))
+  {
+    carp("VCF header tag id missing");
+    return 0;
+  }
+  elsif($tag->{'ID'} =~ /\s/)
+  {
+    carp("VCF header tag id contains whitespace characters '$tag->{'ID'}'\n");
+    return 0;
+  }
+
+  if($tag->{'Field'} ne "FILTER")
+  {
+    # Number
+    if(!defined($tag->{'Number'}))
+    {
+      carp("VCF header tag 'Number' attribute is missing ('.' or an int plz)");
+      return 0;
+    }
+    elsif($tag->{'Number'} !~ /^(?:\d+|\.)$/)
+    {
+      carp("VCF header tag number of arguments is not an +ve int '$tag->{'Number'}'\n");
+      return 0;
+    }
+
+    # Type
+    if(!defined($tag->{'Type'}))
+    {
+      carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types)");
+      return 0;
+    }
+    elsif(!grep(/^$tag->{'Type'}$/, @header_tag_types))
+    {
+      carp("VCF header tag Type not one of ".join(",", @header_tag_types)."\n");
+      return 0;
+    }
+  }
+  elsif(defined($tag->{'Number'}) || defined($tag->{'Type'}))
+  {
+    carp("VCF header FILTER tag cannot have Number or Type attributes\n");
+    return 0;
+  }
+
+  # Combinations
+  if($tag->{'Type'} eq "Flag" && $tag->{'Number'} ne "0")
+  {
+    carp("VCF header type 'Flag' cannot have 'Number' other than 0");
+    return 0;
+  }
+
+  return 1;
+}
+
+sub vcf_add_tag_to_header
+{
+  my ($self, $tag_field, $tag_id, $tag_number, $tag_type, $tag_description)
+    = @_;
+
+  # INFO, FILTER, FORMAT.. field is in upper case
+  $tag_field = uc($tag_field);
+
+  # Integer, String.. lowercase with uppercase first letter
+  $tag_type = lc($tag_type);
+  substr($tag_type,0,1) = uc(substr($tag_type,0,1));
+
+  my $tag = {'Field' => $tag_field,
+             'ID' => $tag_id,
+             'Number' => $tag_number,
+             'Type' => $tag_type,
+             'Description' => $tag_description};
+
+  if(check_valid_header_tag($tag))
+  {
+    $self->{_header_tags}->{$tag_id} = $tag;
+  }
+}
+
+sub vcf_remove_tag_from_header
+{
+  my ($self,$tag_id) = @_;
+
+  delete($self->{_header_tags}->{$tag_id});
+}
+
 sub get_header
 {
   my ($self) = @_;
-  return $self->{_header};
+
+  my $header_str = "";
+
+  # Print header to a string
+  open(my $fh_str, '>', \$header_str) or die("Could not open string for writing");
+  $self->print_header($fh_str);
+  close($fh_str);
+
+  return $header_str;
 }
 
+#
+# Samples
+#
+
+sub get_list_of_sample_names
+{
+  my ($self) = @_;
+
+  my @cols_array = $self->get_columns_array();
+
+  my %usual_fields = ();
+  my @standard_cols = get_standard_vcf_columns();
+
+  for my $standard_col (@standard_cols) {
+    $usual_fields{uc($standard_col)} = 1;
+  }
+
+  my @samples = grep {!defined($usual_fields{uc($_)})} @cols_array;
+  return @samples;
+}
+
+
+#
+# Columns
+#
 sub get_columns_array
 {
   my ($self) = @_;
@@ -156,6 +459,16 @@ sub set_columns_with_arr
   $self->{_columns_hash} = \%cols_hash;
   $self->{_columns_arr} = $cols_arrref;
 }
+
+# Static VCF method
+sub get_standard_vcf_columns
+{
+  return qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT);
+}
+
+#
+# Entries
+#
 
 sub unread_entry
 {
@@ -268,7 +581,8 @@ sub print_entry
 {
   my ($self, $entry, $out_handle) = @_;
 
-  if(!defined($out_handle)) {
+  if(!defined($out_handle))
+  {
     open($out_handle, ">-");
   }
 
@@ -300,31 +614,15 @@ sub print_entry
   print $out_handle "\n";
 }
 
-sub get_list_of_sample_names
-{
-  my ($self) = @_;
-
-  my @cols_array = $self->get_columns_array();
-
-  my %usual_fields = ();
-  my @standard_cols = get_standard_vcf_columns();
-
-  for my $standard_col (@standard_cols) {
-    $usual_fields{uc($standard_col)} = 1;
-  }
-
-  my @samples = grep {!defined($usual_fields{uc($_)})} @cols_array;
-  return @samples;
-}
-
-sub get_standard_vcf_columns
-{
-  return qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT);
-}
+#
+# Old
+#
 
 sub vcf_add_to_header
 {
   my ($header,@new_lines) = @_;
+
+  carp("Warning: redundant method vcf_add_to_header() - please use vcf_add_metainfo\n");
 
   my @curr_lines = split(/[\n\r]+/, $header);
 

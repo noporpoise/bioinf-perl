@@ -34,7 +34,8 @@ if(defined($vcf_file) && $vcf_file ne "-")
   open($vcf_handle, $vcf_file)
     or print_usage("Cannot open VCF file '$vcf_file'\n");
 }
-elsif(-p STDIN) {
+elsif(-p STDIN)
+{
   # STDIN is connected to a pipe
   open($vcf_handle, "<&=STDIN") or print_usage("Cannot read pipe");
 }
@@ -71,12 +72,13 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   for my $sample (@sample_names)
   {
-    if($vcf_entry->{$sample} =~ /^(\d+)\/(\d+)/)
+    if($vcf_entry->{$sample} =~ /^(\d+)[\/\|](\d+)/)
     {
       $allele_counts{$1}++;
       $allele_counts{$2}++;
     }
-    else {
+    else
+    {
       die("Invalid entry '$vcf_entry->{$sample}'");
     }
   }
