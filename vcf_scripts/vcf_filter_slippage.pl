@@ -16,8 +16,8 @@ sub print_usage
   print STDERR "  Prints (or flags) slippage indels\n";
   print STDERR "  Requires INFO tags 'left_flank' and 'right_flank'\n";
   print STDERR "\n";
-  print STDERR "  --invert        Print or flag non slippage indels\n";
-  print STDERR "  --flag <flag>   Add a given flag\n";
+  print STDERR "  --invert       Print or flag non slippage indels\n";
+  print STDERR "  --tag <tag>    INFO tag to add slippage\n";
   exit;
 }
 
@@ -108,6 +108,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
   }
 
   my $is_slippage = 0;
+  my $slippage_dist = 0;
 
   if(length($short_allele) == 0 && length($long_allele) > 0)
   {
@@ -123,10 +124,10 @@ while(defined($vcf_entry = $vcf->read_entry()))
     my $indel = $long_allele;
     my $indel_rev = reverse($indel);
 
-    my $matching_flanks = get_match($left_flank_rev, $indel) +
-                          get_match($right_flank, $indel_rev);
+    $slippage_dist = get_match($left_flank_rev, $indel) +
+                     get_match($right_flank, $indel_rev);
     
-    $is_slippage = $matching_flanks >= length($indel);
+    $is_slippage = $slippage_dist >= length($indel);
     
     #my $flanks = substr($vcf_entry->{'INFO'}->{'left_flank'},-length($long_allele)) .
     #             substr($vcf_entry->{'INFO'}->{'right_flank'},0,length($long_allele));
@@ -138,7 +139,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     # Print all, tag those that are filtered
     if($is_slippage != $invert)
     {
-      $vcf_entry->{'INFO_flags'}->{$flag} = 1;
+      $vcf_entry->{'INFO'}->{$flag} = $slippage_dist;
     }
 
     $vcf->print_entry($vcf_entry);

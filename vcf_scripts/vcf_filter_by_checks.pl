@@ -12,9 +12,10 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
   
-  print STDERR "Usage: ./vcf_filter_by_checks.pl [--pass|--fail] [in.vcf]\n";
-  print STDERR "  Prints variants that passed (or failed) the filtering\n";
+  print STDERR "Usage: ./vcf_filter_by_checks.pl [--invert] [in.vcf]\n";
+  print STDERR "  Prints variants that passed the filtering\n";
   print STDERR "  If [in.vcf] is '-', reads from stdin\n";
+  print STDERR "  --invert  Print variants that failed\n";
   exit;
 }
 
@@ -22,26 +23,23 @@ if(@ARGV > 2) {
   print_usage();
 }
 
-my $print_passed = 1;
+my $invert = 0;
 my $vcf_file;
 
-if(@ARGV == 2) {
-  my $arg_cmd = shift;
-  $vcf_file = shift;
-
-  if($arg_cmd =~ /^-?-p(ass)?$/i) {
-    $print_passed = 1;
+if(@ARGV == 2)
+{
+  if($ARGV[0] =~ /^-?-invert?$/i)
+  {
+    shift;
+    $invert = 1;
   }
-  elsif($arg_cmd =~ /^-?-f(ail)?$/i) {
-    $print_passed = 0;
-  }
-  else {
+  else
+  {
     print_usage();
   }
 }
-else {
-  $vcf_file = shift;
-}
+
+$vcf_file = shift;
 
 #
 # Open VCF Handle
@@ -76,7 +74,7 @@ while(defined($vcf_entry = $vcf->read_entry))
 {
   $total_num_entries++;
 
-  if(($vcf_entry->{'FILTER'} =~ /^PASS$/i) == $print_passed)
+  if(($vcf_entry->{'FILTER'} =~ /^PASS$/i) != $invert)
   {
     $num_of_filtered_entries++;
     $vcf->print_entry($vcf_entry);

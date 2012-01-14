@@ -11,33 +11,38 @@ sub print_usage
     print "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_header.pl [--entries] [vcf] [extra_header]\n";
+  print STDERR "Usage: ./vcf_header.pl [--entries] <vcf> [header1 ..]\n";
   print STDERR "  Print vcf file header (reads from STDIN if <file> is '-').\n";
   print STDERR "  Adds extra headers if passed after file.\n";
   print STDERR "\n";
-  print STDERR "  [extra_header] should be of the following form:\n";
-  print STDERR "    INFO,ID,Number,Type,Description    e.g. 'INFO,T,1,String,T number'\n";
-  print STDERR "    FORMAT,ID,Number,Type,Description  e.g. 'FORMAT,T,1,String,T number'\n";
-  print STDERR "    FILTER,ID,Description              e.g. 'FILTER,T,T number'\n";
-  print STDERR "    ALT,ID,Description                 e.g. 'ALT,T,T number'\n";
+  print STDERR "  [header] should be of the following forms:\n";
+  print STDERR "  1) to add a header:\n";
+  print STDERR "    +tag:INFO,ID,Number,Type,Description    e.g. +tag:INFO,T,0,Flag,T number\n";
+  print STDERR "    +tag:FORMAT,ID,Number,Type,Description  e.g. +tag:FORMAT,T,1,String,T number\n";
+  print STDERR "    +tag:FILTER,ID,Description              e.g. +tag:FILTER,T,T number\n";
+  print STDERR "    +tag:ALT,ID,Description                 e.g. +tag:ALT,T,T number\n";
+  print STDERR "  2) to remove a header:\n";
+  print STDERR "    -tag:ID                                 e.g. -tag:DP\n";
+  print STDERR "  3) to add metainfo:\n";
+  print STDERR "    +meta:ID=value                          e.g. +meta:date,today\n";
+  print STDERR "  4) to remove metainfo:\n";
+  print STDERR "    -meta:ID                                e.g. -meta:date\n";
   print STDERR "\n";
   print STDERR "  --entries  Print VCF entries as well as header\n";
   exit;
 }
 
+if(@ARGV == 0)
+{
+  print_usage();
+}
+
 my $print_entries = 0;
 
-if(@ARGV > 0)
+if(@ARGV > 1 && $ARGV[0] =~ /^-?-e(ntries)?$/i)
 {
-  if($ARGV[0] =~ /^-?-e(ntries)?$/i)
-  {
-    $print_entries = 1;
-    shift;
-  }
-  elsif($ARGV[0] =~ /^-?-h(elp)?$/i)
-  {
-    print_usage();
-  }
+  $print_entries = 1;
+  shift;
 }
 
 my $vcf_file = shift;
@@ -65,35 +70,91 @@ my $vcf = new VCFFile($vcf_handle);
 
 for my $extra_header (@extra_headers)
 {
-  my @parts = split(",", $extra_header);
+  my $add_header;
+  my $header_metainfo;
+  my $header_txt;
 
-  my ($tag_column, $tag_id, $tag_number, $tag_type, $tag_description);
-
-  if(@parts == 3)
+  if($extra_header =~ /^([\-\+]?)(meta|tag):(.*)$/i)
   {
-    ($tag_column,$tag_id,$tag_description) = @parts;
-  }
-  elsif(@parts == 5)
-  {
-    ($tag_column, $tag_id, $tag_number, $tag_type, $tag_description) = @parts;
+    $add_header = ($1 eq "+" || $1 eq "");
+    $header_metainfo = (lc($2) eq "meta");
+    $header_txt = $3;
   }
   else
   {
-    print_usage("Invalid extra header argument: '$extra_header'");
+    print_usage("Invalid header argument '$extra_header'");
   }
 
-  if($tag_description =~ /^\".*\"$/)
+  if($header_metainfo)
   {
-    # Trim first and last characters off
-    $tag_description = substr($tag_description, 1, -1);
-  }
-  elsif($tag_description =~ /\"/)
-  {
-    print_usage("Description should not contain quotation marks");
-  }
+    if($add_header)
+    {
+      my @parts = split("=", $header_txt);
+      
+      if(@parts != 2)
+      {
+        print_usage("Invalid add metainfo tag '$extra_header'");
+      }
 
-  $vcf->add_header_tag($tag_column, $tag_id, $tag_number,
-                       $tag_type, $tag_description);
+      $vcf->add_metainfo($parts[0], $parts[1]);
+    }
+    else
+    {
+      if(!defined(get_header_metainfo($parts[0])))
+      {
+        warn("Metainfo tag '$parts[0]' in VCF file - cannot remove\n");
+      }
+    
+      $vcf->remove_metainfo($parts[0]);
+    }
+  }
+  else
+  {
+    # Header tag
+    ##INFO=<ID=id,...>
+    if($add_header)
+    {
+      # Add header tag
+      my @parts = split(",", $header_txt);
+      my ($tag_column, $tag_id, $tag_number, $tag_type, $tag_description);
+
+      if(@parts == 3)
+      {
+        ($tag_column,$tag_id,$tag_description) = @parts;
+      }
+      elsif(@parts == 5)
+      {
+        ($tag_column, $tag_id, $tag_number, $tag_type, $tag_description) = @parts;
+      }
+      else
+      {
+        print_usage("Invalid extra header argument: '$extra_header'");
+      }
+    
+      if($tag_description =~ /^\".*\"$/)
+      {
+        # Trim first and last characters off
+        $tag_description = substr($tag_description, 1, -1);
+      }
+      elsif($tag_description =~ /\"/)
+      {
+        print_usage("Description should not contain quotation marks");
+      }
+
+      $vcf->add_header_tag($tag_column, $tag_id, $tag_number,
+                           $tag_type, $tag_description);
+    }
+    else
+    {
+      # Remove header tag
+      if(!defined(get_header_tag($tag_id)))
+      {
+        warn("Header tag '$tag_id' in VCF file - cannot remove\n");
+      }
+
+      $vcf->remove_header_tag($tag_id);
+    }
+  }
 }
 
 $vcf->print_header();

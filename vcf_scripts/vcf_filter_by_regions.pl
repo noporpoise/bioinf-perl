@@ -13,17 +13,22 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_filter_by_regions.pl <OPTIONS> [in.vcf]\n";
+  print STDERR "Usage: ./vcf_filter_by_regions.pl [OPTIONS] <region1 ..> [in.vcf]\n";
   print STDERR "  Filter by regions.  Range is inclusive. " .
                "Does not assume VCF is sorted.  \n";
-  print STDERR "  OPTIONS:\n";
+  print STDERR "\n";
+  print STDERR "  Options:\n";
+  print STDERR "   --file         file containing one region per line\n";
+  print STDERR "   --invert       invert selection\n";
+  print STDERR "   --flag <flag>  Print all entries, flag hits\n";
+  print STDERR "\n";
+  print STDERR "  Regions:\n";
   print STDERR "   chr:*          an entire chromosome\n";
   print STDERR "   chr:start-end  a region of a chromosome\n";
-  print STDERR "   --file         file containing one arg per line as above\n";
   print STDERR "\n";
   print STDERR "  Examples:\n";
-  print STDERR "  \$ ./vcf_regions.pl chr1:10,000-12,000 data.vcf\n";
-  print STDERR "  \$ ./vcf_regions.pl --file regions.txt data.vcf\n";
+  print STDERR "  \$ ./vcf_regions.pl --flag IN_CHR1 chr1:10,000-12,000 data.vcf\n";
+  print STDERR "  \$ ./vcf_regions.pl --file --invert regions.txt data.vcf\n";
   print STDERR "  \$ cat data.vcf | ./vcf_regions.pl chr1:* chr2:500-1000\n";
   exit;
 }
@@ -35,47 +40,66 @@ if(@ARGV == 0)
 
 my $vcf_file;
 
+my $invert = 0;
+my $flag;
+
 my %print_all_chrs = ();
 my %regions_by_chr = ();
 
-for(my $i = 0; $i < @ARGV; $i++)
+# Get options
+while(@ARGV > 1 && $ARGV[0] =~ /^-/)
 {
-  my $arg = $ARGV[$i];
+  my $arg = shift;
+
+  if($arg =~ /^-?-invert$/i)
+  {
+    $invert = 1;
+  }
+  elsif(@ARGV == 1)
+  {
+    # All the oth
+    print_usage("Invalid or missing arguments '$arg'");
+  }
+  elsif($arg =~ /^-?-file$/i)
+  {
+    my $file = shift;
+    open(FILE, $file) or print_usage("Cannot open region file '$file'");
+  
+    my $line;
+    while(defined($line = <FILE>))
+    {
+      chomp($line);
+      # Check line is not empty or a comment line
+      if($line !~ /^\s*$/ && $line !~ /^#/ && !parse_region($line))
+      {
+        print_usage("Unexpected region in file '$file': '$line'");
+      }
+    }
+
+    close(FILE);
+  }
+  elsif($arg =~ /^-?-flag$/i)
+  {
+    $flag = shift;
+  }
+}
+
+# Get regions
+
+while(@ARGV > 0)
+{
+  my $arg = shift;
 
   if(!parse_region($arg))
   {
-    if($arg =~ /-?-f(ile)?/i)
+    if(@ARGV == 0)
     {
-      if($i == @ARGV - 1)
-      {
-        print_usage("Missing file argument after '$arg'");
-      }
-
-      my $file = $ARGV[++$i];
-
-      open(FILE, $file) or print_usage("Cannot open region file '$file'");
-    
-      my $line;
-      while(defined($line = <FILE>))
-      {
-        chomp($line);
-        # Check line is not empty or a comment line
-        if($line !~ /^\s*$/ && $line !~ /^#/ && !parse_region($line))
-        {
-          print_usage("Unexpected region in file '$file': '$line'");
-        }
-      }
-    
-      close(FILE);
+      # Last argument
+      $vcf_file = $arg;
     }
     else
     {
-      $vcf_file = $arg;
-    
-      if($i != @ARGV - 1)
-      {
-        print_usage("Invalid commandline options\n");
-      }
+      print_usage("Invalid commandline options\n");
     }
   }
 }
@@ -139,7 +163,17 @@ while(defined($vcf_entry = $vcf->read_entry()))
     $print = (@hits > 0);
   }
 
-  if($print)
+  if(defined($flag))
+  {
+    # Print all, flag those that 'hit'
+    if($print != $invert)
+    {
+      $vcf_entry->{'INFO_flags'}->{$flag} = 1;
+    }
+
+    $vcf->print_entry($vcf_entry);
+  }
+  elsif($print != $invert)
   {
     $num_of_filtered_entries++;
     $vcf->print_entry($vcf_entry);

@@ -40,9 +40,20 @@ sub new
   {
     if($next_line =~ /##(.*)=(.*)/)
     {
+      # header meta info line
       my ($key,$value) = ($1,$2);
       chomp($value);
-      # header meta info line
+      
+      if(defined($header_metainfo{$key}))
+      {
+        carp("Multiple metainfo tags with ID '$key' " .
+             "(only last will be accepted)");
+      }
+      elsif(defined($header_tags{$key}))
+      {
+        carp("Metainfo header shares ID with tag '$key'");
+      }
+
       $header_metainfo{$key} = $value;
     }
     elsif($next_line =~ /##(\w+)=<(.*)>/)
@@ -51,6 +62,16 @@ sub new
       # Prints error and returns undef if not valid line
       if(defined($tag = _parse_header_tag($1,$2)))
       {
+        if($header_tags{$tag->{'ID'}})
+        {
+          carp("Multiple header tags use the ID '$tag->{'ID'}' " .
+               "(only the last will be accepted)");
+        }
+        elsif(defined($header_metainfo{$tag->{'ID'}}))
+        {
+          carp("Tag header shares ID with metainfo header '$tag->{'ID'}'");
+        }
+
         $header_tags{$tag->{'ID'}} = $tag;
       }
     }
@@ -250,9 +271,16 @@ sub _check_valid_header_tag
       carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types)");
       return 0;
     }
-    elsif(!grep(/^$tag->{'Type'}$/, @header_tag_types))
+    elsif($tag->{'column'} eq "INFO" &&
+          !grep(/^$tag->{'Type'}$/, qw(Integer Float Flag Character String)))
     {
-      carp("VCF header tag Type not one of ".join(",", @header_tag_types)."\n");
+      carp("VCF header tag Type not one of Integer,Float,Flag,Character,String\n");
+      return 0;
+    }
+    elsif($tag->{'column'} eq "FORMAT" &&
+          !grep(/^$tag->{'Type'}$/, qw(Integer Float Character String)))
+    {
+      carp("VCF header tag Type not one of Integer,Float,Character,String\n");
       return 0;
     }
   }
