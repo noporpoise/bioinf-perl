@@ -17,13 +17,9 @@ sub print_usage
   }
 
   print STDERR "Usage: ./vcf_add_repeat_masker.pl <rmsk.txt> [in.vcf]\n";
-  print STDERR "  Add repeat annoations to variants\n";
-  print STDERR "  Adds INFO values to VCF :\n";
-  print STDERR "  - rmsk, rmsk_left, rmsk_right (comma-separated lists)\n";
-  print STDERR "    repeat classes variant is in OR " . 
-               "classes to the left/right of variant\n";
-  print STDERR "  - rmsk_left_dist, rmsk_right_dist => distances to the " .
-               "left/right\n";
+  print STDERR "  Add repeat annoations to variants, using INFO tags:\n";
+  print STDERR "  - rmsk_CLASS_left, rmsk_CLASS_right\n";
+  print STDERR "    (distances (bp) to the left/right to nearest element\n";
   exit;
 }
 
@@ -123,8 +119,10 @@ my $vcf = new VCFFile($vcf_handle);
 # Add header tags
 for my $class (@rmsk_classes)
 {
-  my $tag_description = "Variant in repeat masker element $class";
-  $vcf->add_header_tag("INFO", "rmsk_".$class, 0, "Flag", $tag_description);
+  my $descrip = "Distance (bp) left to nearset element '$class' (0 => inside)";
+  $vcf->add_header_tag("INFO", "rmsk_".$class."_left", 1, "Integer", $descrip);
+  $descrip = "Distance (bp) right to nearset element '$class' (0 => inside)";
+  $vcf->add_header_tag("INFO", "rmsk_".$class."_right", 1, "Integer", $descrip);
 }
 
 # Print VCF header
@@ -157,68 +155,29 @@ while(defined($vcf_entry = $vcf->read_entry()))
     next;
   }
 
-  my @hits = ();
-  my @hits_left = ();
-  my @hits_right = ();
-
   for my $rmsk_class (@rmsk_classes)
   {
     my ($hits_arr, $left_arr, $right_arr)
       = $interval_lists_hashref->{$rmsk_class}->fetch_nearest($var_start,
                                                               $var_end);
 
-    # Interval List returns EITHER hits OR nearest to left and right
-    push(@hits, @$hits_arr);
-    push(@hits_left, @$left_arr);
-    push(@hits_right, @$right_arr);
-  }
-
-  if(@hits > 0)
-  {
-    my @classes = map {$_->{'class'}} @hits;
-    $vcf_entry->{'INFO'}->{'rmsk'} = join(",", @classes);
-  
-    for my $class (@classes)
+    
+    my $left_dist = 0;
+    my $right_dist = 0;
+    
+    if(@$hits_arr == 0)
     {
-      $num_in_repeat_class{$class}++;
+      $left_dist = $var_start - $left_arr->[0]->{'end'};
+      $right_dist = $right_arr->[0]->{'start'} - $var_end;
     }
-  }
-  else
-  {
-    # Unset any existing values
-    delete($vcf_entry->{'INFO'}->{'rmsk'});
-  }
+    else
+    {
+      $num_in_repeat_class{$rmsk_class}++;
+    }
 
-  if(@hits_left > 0)
-  {
-    my @classes = map {$_->{'class'}} @hits_left;
-    my @dists = map {$var_start - $_->{'end'}} @hits_left;
-
-    $vcf_entry->{'INFO'}->{'rmsk_left'} = join(",", @classes);
-    $vcf_entry->{'INFO'}->{'rmsk_left_dist'} = join(",", @dists);
+    $vcf_entry->{'INFO'}->{'rmsk_'.$rmsk_class.'_left'} = $left_dist;
+    $vcf_entry->{'INFO'}->{'rmsk_'.$rmsk_class.'_right'} = $right_dist;
   }
-  else
-  {
-    # Unset any existing values
-    delete($vcf_entry->{'INFO'}->{'rmsk_left'});
-    delete($vcf_entry->{'INFO'}->{'rmsk_left_dist'});
-  }
-
-  if(@hits_right > 0)
-  {
-    my @classes = map {$_->{'class'}} @hits_right;
-    my @dists = map {$_->{'start'} - $var_end} @hits_right;
-
-    $vcf_entry->{'INFO'}->{'rmsk_right'} = join(",", @classes);
-    $vcf_entry->{'INFO'}->{'rmsk_right_dist'} = join(",", @dists);
-  }
-  else
-  {
-    # Unset any existing values
-    delete($vcf_entry->{'INFO'}->{'rmsk_right'});
-    delete($vcf_entry->{'INFO'}->{'rmsk_right_dist'});
-  }
-
 
   $vcf->print_entry($vcf_entry);
 }
