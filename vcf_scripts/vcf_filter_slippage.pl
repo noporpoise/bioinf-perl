@@ -11,7 +11,8 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_filter_slippage.pl [--invert | --flag <flag>] [in.vcf]\n";
+  print STDERR "Usage: ./vcf_filter_slippage.pl [--invert | --flag <flag>] " .
+               "[in.vcf]\n";
   print STDERR "  Prints (or flags) slippage indels\n";
   print STDERR "  Requires INFO tags 'left_flank' and 'right_flank'\n";
   print STDERR "\n";
@@ -113,13 +114,23 @@ while(defined($vcf_entry = $vcf->read_entry()))
     if(!defined($vcf_entry->{'INFO'}->{'left_flank'}) ||
        !defined($vcf_entry->{'INFO'}->{'right_flank'}))
     {
-      print_usage("left_flank, right_flank INFO tags not set");
+      warn($vcf_entry->{'ID'}.": left_flank / right_flank INFO tags not set");
     }
 
-    my $flanks = substr($vcf_entry->{'INFO'}->{'left_flank'},-length($long_allele)) .
-                 substr($vcf_entry->{'INFO'}->{'right_flank'},0,length($long_allele));
+    my $left_flank_rev = reverse($vcf_entry->{'INFO'}->{'left_flank'});
+    my $right_flank = $vcf_entry->{'INFO'}->{'right_flank'};
+
+    my $indel = $long_allele;
+    my $indel_rev = reverse($indel);
+
+    my $matching_flanks = get_match($left_flank_rev, $indel) +
+                          get_match($right_flank, $indel_rev);
     
-    $is_slippage = ($flanks =~ /$long_allele/i);
+    $is_slippage = $matching_flanks >= length($indel);
+    
+    #my $flanks = substr($vcf_entry->{'INFO'}->{'left_flank'},-length($long_allele)) .
+    #             substr($vcf_entry->{'INFO'}->{'right_flank'},0,length($long_allele));
+    #$is_slippage = ($flanks =~ /$long_allele/i);
   }
 
   if(defined($flag))
@@ -140,3 +151,20 @@ while(defined($vcf_entry = $vcf->read_entry()))
 }
 
 close($vcf_handle);
+
+sub get_match
+{
+  my ($str1, $str2) = @_;
+
+  my $len = min(length($str1), length($str2));
+
+  for(my $i = 0; $i < $len; $i++)
+  {
+    if(substr($str1,$i,1) ne substr($str2,$i,1))
+    {
+      return $i;
+    }
+  }
+
+  return $len;
+}

@@ -130,8 +130,6 @@ for my $class (@rmsk_classes)
 # Print VCF header
 $vcf->print_header();
 
-print vcf_add_to_header($vcf->get_header(), $additional_header);
-
 my $total_num_entries = 0;
 my %num_in_repeat_class = ();
 my %missing_chrs = ();

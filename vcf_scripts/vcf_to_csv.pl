@@ -48,8 +48,6 @@ else
 #
 my $vcf = new VCFFile($vcf_handle);
 
-my $vcf_header = $vcf->get_header();
-
 my @vcf_cols = $vcf->get_columns_array();
 
 @vcf_cols = grep {$_ !~ /^INFO$/i} @vcf_cols;
@@ -58,9 +56,14 @@ push(@vcf_cols, ('true_REF','true_ALT','true_POS'));
 # Get info fields
 my %info_fields_hash = ();
 
-while($vcf_header =~ /##INFO=<ID=(\w+)/ig)
+my %header_tags = get_header_tags();
+
+while(my ($id, $tag) = each(%header_tags))
 {
-  $info_fields_hash{$1} = 1;
+  if($tag->{'column'} eq "INFO")
+  {
+    $info_fields_hash{$id} = 1;
+  }
 }
 
 # Read VCF entry

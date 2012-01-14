@@ -7,7 +7,7 @@ use Carp;
 
 # All methods are object methods except these:
 use base 'Exporter';
-our @EXPORT = qw(get_standard_vcf_columns vcf_add_to_header);
+our @EXPORT = qw(get_standard_vcf_columns);
 
 my @header_tag_columns = qw(ALT FILTER FORMAT INFO);
 my @header_tag_types = qw(Integer Float Character String Flag);
@@ -199,6 +199,80 @@ sub _parse_header_tag
   return _check_valid_header_tag(\%tag) ? \%tag : undef;
 }
 
+# Returns 0 if invalid, 1 if valid
+sub _check_valid_header_tag
+{
+  my ($tag) = @_;
+
+  # Check all the things!
+
+  # column
+  if(!defined($tag->{'column'}))
+  {
+    die("VCF header tag 'column' not set");
+  }
+  elsif(!grep(/^$tag->{'column'}$/, @header_tag_columns))
+  {
+    carp("VCF header tag column not one of ".join(",", @header_tag_types)."\n");
+    return 0;
+  }
+
+  # ID
+  if(!defined($tag->{'ID'}))
+  {
+    carp("VCF header tag id missing");
+    return 0;
+  }
+  elsif($tag->{'ID'} =~ /\s/)
+  {
+    carp("VCF header tag id contains whitespace characters '$tag->{'ID'}'\n");
+    return 0;
+  }
+
+  if($tag->{'column'} !~ /^(?:ALT|FILTER)$/)
+  {
+    # Number
+    if(!defined($tag->{'Number'}))
+    {
+      carp("VCF header tag 'Number' attribute is missing ('.' or an int plz)");
+      return 0;
+    }
+    elsif($tag->{'Number'} !~ /^(?:\d+|\.)$/)
+    {
+      carp("VCF header tag number of arguments is not an +ve int " .
+           "'$tag->{'Number'}'\n");
+      return 0;
+    }
+
+    # Type
+    if(!defined($tag->{'Type'}))
+    {
+      carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types)");
+      return 0;
+    }
+    elsif(!grep(/^$tag->{'Type'}$/, @header_tag_types))
+    {
+      carp("VCF header tag Type not one of ".join(",", @header_tag_types)."\n");
+      return 0;
+    }
+  }
+  elsif(defined($tag->{'Number'}) || defined($tag->{'Type'}))
+  {
+    carp("VCF header ALT/FILTER tags cannot have Number or Type attributes\n");
+    return 0;
+  }
+
+  # Combinations
+  if(defined($tag->{'Type'}) && $tag->{'Type'} eq "Flag" &&
+     $tag->{'Number'} ne "0")
+  {
+    carp("VCF header type 'Flag' cannot have 'Number' other than 0");
+    return 0;
+  }
+
+  return 1;
+}
+
 sub _cmp_header_tags
 {
   my ($a, $b) = @_;
@@ -268,6 +342,25 @@ sub print_header
   }
 }
 
+sub get_header
+{
+  my ($self) = @_;
+
+  my $header_str = "";
+
+  # Print header to a string
+  open(my $fh_str, '>', \$header_str)
+    or die("Could not open string for writing");
+
+  $self->print_header($fh_str);
+  close($fh_str);
+
+  return $header_str;
+}
+
+# Metainfo e.g.
+##thing=value
+
 sub add_header_metainfo
 {
   my ($self, $key, $value) = @_;
@@ -282,78 +375,15 @@ sub remove_header_metainfo
   delete($self->{_header_metainfo}->{$key});
 }
 
-# Returns 0 if invalid, 1 if valid
-sub _check_valid_header_tag
+sub get_header_metainfo
 {
-  my ($tag) = @_;
+  my ($self) = @_;
 
-  # Check all the things!
-
-  # column
-  if(!defined($tag->{'column'}))
-  {
-    die("VCF header tag 'column' not set");
-  }
-  elsif(!grep(/^$tag->{'column'}$/, @header_tag_columns))
-  {
-    carp("VCF header tag column not one of ".join(",", @header_tag_types)."\n");
-    return 0;
-  }
-
-  # ID
-  if(!defined($tag->{'ID'}))
-  {
-    carp("VCF header tag id missing");
-    return 0;
-  }
-  elsif($tag->{'ID'} =~ /\s/)
-  {
-    carp("VCF header tag id contains whitespace characters '$tag->{'ID'}'\n");
-    return 0;
-  }
-
-  if($tag->{'column'} !~ /^(?:ALT|FILTER)$/)
-  {
-    # Number
-    if(!defined($tag->{'Number'}))
-    {
-      carp("VCF header tag 'Number' attribute is missing ('.' or an int plz)");
-      return 0;
-    }
-    elsif($tag->{'Number'} !~ /^(?:\d+|\.)$/)
-    {
-      carp("VCF header tag number of arguments is not an +ve int '$tag->{'Number'}'\n");
-      return 0;
-    }
-
-    # Type
-    if(!defined($tag->{'Type'}))
-    {
-      carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types)");
-      return 0;
-    }
-    elsif(!grep(/^$tag->{'Type'}$/, @header_tag_types))
-    {
-      carp("VCF header tag Type not one of ".join(",", @header_tag_types)."\n");
-      return 0;
-    }
-  }
-  elsif(defined($tag->{'Number'}) || defined($tag->{'Type'}))
-  {
-    carp("VCF header ALT/FILTER tags cannot have Number or Type attributes\n");
-    return 0;
-  }
-
-  # Combinations
-  if(defined($tag->{'Type'}) && $tag->{'Type'} eq "Flag" &&
-     $tag->{'Number'} ne "0")
-  {
-    carp("VCF header type 'Flag' cannot have 'Number' other than 0");
-    return 0;
-  }
-
-  return 1;
+  return %{$self->{_header_metainfo}};
 }
+
+# Tags e.g.
+##INFO=<ID=AS,Number=1,Type=Float,Description="Woot">
 
 sub add_header_tag
 {
@@ -394,18 +424,10 @@ sub remove_header_tag
   delete($self->{_header_tags}->{$tag_id});
 }
 
-sub get_header
+sub get_header_tags
 {
   my ($self) = @_;
-
-  my $header_str = "";
-
-  # Print header to a string
-  open(my $fh_str, '>', \$header_str) or die("Could not open string for writing");
-  $self->print_header($fh_str);
-  close($fh_str);
-
-  return $header_str;
+  return %{$self->{_header_tags}};
 }
 
 #
@@ -625,43 +647,6 @@ sub print_entry
   }
 
   print $out_handle "\n";
-}
-
-#
-# Old
-#
-
-sub vcf_add_to_header
-{
-  my ($header,@new_lines) = @_;
-
-  carp("Warning: redundant method vcf_add_to_header() - please use vcf_add_metainfo\n");
-
-  my @curr_lines = split(/[\n\r]+/, $header);
-
-  if($curr_lines[$#curr_lines] !~ /#CHROM/i)
-  {
-    carp("Warning: VCFFile.pm - header does not end with '#CHROM ..' line\n");
-  }
-
-  my $last_header_line = pop(@curr_lines);
-
-  for my $new_line (@new_lines)
-  {
-    chomp($new_line);
-
-    if($new_line !~ /^##/)
-    {
-      $new_line = '##'.$new_line;
-      carp("Warning: VCFFile.pm - adding hashes to header line\n");
-    }
-
-    push(@curr_lines, $new_line);
-  }
-
-  push(@curr_lines, $last_header_line);
-
-  return join("\n", @curr_lines)."\n";
 }
 
 1;
