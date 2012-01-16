@@ -7,22 +7,38 @@ use UsefulModule;
 
 use List::Util qw(max);
 
+my $csvsep = ",";
+
 sub print_usage
 {
   for my $err (@_) {
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./fastn_lengths.pl [file]\n";
-  print STDERR " Print the length of each sequence\n";
-  print STDERR " If file not given (or '-') reads from STDIN\n";
+  print STDERR "Usage: ./fastn_lengths.pl [--bases] [file]\n";
+  print STDERR " Print the length of each sequence.  " .
+               "If file not given (or '-') reads from STDIN\n";
+  print STDERR " --bases only count [ACGT] bases, not `N's\n";
   exit;
 }
 
-if(@ARGV == 1 && $ARGV[0] =~ /^--?h(elp)?$/i)
+my $bases_only = 0;
+
+if(@ARGV == 1 && $ARGV[0] =~ /^-?-h(elp)?$/i)
 {
   print_usage();
 }
+elsif(@ARGV > 0 && $ARGV[0] =~ /^-?-b(ases?)?$/i)
+{
+  shift;
+  $bases_only = 1;
+}
+elsif(@ARGV > 1)
+{
+  print_usage();
+}
+
+print "chr,length\n";
 
 #
 # Open FASTA/Q handle
@@ -101,8 +117,7 @@ sub print_read_lengths
 
   if($is_fastq)
   {
-    my $name = $line;
-    chomp($name);
+    my $name = substr($line,1);
 
     while(defined($name))
     {
@@ -111,8 +126,7 @@ sub print_read_lengths
       chomp($name);
       chomp($line);
 
-      print "$name\n";
-      print length($line)."\n";
+      print "$name" . $csvsep . count_length($line) . "\n";
   
       $line = <$handle>; # read '+'
       $line = <$handle>; # read quality scores
@@ -121,7 +135,7 @@ sub print_read_lengths
   }
   else
   {
-    print "$line\n";
+    my $name = substr($line,1);
 
     my $curr_length = 0;
   
@@ -131,16 +145,32 @@ sub print_read_lengths
 
       if($line =~ /^>/)
       {
-        print "$curr_length\n";
-        print "$line\n";
+        print $name.$csvsep.$curr_length."\n";
+
+        $name = substr($line,1);
         $curr_length = 0;
       }
       else
       {
-        $curr_length += length($line);
+        $curr_length += count_length($line);
       }
     }
 
-    print "$curr_length\n";
+    print $name.$csvsep.$curr_length."\n";
+  }
+}
+
+sub count_length
+{
+  my ($str) = @_;
+
+  if($bases_only)
+  {
+    $str =~ s/[^acgt]//gi;
+    return length($str);
+  }
+  else
+  {
+    return length($str);
   }
 }

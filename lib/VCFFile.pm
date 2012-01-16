@@ -38,7 +38,26 @@ sub new
 
   while(defined($next_line))
   {
-    if($next_line =~ /##(.*)=(.*)/)
+    if($next_line =~ /##(\w+)=<(.*)>/)
+    {
+      my $tag;
+      # Prints error and returns undef if not valid line
+      if(defined($tag = _parse_header_tag($1,$2)))
+      {
+        if(defined($header_tags{$tag->{'ID'}}))
+        {
+          carp("Multiple header tags use the ID '$tag->{'ID'}' " .
+               "(only the last will be accepted)");
+        }
+        elsif(defined($header_metainfo{$tag->{'ID'}}))
+        {
+          carp("Tag header shares ID with metainfo header '$tag->{'ID'}'");
+        }
+
+        $header_tags{$tag->{'ID'}} = $tag;
+      }
+    }
+    elsif($next_line =~ /##(.*)=(.*)/)
     {
       # header meta info line
       my ($key,$value) = ($1,$2);
@@ -56,26 +75,7 @@ sub new
 
       $header_metainfo{$key} = $value;
     }
-    elsif($next_line =~ /##(\w+)=<(.*)>/)
-    {
-      my $tag;
-      # Prints error and returns undef if not valid line
-      if(defined($tag = _parse_header_tag($1,$2)))
-      {
-        if($header_tags{$tag->{'ID'}})
-        {
-          carp("Multiple header tags use the ID '$tag->{'ID'}' " .
-               "(only the last will be accepted)");
-        }
-        elsif(defined($header_metainfo{$tag->{'ID'}}))
-        {
-          carp("Tag header shares ID with metainfo header '$tag->{'ID'}'");
-        }
-
-        $header_tags{$tag->{'ID'}} = $tag;
-      }
-    }
-    elsif($next_line =~ /#[^#]/)
+    elsif($next_line =~ /^#[^#]/)
     {
       # column header line (e.g. '#CHROM..')
       my $header_line = substr($next_line, 1);
@@ -140,6 +140,9 @@ sub new
     $columns_hash{$columns_arr[$i]} = $i;
   }
 
+  #print "Meta tags: " . join(",", sort keys %header_metainfo) . "\n";
+  #print "header tags:" . join(",", sort keys %header_tags) . "\n";
+
   my $self = {
       _handle => $handle,
       _next_line => $next_line,
@@ -177,42 +180,55 @@ sub _read_line
 
 sub _parse_header_tag
 {
-  # $column=<$tag_str>
-  my ($tag_col,$tag_str) = @_;
+  # $column=<$str>
+  my ($tag_col, $str) = @_;
 
   my %tag = ('column' => $tag_col);
 
-  my @tag_parts = split(/\s*,\s*/, $tag_str);
-
-  for my $tag_part (@tag_parts)
+  while($str =~ /\s*(\w+)\s*=\s*(\"(?:(?:\\\\)*\\\"|[^\"]*)*\"|\'(?:(?:\\\\)*\\\'|[^\']*)*\'|[^,]*?)(?:,|$)/gi)
   {
-    if($tag_part =~ /^ID\s*=\s*(.*)\s*$/i)
+    my $key = lc($1);
+    my $value = $2;
+
+    if(substr($value,0,1) eq "'" || substr($value,0,1) eq '"')
+    {
+      $value = substr($value,1,-1);
+      $value =~ s/\\\\/\\/g;
+      $value =~ s/\\\"/\"/g;
+      $value =~ s/\\\'/\'/g;
+    }
+
+    if($key eq "id")
     {
       if(defined($tag{'ID'})) {
         carp("VCF header tag has multiple IDs");
       }
-      $tag{'ID'} = $1;
+      $tag{'ID'} = $value;
     }
-    elsif($tag_part =~ /^Number\s*=\s*(.*)\s*$/i)
+    elsif($key eq "number")
     {
       if(defined($tag{'Number'})) {
         carp("VCF header tag has multiple Number values");
       }
-      $tag{'Number'} = $1;
+      $tag{'Number'} = $value;
     }
-    elsif($tag_part =~ /^Type\s*=\s*(.*)\s*$/i)
+    elsif($key eq "type")
     {
       if(defined($tag{'Type'})) {
         carp("VCF header tag has multiple Type values");
       }
-      $tag{'Type'} = $1;
+      $tag{'Type'} = $value;
     }
-    elsif($tag_part =~ /^Description\s*=\s*\"(.*)\"\s*$/i)
+    elsif($key eq "description")
     {
       if(defined($tag{'Description'})) {
         carp("VCF header tag has multiple Description values");
       }
-      $tag{'Description'} = $1;
+      $tag{'Description'} = $value;
+    }
+    else
+    {
+      carp("VCF header tag has unknown key=value pair '$str'");
     }
   }
 
@@ -290,6 +306,12 @@ sub _check_valid_header_tag
     return 0;
   }
 
+  if(!defined($tag->{'Description'}))
+  {
+    carp("VCF header tag missing Description (ID: $tag->{'ID'})\n");
+    return 0;
+  }
+
   # Combinations
   if(defined($tag->{'Type'}) && $tag->{'Type'} eq "Flag" &&
      $tag->{'Number'} ne "0")
@@ -303,13 +325,19 @@ sub _check_valid_header_tag
 
 sub _cmp_header_tags
 {
-  my ($a, $b) = @_;
-
-  my $cmp;
-  
-  for my $tag_field ('column','ID','Type','Description')
+  for my $tag_field (qw(column ID Description))
   {
-    my $cmp = $a->{$tag_field} cmp $a->{$tag_field};
+    if(!defined($a->{$tag_field}))
+    {
+      "Error: " . join(";", map {"$_ => $a->{$_}"} keys %$a)."\n";
+    }
+    
+    if(!defined($b->{$tag_field}))
+    {
+      "Error: " . join(";", map {"$_ => $b->{$_}"} keys %$b)."\n";
+    }
+
+    my $cmp = $a->{$tag_field} cmp $b->{$tag_field};
   
     if($cmp != 0)
     {
@@ -317,7 +345,7 @@ sub _cmp_header_tags
     }
   }
 
-  return $a->{'Number'} <=> $b->{'Number'};
+  return 0;
 }
 
 sub print_header
@@ -339,17 +367,18 @@ sub print_header
   }
 
   # Print tags
-  my $header_tags = $self->{_header_tags};
-
-  for my $key (sort _cmp_header_tags keys %$header_tags)
+  for my $tag (sort _cmp_header_tags values %{$self->{_header_tags}})
   {
-    my $tag = $header_tags->{$key};
+    my $desc = $tag->{'Description'};
+
+    $desc =~ s/\\/\\\\/g;
+    $desc =~ s/\"/\\\"/g;
 
     if($tag->{'column'} =~ /^(?:ALT|FILTER)$/)
     {
       print $out "##" . $tag->{'column'} . "=<" .
                  "ID=" . $tag->{'ID'} . "," .
-                 "Description=\"" . $tag->{'Description'} . "\">\n";
+                 "Description=\"" . $desc . "\">\n";
     }
     else
     {
@@ -357,7 +386,7 @@ sub print_header
                  "ID=" . $tag->{'ID'} . "," .
                  "Number=" . $tag->{'Number'} . "," .
                  "Type=" . $tag->{'Type'} . "," .
-                 "Description=\"" . $tag->{'Description'} . "\">\n";
+                 "Description=\"" . $desc . "\">\n";
     }
   }
 
@@ -438,6 +467,8 @@ sub add_header_tag
   {
     $tag->{'Type'} = $tag_type;
   }
+
+  #print "Adding tag: column => $tag_col; ID => $tag_id; Description => $tag_description;\n";
 
   if(_check_valid_header_tag($tag))
   {

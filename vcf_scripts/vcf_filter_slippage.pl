@@ -5,6 +5,8 @@ use warnings;
 
 use VCFFile;
 
+use List::Util qw(min max);
+
 sub print_usage
 {
   for my $err (@_) {
@@ -86,7 +88,7 @@ if(defined($flag))
 {
   # Add tag to VCF header
   my $description = $invert ? "Not slippage indels" : "Slippage indels";
-  $vcf->vcf_add_header_tag("INFO", $flag, 0, "Flag", $description);
+  $vcf->add_header_tag("INFO", $flag, 0, "Flag", $description);
 }
 
 $vcf->print_header();

@@ -56,7 +56,7 @@ push(@vcf_cols, ('true_REF','true_ALT','true_POS'));
 # Get info fields
 my %info_fields_hash = ();
 
-my %header_tags = get_header_tags();
+my %header_tags = $vcf->get_header_tags();
 
 while(my ($id, $tag) = each(%header_tags))
 {

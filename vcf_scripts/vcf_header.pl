@@ -96,16 +96,16 @@ for my $extra_header (@extra_headers)
         print_usage("Invalid add metainfo tag '$extra_header'");
       }
 
-      $vcf->add_metainfo($parts[0], $parts[1]);
+      $vcf->add_header_metainfo($parts[0], $parts[1]);
     }
     else
     {
-      if(!defined(get_header_metainfo($parts[0])))
+      if(!defined(get_header_metainfo($header_txt)))
       {
-        warn("Metainfo tag '$parts[0]' in VCF file - cannot remove\n");
+        warn("Metainfo tag '$header_txt' in VCF file - cannot remove\n");
       }
     
-      $vcf->remove_metainfo($parts[0]);
+      $vcf->remove_metainfo($header_txt);
     }
   }
   else
@@ -147,12 +147,12 @@ for my $extra_header (@extra_headers)
     else
     {
       # Remove header tag
-      if(!defined(get_header_tag($tag_id)))
+      if(!defined(get_header_tag($header_txt)))
       {
-        warn("Header tag '$tag_id' in VCF file - cannot remove\n");
+        warn("Header tag '$header_txt' in VCF file - cannot remove\n");
       }
 
-      $vcf->remove_header_tag($tag_id);
+      $vcf->remove_header_tag($header_txt);
     }
   }
 }

@@ -167,8 +167,9 @@ while(defined($vcf_entry = $vcf->read_entry()))
     
     if(@$hits_arr == 0)
     {
-      $left_dist = $var_start - $left_arr->[0]->{'end'};
-      $right_dist = $right_arr->[0]->{'start'} - $var_end;
+      # Get distance to hits either side, or '.' if there were none
+      $left_dist = @$left_arr > 0 ? $var_start - $left_arr->[0]->{'end'} : ".";
+      $right_dist = @$right_arr > 0 ? $right_arr->[0]->{'start'} - $var_end : ".";
     }
     else
     {
