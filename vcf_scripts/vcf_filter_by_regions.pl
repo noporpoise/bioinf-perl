@@ -148,7 +148,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
   $total_num_entries++;
 
   my $chr = $vcf_entry->{'CHROM'};
-  my $pos = $vcf_entry->{'POS'};
+  my $pos = $vcf_entry->{'true_POS'};
   my $len = length($vcf_entry->{'true_REF'});
 
   my $print = 0;

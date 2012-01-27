@@ -99,7 +99,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     $bins_by_chr{$chr} = \(map {0} 1..$num_of_bins);
   }
 
-  my $bin_index = int($vcf_entry->{'POS'} / $bin_size);
+  my $bin_index = int($vcf_entry->{'true_POS'} / $bin_size);
 
   $bins_by_chr{$chr}->[$bin_index]++;
 }

@@ -7,7 +7,7 @@ use Carp;
 
 use base 'Exporter';
 
-our @EXPORT = qw(get_clean_chr_name rev_comp rev_comp_cyclic
+our @EXPORT = qw(get_clean_chr_name rev_comp complement rev_comp_cyclic
                  dna_word_group dna_pattern_group dna_weak_strong_group);
 
 
@@ -55,28 +55,37 @@ sub rev_comp
 {
   my ($seq) = @_;
 
+  # Reverse
+  my $rev = reverse(complement($seq));
+
+  return $rev;
+}
+
+sub complement
+{
+  my ($seq) = @_;
+
   my %mapping = ('a' => 't', 'A' => 'T',
                  'c' => 'g', 'C' => 'G',
                  'g' => 'c', 'G' => 'C',
                  't' => 'a', 'T' => 'A');
-
-  # Reverse
-  my $rev = reverse($seq);
+  
+  my $complement = $seq;
   
   # Complement
-  for(my $i = 0; $i < length($rev); $i++)
+  for(my $i = 0; $i < length($seq); $i++)
   {
-    my $complement = $mapping{substr($rev,$i,1)};
+    my $chr = $mapping{substr($seq,$i,1)};
 
-    if(!defined($complement))
+    if(!defined($chr))
     {
-      carp("rev_comp: Cannot complement base '".substr($rev,$i,1)."'");
+      carp("rev_comp: Cannot complement base '".substr($seq,$i,1)."'");
     }
 
-    substr($rev,$i,1) = $complement;
+    substr($complement, $i, 1) = $chr;
   }
 
-  return $rev;
+  return $complement;
 }
 
 sub rev_comp_cyclic

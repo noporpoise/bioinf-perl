@@ -238,7 +238,7 @@ do
     @positions = ();
   }
 
-  push(@positions, $vcf_entry->{'POS'});
+  push(@positions, $vcf_entry->{'true_POS'});
 }
 while(defined($vcf_entry = $vcf->read_entry()));
 

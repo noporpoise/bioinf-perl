@@ -642,12 +642,23 @@ sub read_entry
   # Auto-correct chromosome names
   if($entry{'CHROM'} !~ /^chr/)
   {
-    if($entry{'CHROM'} =~ /^chr(.*)$/i) { # matches only with case-insensitive
+    if($entry{'CHROM'} =~ /^chr(.*)$/i)
+    {
+      # matches only with case-insensitive
       $entry{'CHROM'} = 'chr'.$1;
     }
     else {
       $entry{'CHROM'} = 'chr'.$entry{'CHROM'};
     }
+  }
+
+  if($entry{'CHROM'} =~ /^chr([xy])$/i)
+  {
+    $entry{'CHROM'} = 'chr'.uc($1);
+  }
+  else
+  {
+    $entry{'CHROM'} = lc($entry{'CHROM'});
   }
 
   # Correct SVLEN
