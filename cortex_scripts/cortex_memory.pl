@@ -20,10 +20,8 @@ sub usage
   }
   
   print "Usage: ./cortex_memory.pl [options] <mem_height> <mem_width>\n";
-  print "  Options: --kmer_size -k <k>   K-mer size of De Bruijn graph [31]\n";
-  print "           --colours -c <num>   Number of colours in graph  [1]\n";
-  print "\n";
-  print "  Isaac Turner  <isaac.turner\@dtc.ox.ac.uk>  2011/02/01\n";
+  print "  Options: --kmer_size -k <k>   K-mer size of De Bruijn graph [default: 31]\n";
+  print "           --colours -c <num>   Number of colours in graph    [default: 1]\n";
   exit;
 }
 
@@ -78,29 +76,18 @@ if($memWidth !~ /^[0-9]+$/ || $memWidth < 1) {
   usage("invalid memHeight");
 }
 
-print "width: $memWidth\n";
-print "height: $memHeight\n";
+print "width: $memWidth; height: $memHeight; colours: " .
+      "$numOfColours; kmer_size: $kmerSize\n";
 
 my $num_of_hash_entries = 2**$memHeight * $memWidth;
 
 print num2str($num_of_hash_entries) . " hash table entries\n";
 
-#my $bytes = 2**$memHeight * $memWidth *
-#            (8*ceil($kmerSize/31) + 5*$numOfColours + 1);
-
 # Round entry size to nearest 8 bytes and multiply by the number of entries
 my $bytes = $num_of_hash_entries *
             ceil((8*ceil($kmerSize/31) + 5*$numOfColours + 1)/8)*8;
 
-print "" . num2str($bytes) . " bytes\n";
+print "Memory: " . num2str($bytes) . " bytes (" . mem2str($bytes) . ")\n";
 
-# Don't want more than double digits
-if($bytes > 2**28) {
-  print "" . num2str($bytes / (2**30)) . " gigabytes\n";
-}
-elsif($bytes > 2**18) {
-  print "" . num2str($bytes / (2**20)) . " megabytes\n";
-}
-elsif($bytes > 2**8) {
-  print "" . num2str($bytes / (2**10)) . " kilobytes\n";
-}
+print "Command: cortex_var_" . ($kmerSize > 31 ? "63" : "31") .
+      "_c" . $numOfColours . " --mem_width $memWidth --mem_height $memHeight\n";

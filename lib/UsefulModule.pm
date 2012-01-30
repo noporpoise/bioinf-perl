@@ -11,7 +11,7 @@ use base 'Exporter';
 # When the module is invoked, export, by default, the function "hello" into 
 # the namespace of the using code.
 
-our @EXPORT = qw(num2str binary_search_nearest);
+our @EXPORT = qw(num2str mem2str binary_search_nearest);
 
 =head1 NAME
  
@@ -76,6 +76,34 @@ sub num2str
   }
   
   return $strNum;
+}
+
+sub mem2str
+{
+  my $num_bytes = shift;
+  my $full_unit = shift;
+
+  # Don't want more than double digits
+  if($num_bytes > 2**38)
+  {
+    return "" . num2str($num_bytes / (2**40)) . " " .
+           (defined($full_unit) ? "terabytes" : "TB");
+  }
+  elsif($num_bytes > 2**28)
+  {
+    return "" . num2str($num_bytes / (2**30)) . " " .
+           (defined($full_unit) ? "gigabytes" : "GB");
+  }
+  elsif($num_bytes > 2**18)
+  {
+    return "" . num2str($num_bytes / (2**20)) . " " .
+           (defined($full_unit) ? "megabytes" : "MB");
+  }
+  elsif($num_bytes > 2**8)
+  {
+    return "" . num2str($num_bytes / (2**10)) . " " .
+           (defined($full_unit) ? "kilobytes" : "kB");
+  }
 }
 
 # Returns index of nearest value
