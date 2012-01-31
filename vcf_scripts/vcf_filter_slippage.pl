@@ -129,11 +129,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     $slippage_dist = get_match($left_flank_rev, $indel) +
                      get_match($right_flank, $indel_rev);
     
-    $is_slippage = $slippage_dist >= length($indel);
-    
-    #my $flanks = substr($vcf_entry->{'INFO'}->{'left_flank'},-length($long_allele)) .
-    #             substr($vcf_entry->{'INFO'}->{'right_flank'},0,length($long_allele));
-    #$is_slippage = ($flanks =~ /$long_allele/i);
+    $is_slippage = ($slippage_dist >= length($indel));
   }
 
   if(defined($flag))
