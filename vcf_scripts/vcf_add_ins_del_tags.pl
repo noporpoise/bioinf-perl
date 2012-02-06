@@ -14,6 +14,7 @@ sub print_usage
 
   print STDERR "Usage: ./vcf_add_ins_del_tags.pl [file.vcf]\n";
   print STDERR "  Adds INDEL=INS|DEL INFO tag using AA and SVLEN tags\n";
+  print STDERR "  Also adds AALEN=(derived-ancestral allele leng)\n";
   exit;
 }
 
@@ -68,12 +69,14 @@ while(defined($vcf_entry = $vcf->read_entry()))
       # ref allele is ancestral
       my $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} > 0);
       $vcf_entry->{'INFO'}->{'INDEL'} = $ins ? 'INS' : 'DEL';
+      $vcf_entry->{'INFO'}->{'AALEN'} = $alt_len - $ref_len;
     }
     elsif($vcf_entry->{'INFO'}->{'AA'} eq "1")
     {
       # alt allele is ancestral
       my $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} < 0);
       $vcf_entry->{'INFO'}->{'INDEL'} = $ins ? 'INS' : 'DEL';
+      $vcf_entry->{'INFO'}->{'AALEN'} = $ref_len - $alt_len;
     }
     else
     {
