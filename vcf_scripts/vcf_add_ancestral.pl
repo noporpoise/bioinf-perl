@@ -105,16 +105,16 @@ my @anc_chrs = keys %$anc_ref_hash;
 # looks like: >ANCESTOR_for_chromosome:CHIMP2.1:1:1:229974691:1
 for my $key (@anc_chrs)
 {
-  if($key =~ />ANCESTOR_for_chromosome:CHIMP2.1:(?:chr)?([\dXY]*)([ab]*):$/i)
+  if($key =~ /ANCESTOR_for_chromosome:CHIMP2.1:(?:chr)?([\dXY]*)([ab]*):/i)
   {
     my $chr = "chr".uc($1).lc($2);
     $anc_ref_hash->{$chr} = $anc_ref_hash->{$key};
     delete($anc_ref_hash->{$key});
+    #print STDERR "vcf_add_ancestral.pl: Loaded '$chr'\n";
   }
   else
   {
-    print STDERR "vcf_add_ancestral.pl: Ancestral ref not as expected!\n";
-    print STDERR "key: '$key'\n";
+    #print STDERR "vcf_add_ancestral.pl: Ancestral ref ignored: $key\n";
   }
 }
 
@@ -152,10 +152,18 @@ while(defined($vcf_entry = $vcf->read_entry()))
   my $ref_allele = uc($vcf_entry->{'true_REF'});
   my $alt_allele = uc($vcf_entry->{'true_ALT'});
 
+  my $aa;
+
   if($svlen == 0)
   {
     # Nucleotide Polymorphism (NP) - use ancestral allele
     $num_of_np++;
+
+    if(!defined($anc_ref_hash->{$chr}))
+    {
+      print STDERR "vcf_add_ancestral.pl: Ancestor lacks chromosome '$chr'\n";
+      die();
+    }
 
     my $anc_ref = substr($anc_ref_hash->{$chr},
                          $vcf_entry->{'true_POS'}-1, # because perl uses 0-based
@@ -170,18 +178,18 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
     if($ref_matches && !$alt_matches)
     {
-      $vcf_entry->{'INFO'}->{'AA'} = '0';
+      $aa = '0';
       $num_of_np_polarised++;
     }
     elsif(!$ref_matches && $alt_matches)
     {
-      $vcf_entry->{'INFO'}->{'AA'} = '1';
+      $aa = '1';
       $num_of_np_polarised++;
       $num_of_np_ref++;
     }
     else
     {
-      $vcf_entry->{'INFO'}->{'AA'} = '.';
+      $aa = '.';
     }
   }
   else
@@ -234,7 +242,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     {
       # Ref/alt don't map, map to different chromosomes or map too far apart
       # 32 used here because it is the flank size
-      $vcf_entry->{'INFO'}->{'AA'} = '.';
+      $aa = '.';
     }
     else
     {
@@ -261,21 +269,31 @@ while(defined($vcf_entry = $vcf->read_entry()))
         ($short_mapq, $long_mapq) = ($long_mapq, $short_mapq);
       }
 
-      my $aa = get_indel_ancestor($long_cigar, $short_cigar,
-                                  $long_mapq, $short_mapq,
-                                  $svlen);
-
-      $vcf_entry->{'INFO'}->{'AA'} = $aa;
+      $aa = get_indel_ancestor($long_cigar, $short_cigar,
+                               $long_mapq, $short_mapq,
+                               $svlen);
       
       if($aa ne '.')
       {
         $num_of_indels_polarised++;
-      }
-      elsif($aa eq '0')
-      {
-        $num_of_indels_ref++;
+
+        if($aa eq '0')
+        {
+          $num_of_indels_ref++;
+        }
       }
     }
+  }
+
+  $vcf_entry->{'INFO'}->{'AA'} = $aa;
+
+  if($aa eq '.')
+  {
+    $vcf_entry->{'INFO'}->{'AALEN'} = '.';
+  }
+  else
+  {
+    $vcf_entry->{'INFO'}->{'AALEN'} = ($aa eq '0' ? $svlen : -$svlen);
   }
 
   $vcf->print_entry($vcf_entry);
