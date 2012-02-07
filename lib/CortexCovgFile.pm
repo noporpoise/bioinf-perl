@@ -8,6 +8,20 @@ use Carp;
 use List::Util qw(min max sum);
 
 
+# perl library code for handling data from the cortex variant caller
+# url: http://github.com/noporpoise/bioinf-perl
+# author: Isaac Turner <turner.isaac@gmail.com>
+
+# Cortex can be found here:
+# http://cortexassembler.sourceforge.net/
+# (by Zam Iqbal & Mario Caccamo)
+
+# Please reference:
+# "De novo assembly and genotyping of variants using colored de Bruijn graphs",
+# Iqbal(*), Caccamo(*), Turner, Flicek, McVean (Nature Genetics) (2012)
+# (doi:10.1038/ng.1028)
+
+
 # Object methods
 # grab_bubble_entry read_bubble_entry read_align_entry
 
