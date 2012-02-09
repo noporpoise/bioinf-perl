@@ -77,10 +77,10 @@ while(defined($ensgene_line = <$ensgene_handle>))
     push(@exons, $exon_starts[$i], $exon_ends[$i]);
   }
 
-  my $gene = ['key' => $key, 'chr' => $chr, 'strand' => $strand,
+  my $gene = {'key' => $key, 'chr' => $chr, 'strand' => $strand,
               'tx_start' => $tx_start, 'tx_end' => $tx_end,
               'cds_start' => $cds_start, 'cds_end' => $cds_end,
-              'exons' => \@exons];
+              'exons' => \@exons};
 
   if(!defined($genes_by_chr{$chr}))
   {
@@ -103,6 +103,11 @@ while(my ($chr, $genes) = each(%genes_by_chr))
 # Read VCF
 #
 my $vcf = new VCFFile($vcf_handle);
+
+$vcf->add_header_tag("INFO", "GENES", 1, "String", "Ensembl gene name/key");
+$vcf->add_header_tag("INFO", "GENES_STRAND", 1, "String", "Strand gene is on +/-");
+$vcf->add_header_tag("INFO", "GENES_POS", 1, "String", "Parts of gene in variant");
+$vcf->print_header();
 
 my $vcf_entry;
 
@@ -150,6 +155,11 @@ sub get_gene_pos
   }
   else
   {
+    if($start < $gene->{'exons'}->[0] && $end >= $gene->{'cds_start'})
+    {
+      push(@pos, "CDS_START");
+    }
+  
     my $num_exons = $num_exons_pos / 2;
 
     for(my $i = 0; $i < $num_exons_pos; $i += 2)
@@ -164,6 +174,11 @@ sub get_gene_pos
       {
         push(@pos, "INTRON".($i/2));
       }
+    }
+
+    if($start < $gene->{'cds_end'} && $end >= $gene->{'exons'}->[$num_exons_pos-1])
+    {
+      push(@pos, "CDS_END");
     }
   }
 
