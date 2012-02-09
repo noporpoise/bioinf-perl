@@ -29,6 +29,7 @@ sub new
   #
   my %header_metainfo = ();
   my %header_tags = ();
+  my @header_extra_lines = (); # Unrecognised header lines
   my @columns_arr = ();
 
   # Example header lines:
@@ -38,7 +39,7 @@ sub new
 
   while(defined($next_line))
   {
-    if($next_line =~ /##(\w+)=<(.*)>/)
+    if($next_line =~ /^##(\w+)=<(.*)>/)
     {
       my $tag;
       # Prints error and returns undef if not valid line
@@ -57,7 +58,7 @@ sub new
         $header_tags{$tag->{'ID'}} = $tag;
       }
     }
-    elsif($next_line =~ /##(.*)=(.*)/)
+    elsif($next_line =~ /^##(.*)=(.*)/)
     {
       # header meta info line
       my ($key,$value) = ($1,$2);
@@ -75,6 +76,12 @@ sub new
 
       $header_metainfo{$key} = $value;
     }
+    elsif($next_line =~ /^##/)
+    {
+      chomp($next_line);
+      push(@header_extra_lines, $next_line);
+      #carp("VCF header line unrecognised '$next_line'");
+    }
     elsif($next_line =~ /^#[^#]/)
     {
       # column header line (e.g. '#CHROM..')
@@ -91,11 +98,6 @@ sub new
       # Peak at first entry
       $next_line = <$handle>;
       last;
-    }
-    elsif($next_line =~ /^##/)
-    {
-      chomp($next_line);
-      carp("VCF header line unrecognised '$next_line'");
     }
     elsif($next_line !~ /^\s*$/)
     {
@@ -148,6 +150,7 @@ sub new
       _next_line => $next_line,
       _header_metainfo => \%header_metainfo,
       _header_tags => \%header_tags,
+      _header_extra_line => \@header_extra_lines,
       _columns_hash => \%columns_hash,
       _columns_arr => \@columns_arr,
       _unread_entries => []
@@ -228,7 +231,8 @@ sub _parse_header_tag
     }
     else
     {
-      carp("VCF header tag has unknown key=value pair '$str'");
+      #carp("VCF header tag has unknown key=value pair '$str'");
+      return undef;
     }
   }
 
@@ -250,19 +254,19 @@ sub _check_valid_header_tag
   }
   elsif(!grep(/^$tag->{'column'}$/, @header_tag_columns))
   {
-    carp("VCF header tag column not one of ".join(",", @header_tag_types)."\n");
+    #carp("VCF header tag column not one of ".join(",", @header_tag_types)."\n");
     return 0;
   }
 
   # ID
   if(!defined($tag->{'ID'}))
   {
-    carp("VCF header tag id missing");
+    #carp("VCF header tag id missing");
     return 0;
   }
   elsif($tag->{'ID'} =~ /\s/)
   {
-    carp("VCF header tag id contains whitespace characters '$tag->{'ID'}'\n");
+    #carp("VCF header tag id contains whitespace characters '$tag->{'ID'}'\n");
     return 0;
   }
 
@@ -271,44 +275,44 @@ sub _check_valid_header_tag
     # Number
     if(!defined($tag->{'Number'}))
     {
-      carp("VCF header tag 'Number' attribute is missing ('.' or an int plz)");
+      #carp("VCF header tag 'Number' attribute is missing ('.' or an int plz)");
       return 0;
     }
     elsif($tag->{'Number'} !~ /^(?:\d+|\.)$/)
     {
-      carp("VCF header tag number of arguments is not an +ve int " .
-           "'$tag->{'Number'}'\n");
+      #carp("VCF header tag number of arguments is not an +ve int " .
+      #     "'$tag->{'Number'}'\n");
       return 0;
     }
 
     # Type
     if(!defined($tag->{'Type'}))
     {
-      carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types)");
+      #carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types)");
       return 0;
     }
     elsif($tag->{'column'} eq "INFO" &&
           !grep(/^$tag->{'Type'}$/, qw(Integer Float Flag Character String)))
     {
-      carp("VCF header tag Type not one of Integer,Float,Flag,Character,String\n");
+      #carp("VCF header tag Type not one of Integer,Float,Flag,Character,String\n");
       return 0;
     }
     elsif($tag->{'column'} eq "FORMAT" &&
           !grep(/^$tag->{'Type'}$/, qw(Integer Float Character String)))
     {
-      carp("VCF header tag Type not one of Integer,Float,Character,String\n");
+      #carp("VCF header tag Type not one of Integer,Float,Character,String\n");
       return 0;
     }
   }
   elsif(defined($tag->{'Number'}) || defined($tag->{'Type'}))
   {
-    carp("VCF header ALT/FILTER tags cannot have Number or Type attributes\n");
+    #carp("VCF header ALT/FILTER tags cannot have Number or Type attributes\n");
     return 0;
   }
 
   if(!defined($tag->{'Description'}))
   {
-    carp("VCF header tag missing Description (ID: $tag->{'ID'})\n");
+    #carp("VCF header tag missing Description (ID: $tag->{'ID'})\n");
     return 0;
   }
 
@@ -316,7 +320,7 @@ sub _check_valid_header_tag
   if(defined($tag->{'Type'}) && $tag->{'Type'} eq "Flag" &&
      $tag->{'Number'} ne "0")
   {
-    carp("VCF header type 'Flag' cannot have 'Number' other than 0");
+    #carp("VCF header type 'Flag' cannot have 'Number' other than 0");
     return 0;
   }
 
@@ -364,6 +368,12 @@ sub print_header
   for my $key (sort keys %$header_metainfo)
   {
     print $out "##$key=$header_metainfo->{$key}\n";
+  }
+
+  # Print unknowns
+  if(@{$self->{_header_extra_line}} > 0)
+  {
+    print join("\n",@{$self->{_header_extra_line}})."\n";
   }
 
   # Print tags

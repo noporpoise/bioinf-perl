@@ -166,13 +166,15 @@ sub get_gene_pos
     {
       if($end >= $gene->{'exons'}->[$i] && $start <= $gene->{'exons'}->[$i+1])
       {
-        push(@pos, "EXON".($i/2));
+        my $exon_num = $gene->{'strand'} eq "+" ? ($i/2) : $num_exons - 1 - ($i/2);
+        push(@pos, "EXON".$exon_num);
       }
       
       if($i+2 < $num_exons_pos && # Not the last exon
          $end >= $gene->{'exons'}->[$i+1] && $start <= $gene->{'exons'}->[$i+2])
       {
-        push(@pos, "INTRON".($i/2));
+        my $intron_num = $gene->{'strand'} eq "+" ? ($i/2) : $num_exons - 2 - ($i/2);
+        push(@pos, "INTRON".$intron_num);
       }
     }
 
