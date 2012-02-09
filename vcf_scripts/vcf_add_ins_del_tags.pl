@@ -64,7 +64,12 @@ while(defined($vcf_entry = $vcf->read_entry()))
   if(min($ref_len, $alt_len) == 0 && max($ref_len, $alt_len) > 0)
   {
     # SVLEN is length(alt) - length(ref)
-    if($vcf_entry->{'INFO'}->{'AA'} eq "0")
+    if(!defined($vcf_entry->{'INFO'}->{'AA'}))
+    {
+      $vcf_entry->{'INFO'}->{'INDEL'} = '.';
+      $vcf_entry->{'INFO'}->{'AALEN'} = '.';
+    }
+    elsif($vcf_entry->{'INFO'}->{'AA'} eq "0")
     {
       # ref allele is ancestral
       my $ins = ($vcf_entry->{'INFO'}->{'SVLEN'} > 0);
@@ -81,6 +86,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     else
     {
       $vcf_entry->{'INFO'}->{'INDEL'} = '.';
+      $vcf_entry->{'INFO'}->{'AALEN'} = '.';
     }
   }
 

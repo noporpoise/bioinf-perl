@@ -90,4 +90,5 @@ my $bytes = $num_of_hash_entries *
 print "Memory: " . num2str($bytes) . " bytes (" . mem2str($bytes) . ")\n";
 
 print "Command: cortex_var_" . ($kmerSize > 31 ? "63" : "31") .
-      "_c" . $numOfColours . " --mem_width $memWidth --mem_height $memHeight\n";
+      "_c" . $numOfColours . " --kmer_size $kmerSize " .
+      "--mem_width $memWidth --mem_height $memHeight\n";

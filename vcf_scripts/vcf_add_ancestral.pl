@@ -324,6 +324,13 @@ print STDERR "vcf_add_ancestral.pl: of which " .
              num2str($num_of_indels_ref) . "/" . num2str($num_of_indels_polarised) .
              " ($percent%) were ref\n";
 
+my $total_polarised = $num_of_np_polarised + $num_of_indels_polarised;
+
+$percent = sprintf("%.2f", 100 * $total_polarised / $num_of_variants);
+print STDERR "vcf_add_ancestral.pl: Total variants polarised = " .
+             num2str($total_polarised) . "/" . num2str($num_of_variants) .
+             " ($percent%)\n";
+
 # Done
 close($vcf_handle);
 close($mapping_handle);
@@ -364,6 +371,9 @@ sub get_indel_ancestor
 sub ancestral_match
 {
   my ($anc, $allele) = @_;
+
+  $anc = uc($anc);
+  $allele = uc($allele);
 
   my $len = length($anc);
   my $unknowns = 0;

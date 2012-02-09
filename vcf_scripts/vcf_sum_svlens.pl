@@ -64,21 +64,21 @@ my $sum_deletions = 0;
 while(defined($vcf_entry = $vcf->read_entry()))
 {
   $num_of_variants++;
-  my $svlen = $vcf_entry->{'INFO'}->{'AALEN'};
+  my $aalen = $vcf_entry->{'INFO'}->{'AALEN'};
   
-  if(defined($svlen))
+  if(defined($aalen) && $aalen ne ".")
   {
     $num_of_variants_polarised++;
 
-    if($svlen > 0)
+    if($aalen > 0)
     {
       $num_insertions++;
-      $sum_insertions += $svlen;
+      $sum_insertions += $aalen;
     }
-    elsif($svlen < 0)
+    elsif($aalen < 0)
     {
       $num_deletions++;
-      $sum_deletions += $svlen;
+      $sum_deletions += $aalen;
     }
     else
     {
@@ -91,13 +91,31 @@ while(defined($vcf_entry = $vcf->read_entry()))
 my $num_of_indels = $num_insertions + $num_deletions;
 
 print "".num2str($num_of_variants_polarised)." / ".num2str($num_of_variants)." ".
-      sprintf("%.2f", ($num_of_variants_polarised / $num_of_variants)) . "% " .
+      sprintf("%.2f", (100*$num_of_variants_polarised / $num_of_variants)) . "% " .
       " variants polarised\n";
 
-print "Ins/Del per indel: ".(($sum_insertions+$sum_deletions) / $num_of_indels)."bp\n";
+print "Mean Ins/Del per indel: " .
+      sprintf("%.3f", ($sum_insertions+$sum_deletions) / $num_of_indels)."bp\n";
 
-print "Total insertions: $sum_insertions for $num_insertions (".($sum_insertions/$num_insertions).")\n";
-print "Total deletions: $sum_deletions for $num_deletions (".($sum_deletions/$num_deletions).")\n";
-print "Total MNPs: $sum_mnps for $num_mnps (".($sum_mnps/$num_mnps).")\n";
+if($num_insertions > 0)
+{
+  print "Total inserted bases = ".num2str($sum_insertions) ." bp in " .
+        num2str($num_insertions) . " insertions (" . 
+        sprintf("%.2f", $sum_insertions/$num_insertions) . "bp each)\n";
+}
+
+if($num_deletions > 0)
+{
+  print "Total deleted bases = ".num2str($sum_deletions) ." bp in " .
+        num2str($num_deletions) . " deletions (" . 
+        sprintf("%.2f", $sum_deletions/$num_deletions) . "bp each)\n";
+}
+
+if($num_mnps > 0)
+{
+  print "Total bases in MNPs = ".num2str($sum_mnps) ." bp in " .
+        num2str($num_mnps) . " variants (" . 
+        sprintf("%.2f", $sum_mnps/$num_mnps) . "bp each)\n";
+}
 
 close($vcf_handle);

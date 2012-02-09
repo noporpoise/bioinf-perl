@@ -13,13 +13,13 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_filter_slippage.pl [--invert | --flag <flag>] " .
-               "[in.vcf]\n";
-  print STDERR "  Prints (or flags) slippage indels\n";
-  print STDERR "  Requires INFO tags 'left_flank' and 'right_flank'\n";
-  print STDERR "\n";
-  print STDERR "  --invert       Print or flag non slippage indels\n";
-  print STDERR "  --tag <tag>    INFO tag to add slippage\n";
+  print STDERR "" .
+"Usage: ./vcf_filter_slippage.pl [--invert | --flag <flag>] [in.vcf]\n" .
+"  Prints (or flags) slippage indels.  Slippage can only be on clean indels.\n" .
+"  Requires INFO tags 'left_flank' and 'right_flank'\n" .
+"  \n" .
+"  --invert       Print or flag non slippage indels\n" .
+"  --tag <tag>    INFO tag to add slippage\n";
   exit;
 }
 
@@ -126,8 +126,8 @@ while(defined($vcf_entry = $vcf->read_entry()))
     my $indel = $long_allele;
     my $indel_rev = reverse($indel);
 
-    $slippage_dist = get_match($left_flank_rev, $indel) +
-                     get_match($right_flank, $indel_rev);
+    $slippage_dist = get_match($left_flank_rev, $indel_rev) +
+                     get_match($right_flank, $indel);
     
     $is_slippage = ($slippage_dist >= length($indel));
   }
@@ -135,10 +135,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
   if(defined($flag))
   {
     # Print all, tag those that are filtered
-    if($is_slippage != $invert)
-    {
-      $vcf_entry->{'INFO'}->{$flag} = $slippage_dist;
-    }
+    $vcf_entry->{'INFO'}->{$flag} = $slippage_dist;
 
     $vcf->print_entry($vcf_entry);
   }
@@ -154,6 +151,9 @@ close($vcf_handle);
 sub get_match
 {
   my ($str1, $str2) = @_;
+
+  $str1 = uc($str1);
+  $str2 = uc($str2);
 
   my $len = min(length($str1), length($str2));
 

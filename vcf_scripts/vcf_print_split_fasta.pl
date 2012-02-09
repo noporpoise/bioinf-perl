@@ -5,6 +5,8 @@ use warnings;
 
 use VCFFile;
 
+use List::Util qw(min max);
+
 sub print_usage
 {
   for my $err (@_) {
