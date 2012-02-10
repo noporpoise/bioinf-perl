@@ -3,11 +3,12 @@ package VCFFile;
 use strict;
 use warnings;
 
+use List::Util qw(min max);
 use Carp;
 
 # All methods are object methods except these:
 use base 'Exporter';
-our @EXPORT = qw(get_standard_vcf_columns);
+our @EXPORT = qw(get_standard_vcf_columns is_snp get_clean_indel);
 
 my @header_tag_columns = qw(ALT FILTER FORMAT INFO);
 my @header_tag_types = qw(Integer Float Character String Flag);
@@ -478,7 +479,8 @@ sub add_header_tag
     $tag->{'Type'} = $tag_type;
   }
 
-  #print "Adding tag: column => $tag_col; ID => $tag_id; Description => $tag_description;\n";
+  #print "Adding tag: column => $tag_col; ID => $tag_id; " .
+  #      "Description => $tag_description;\n";
 
   if(_check_valid_header_tag($tag))
   {
@@ -727,6 +729,36 @@ sub print_entry
   }
 
   print $out_handle "\n";
+}
+
+# returns 0 or 1
+sub is_snp
+{
+  my ($vcf_entry) = @_;
+  
+  my $ref_len = length($vcf_entry->{'true_REF'}):
+  my $alt_len = length($vcf_entry->{'true_ALT'}):
+  
+  return ($ref_len == 1 && $alt_len == 1);
+}
+
+# returns undef or $indel
+sub get_clean_indel
+{
+  my ($vcf_entry) = @_;
+  
+  my $ref = $vcf_entry->{'true_REF'});
+  my $alt = $vcf_entry->{'true_ALT'});
+  my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
+
+  if(min(length($ref), length($alt)) == 0 && $svlen != 0)
+  {
+    return $svlen > 0 ? $alt : $ref;
+  }
+  else
+  {
+    return undef;
+  }
 }
 
 1;

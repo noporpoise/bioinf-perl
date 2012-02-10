@@ -19,7 +19,7 @@ sub print_usage
   }
 
   print STDERR "Usage: ./vcf_add_flanks.pl [FILTERS] <flank_size> <in.vcf> " .
-               "<ref_name> [ref1.fa ..]\n";
+               "<ref_name> <ref1.fa ..>\n";
   print STDERR "  Adds the flanking sequence to VCF files\n";
   print STDERR "  --filter_ref_match: remove variants where ref allele " .
                "doesn't match\n";
@@ -40,7 +40,7 @@ my $filter_Ns = 0;
 
 for my $i (1,2)
 {
-  if($ARGV[0] =~ /^-?-filter_ref_match$/i)
+  if($ARGV[0] =~ /^-?-filter_ref(?:_match)?$/i)
   {
     shift(@ARGV);
     $filter_by_ref_match = 1;
@@ -59,7 +59,7 @@ my @ref_files = @ARGV;
 
 if($flank_size !~ /^\d+$/ || $flank_size < 0)
 {
-  print_usage("Flank size must be a +ve integers");
+  print_usage("Flank size must be a +ve integers ('$flank_size' invalid)");
 }
 
 #
@@ -134,6 +134,8 @@ my $total_num_entries = 0;
 
 my $vcf_entry;
 
+my %missing_chrs = ();
+
 while(defined($vcf_entry = $vcf->read_entry()))
 {
   $total_num_entries++;
@@ -141,8 +143,8 @@ while(defined($vcf_entry = $vcf->read_entry()))
   
   if(!defined($ref_genomes{$chr}))
   {
-    die("Chromosome not found '$chr' in " .
-        "(" . join(",", sort keys %ref_genomes) . ")");
+    $missing_chrs{$chr} = 1;
+    next;
   }
   
   # Get coordinates, convert to zero based
@@ -169,7 +171,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     
     open(my $stderr, ">&", STDERR) or die("Cannot open STDERR");
     $vcf->print_entry($vcf_entry, $stderr);
-    die();
+    #die();
   }
   elsif($right_flank_start < 0 ||
         $right_flank_start + $right_flank_length > length($ref_genomes{$chr}))
@@ -179,7 +181,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     
     open(my $stderr, ">&", STDERR) or die("Cannot open STDERR");
     $vcf->print_entry($vcf_entry, $stderr);
-    die();
+    #die();
   }
 
   $vcf_info->{'left_flank'} = substr($ref_genomes{$chr},
@@ -210,6 +212,14 @@ while(defined($vcf_entry = $vcf->read_entry()))
     $num_printed++;
     $vcf->print_entry($vcf_entry);
   }
+}
+
+my @missing_chr_names = sort keys %missing_chrs;
+
+if(@missing_chr_names > 0)
+{
+  print STDERR "vcf_add_flanks.pl: Missing chromosomes: " .
+               join(", ", @missing_chr_names) . "\n";
 }
 
 if($num_ref_mismatch > 0)

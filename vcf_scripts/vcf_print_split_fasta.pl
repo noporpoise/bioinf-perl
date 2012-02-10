@@ -59,44 +59,59 @@ while(defined($vcf_entry = $vcf->read_entry()))
   my $ref = $vcf_entry->{'true_REF'};
   my $alt = $vcf_entry->{'true_ALT'};
 
-  my $left = $vcf_entry->{'INFO'}->{'left_flank'};
-  my $right = $vcf_entry->{'INFO'}->{'right_flank'};
-
   my $aa = $vcf_entry->{'INFO'}->{'AA'};
   my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
-
-  my $indel = $vcf_entry->{'INFO'}->{'INDEL'};
-
   my $min_allele_len = min(length($ref), length($alt));
 
-  print ">".$id."_5p\n";
-  print "$left\n";
+  my $left = $vcf_entry->{'INFO'}->{'left_flank'};
 
-  if($aa eq "0" || $aa eq "1")
+  if(defined($left))
   {
-    if($svlen != 0 && $min_allele_len == 0)
+    print ">".$id."_5p\n";
+    print "$left\n";
+  }
+
+  if($svlen != 0 && $min_allele_len == 0)
+  {
+    # Clean Indel
+    
+    my $indel = "";
+    if(defined($aa) && ($aa eq "0" || $aa eq "1"))
     {
-      print ">".$id."_".lc($indel)."\n";
-      print "".($svlen > 0 ? $alt : $ref) . "\n";
+      $indel = (($aa eq "0") == ($svlen > 0)) ? "ins" : "del";
     }
     else
     {
-      print ">".$id."_anc\n";
-      print "".($aa eq "0" ? $ref : $alt) . "\n";
-      print ">".$id."_alt\n";
-      print "".($aa eq "0" ? $alt : $ref) . "\n";
+      $indel = "indel";
     }
+    
+    print ">".$id."_".$indel."\n";
+    print "".($svlen > 0 ? $alt : $ref) . "\n";
+  }
+  elsif(defined($aa) && ($aa eq "0" || $aa eq "1"))
+  {
+    # ancestral info
+    print ">".$id."_anc\n";
+    print "".($aa eq "0" ? $ref : $alt) . "\n";
+    print ">".$id."_alt\n";
+    print "".($aa eq "0" ? $alt : $ref) . "\n";
   }
   else
   {
+    # no ancestral
     print ">".$id."_ref\n";
     print "$ref\n";
     print ">".$id."_alt\n";
     print "$alt\n";
   }
 
-  print ">".$id."_3p\n";
-  print "$right\n\n";
+  my $right = $vcf_entry->{'INFO'}->{'right_flank'};
+
+  if(defined($right))
+  {
+    print ">".$id."_3p\n";
+    print "$right\n\n";
+  }
 }
 
 close($vcf_handle);
