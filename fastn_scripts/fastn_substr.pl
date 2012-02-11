@@ -11,12 +11,16 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "usage: ./fastn_substr.pl <chr:pos:len,chr:pos-end,.> [in1.fa in2.fq ..]\n";
-  print STDERR "  Prints substrings from FASTA/Q files (or STDIN if '-')\n";
-  print STDERR "  Takes comma separated list of regions in the form:\n";
-  print STDERR "    'chr:start:length,..' and 'chr:start-end,..'\n";
-  print STDERR "  Coordinates are 1-based.  " .
-               "Start/end positions < 0 mean X bp from the end.\n";
+  print STDERR "" .
+"Usage: ./fastn_substr.pl [--file <f.pos>] [chr:pos:len,chr:pos-end,.] [in1.fa in2.fq ..]\n" .
+"  Prints substrings from FASTA/Q files (or STDIN if '-').  Takes comma-\n" .
+"  separated list of regions.\n" .
+"  \n" .
+"  * Regions must be 'chr:start:length,..' or 'chr:start-end,..'\n" .
+"  * (coordinates are 1-based)  \n" .
+"  * Start/end positions <0 mean X bp from the end\n" .
+"  * --file <f.pos>  is a file with each line chr:pos:len or chr:pos-end\n";
+
   exit;
 }
 
@@ -25,70 +29,75 @@ if(@ARGV < 1)
   print_usage();
 }
 
-my $searches_list = shift;
-my @files = @ARGV;
+my @search_files = ();
+my $searches_list;
 
-my @searches = split(",", $searches_list);
-my %search_chrs = ();
-
-for my $search (@searches)
+while(@ARGV >= 2 && $ARGV[0] =~ /^-?-f(ile)?$/i)
 {
-  my ($chr,$start,$length,$end);
-  
-  if($search =~ /^(.*):(-?\d+):(\d+)$/)
-  {
-    $chr = $1;
-    $start = $2;
-    $length = $3;
-    
-    if($start == 0) {
-      print_usage("Start position is 1-based - cannot be 0");
-    }
-    elsif($length == 0) {
-      print_usage("Substring length cannot be 0");
-    }
-    elsif($start < 0 && $length > -$start)
-    {
-      print_usage("Start position is " . (-$start) . "bp from the end of the " .
-                  "read, but length is ".$length."bp (length too long!)");
-    }
-  }
-  elsif($search =~ /^(.*):(-?\d+)-(-?\d+)$/)
-  {
-    $chr = $1;
-    $start = $2;
-    $end = $3;
-    
-    if($start == 0) {
-      print_usage("Start position is 1-based - cannot be 0");
-    }
-    elsif($end == 0) {
-      print_usage("End position cannot be 0");
-    }
-    elsif($start < 0 && $end < $start)
-    {
-      print_usage("Start position is " . (-$start) . "bp from the end of the " .
-                  "read, but end is ".(-$end)."bp from the end (negative length!)");
-    }
-  }
-  else {
-    print_usage("Invalid position argument '$search'");
-  }
-
-  if(!defined($search_chrs{$chr}))
-  {
-    # First search position on this chromosome
-    $search_chrs{$chr} = [];
-  }
-  
-  push(@{$search_chrs{$chr}}, [$start, $length, $end]);
+  shift;
+  push(@search_files, shift);
 }
 
+if(@ARGV >= 0 && $ARGV[0] =~ /.+:\d+[:\-]\d+/)
+{
+  $searches_list = shift;
+}
+
+my @ref_files = @ARGV;
+
+# Check we can read ref files
+
+for my $ref_file (@ref_files)
+{
+  if(!(-r $ref_file))
+  {
+    print_usage("Cannot read fasta/q file '$ref_file'");
+  }
+}
+
+my %search_chrs = ();
+
+# Load searches from files
+for my $search_file (@search_files)
+{
+  open(SEARCH, $search_file)
+    or print_usage("Couldn't open file of coords '$search_file'");
+
+  my $search_line;
+  my $search_line_number = 1;
+
+  while(defined($search_line = <SEARCH>))
+  {
+    chomp($search_line);
+    my @searches = split(",", $search_line);
+  
+    for my $search (@searches)
+    {
+      parse_search_term($search,
+                        " [file:".$search_file.":".$search_line_number."]");
+    }
+
+    $search_line_number++;
+  }
+
+  close(SEARCH);
+}
+
+# Load searches from cmd line
+if(defined($searches_list))
+{
+  my @searches = split(",", $searches_list);
+
+  for my $search (@searches)
+  {
+    parse_search_term($search);
+  }
+}
 
 #
 # Open FASTA/Q handles
 #
-if(@files == 0)
+if(@ref_files == 0)
 {
   my $fastn_handle = open_stdin();
   
@@ -98,7 +107,7 @@ if(@files == 0)
 }
 else
 {
-  for my $file (@files)
+  for my $file (@ref_files)
   {
     my $fastn_handle;
 
@@ -228,4 +237,68 @@ sub search_file
   }
 
   close($handle);
+}
+
+sub parse_search_term
+{
+  my ($search, $file_err) = @_;
+
+  if(!defined($file_err))
+  {
+    $file_err = "";
+  }
+
+  my ($chr,$start,$length,$end);
+  
+  if($search =~ /^(.*):(-?\d+):(\d+)$/)
+  {
+    $chr = $1;
+    $start = $2;
+    $length = $3;
+    
+    if($start == 0) {
+      print_usage("Start position is 1-based - cannot be 0");
+    }
+    elsif($length == 0) {
+      print_usage("Substring length cannot be 0");
+    }
+    elsif($start < 0 && $length > -$start)
+    {
+      print_usage("Start position is " . (-$start) . "bp from the end of the " .
+                  "read, but length is ".$length."bp (length too long!)" .
+                  $file_err);
+    }
+  }
+  elsif($search =~ /^(.*):(-?\d+)-(-?\d+)$/)
+  {
+    $chr = $1;
+    $start = $2;
+    $end = $3;
+    
+    if($start == 0) {
+      print_usage("Start position is 1-based - cannot be 0");
+    }
+    elsif($end == 0) {
+      print_usage("End position cannot be 0");
+    }
+    elsif($start < 0 && $end < $start)
+    {
+      print_usage("Start position is " . (-$start) . "bp from the end of the " .
+                  "read, but end is ".(-$end)."bp from the end (negative length!)" .
+                  $file_err);
+    }
+  }
+  else
+  {
+    print_usage("Invalid position argument '$search'" .
+                $file_err);
+  }
+
+  if(!defined($search_chrs{$chr}))
+  {
+    # First search position on this chromosome
+    $search_chrs{$chr} = [];
+  }
+  
+  push(@{$search_chrs{$chr}}, [$start, $length, $end]);
 }

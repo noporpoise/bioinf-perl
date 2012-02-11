@@ -115,6 +115,11 @@ sub pretty_fraction
     $places = 2;
   }
 
+  if($denominator == 0)
+  {
+    return num2str($nominator) . " / " . num2str($denominator);
+  }
+
   my $percent = sprintf("%.".$places."f", 100 * $nominator / $denominator);
 
   return num2str($nominator) . " / " . num2str($denominator) . " " .
