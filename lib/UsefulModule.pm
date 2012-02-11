@@ -11,7 +11,7 @@ use base 'Exporter';
 # When the module is invoked, export, by default, the function "hello" into 
 # the namespace of the using code.
 
-our @EXPORT = qw(num2str mem2str binary_search_nearest);
+our @EXPORT = qw(num2str mem2str binary_search_nearest pretty_fraction);
 
 =head1 NAME
  
@@ -106,6 +106,21 @@ sub mem2str
   }
 }
 
+sub pretty_fraction
+{
+  my ($nominator, $denominator, $places) = @_;
+
+  if(!defined($places))
+  {
+    $places = 2;
+  }
+
+  my $percent = sprintf("%.".$places."f", 100 * $nominator / $denominator);
+
+  return num2str($nominator) . " / " . num2str($denominator) . " " .
+         "(" . $percent . "%)";
+}
+
 # Returns index of nearest value
 sub binary_search_nearest
 {
@@ -113,8 +128,10 @@ sub binary_search_nearest
 
   my ($arr, $search_value, $lower_bound, $upper_bound) = @_;
 
-  if(@$arr == 0) {
-    die("binary_search_nearest cannot an search empty array for value '$search_value'");
+  if(@$arr == 0)
+  {
+    die("binary_search_nearest cannot an search empty array for value " .
+        "'$search_value'");
   }
   elsif(!defined($lower_bound))
   {

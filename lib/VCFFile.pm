@@ -736,8 +736,8 @@ sub is_snp
 {
   my ($vcf_entry) = @_;
   
-  my $ref_len = length($vcf_entry->{'true_REF'}):
-  my $alt_len = length($vcf_entry->{'true_ALT'}):
+  my $ref_len = length($vcf_entry->{'true_REF'});
+  my $alt_len = length($vcf_entry->{'true_ALT'});
   
   return ($ref_len == 1 && $alt_len == 1);
 }
@@ -747,8 +747,8 @@ sub get_clean_indel
 {
   my ($vcf_entry) = @_;
   
-  my $ref = $vcf_entry->{'true_REF'});
-  my $alt = $vcf_entry->{'true_ALT'});
+  my $ref = $vcf_entry->{'true_REF'};
+  my $alt = $vcf_entry->{'true_ALT'};
   my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
 
   if(min(length($ref), length($alt)) == 0 && $svlen != 0)
