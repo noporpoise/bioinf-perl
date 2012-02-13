@@ -141,7 +141,7 @@ sub get_gene_pos
 
   if($end >= $gene->{'tx_start'} && $start < $gene->{'cds_start'})
   {
-    push(@pos, "TX_START");
+    push(@pos, $gene->{'strand'} eq "+" ? "TX_START" : "TX_END");
   }
 
   my $num_exons_pos = @{$gene->{'exons'}};
@@ -186,7 +186,7 @@ sub get_gene_pos
 
   if($end > $gene->{'cds_end'} && $start <= $gene->{'tx_end'})
   {
-    push(@pos, "TX_END");
+    push(@pos, $gene->{'strand'} eq "+" ? "TX_END" : "TX_START");
   }
 
   return join(",", @pos);

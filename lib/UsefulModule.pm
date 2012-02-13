@@ -11,7 +11,8 @@ use base 'Exporter';
 # When the module is invoked, export, by default, the function "hello" into 
 # the namespace of the using code.
 
-our @EXPORT = qw(num2str mem2str binary_search_nearest pretty_fraction);
+our @EXPORT = qw(num2str mem2str round_int round_decimal
+                 pretty_fraction binary_search_nearest);
 
 =head1 NAME
  
@@ -124,6 +125,27 @@ sub pretty_fraction
 
   return num2str($nominator) . " / " . num2str($denominator) . " " .
          "(" . $percent . "%)";
+}
+
+sub round_int
+{
+  my ($num, $round_to) = @_;
+
+  if(!defined($round_to))
+  {
+    $round_to = 1;
+  }
+
+  return int($num / $round_to + 0.5) * $round_to;
+}
+
+sub round_decimal
+{
+  my ($num, $decimal_places) = @_;
+
+  my $multiply = 10**$decimal_places;
+
+  return int($num * $multiply + 0.5) / $multiply;
 }
 
 # Returns index of nearest value

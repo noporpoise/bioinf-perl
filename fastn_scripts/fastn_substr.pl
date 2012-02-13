@@ -16,7 +16,8 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./fastn_substr.pl [--file <f.pos>] [chr:pos:len,chr:pos-end,.] [in1.fa in2.fq ..]\n" .
+"Usage: ./fastn_substr.pl [--file <f.pos>] [chr:pos:len,chr:pos-end,.] " .
+  "[in1.fa in2.fq ..]\n" .
 "  Prints substrings from FASTA/Q files (or STDIN if '-').  Takes comma-\n" .
 "  separated list of regions.\n" .
 "  \n" .
