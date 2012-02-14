@@ -13,22 +13,40 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_print_svlen.pl [--abs] <max_svlen> [file.vcf]\n";
+  print STDERR "Usage: ./vcf_print_svlen.pl [--abs|--tag <t>] <max_svlen> [file.vcf]\n";
   print STDERR "  Print SVLENs\n";
   exit;
 }
 
-if(@ARGV < 1 || @ARGV > 3)
+if(@ARGV < 1 || @ARGV > 5)
 {
   print_usage();
 }
 
 my $abs = 0;
+my $tag = 'SVLEN';
 
-if(@ARGV > 0 && $ARGV[0] =~ /^-?-abs$/i)
+while(@ARGV > 0)
 {
-  shift;
-  $abs = 1;
+  if($ARGV[0] =~ /^-?-abs$/i)
+  {
+    shift;
+    $abs = 1;
+  }
+  elsif($ARGV[0] =~ /^-?-t(ag)?$/i)
+  {
+    shift;
+    $tag = shift;
+  }
+  else
+  {
+    last;
+  }
+}
+
+if(@ARGV < 1 || @ARGV > 2)
+{
+  print_usage();
 }
 
 my $max_svlen = shift;
@@ -71,7 +89,7 @@ my @del = map {0} 0..$max_svlen;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
-  my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
+  my $svlen = $vcf_entry->{'INFO'}->{$tag};
 
   if($abs)
   {
