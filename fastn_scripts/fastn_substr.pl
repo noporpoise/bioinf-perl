@@ -219,6 +219,7 @@ sub search_file
         if($all)
         {
           print ">$name\n";
+          print "$seq\n";
         }
         else
         {
