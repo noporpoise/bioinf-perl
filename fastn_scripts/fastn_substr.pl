@@ -16,15 +16,16 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./fastn_substr.pl [--file <f.pos>] [chr:pos:len,chr:pos-end,.] " .
+"Usage: ./fastn_substr.pl [--allow_dupes|--file <f.pos>] [chr:pos:len,chr:pos-end,.] " .
   "[in1.fa in2.fq ..]\n" .
 "  Prints substrings from FASTA/Q files (or STDIN if '-').  Takes comma-\n" .
 "  separated list of regions.\n" .
 "  \n" .
-"  * Regions must be 'chr:start:length,..' or 'chr:start-end,..'\n" .
+"  * Regions must be 'chr:start:length,..' or 'chr:start-end,..' or 'chrX:*'\n" .
 "  * (coordinates are 1-based)  \n" .
 "  * Start/end positions <0 mean X bp from the end\n" .
 "  * --file <f.pos>  is a file with each line chr:pos:len or chr:pos-end\n";
+"  * --allow_dupes   if multiple entries have the same name\n";
 
   exit;
 }
@@ -37,15 +38,32 @@ if(@ARGV < 1)
 my @search_files = ();
 my $searches_list;
 
-while(@ARGV >= 2 && $ARGV[0] =~ /^-?-f(ile)?$/i)
+my $allow_dupes = 0;
+
+while(@ARGV >= 1)
 {
-  shift;
-  push(@search_files, shift);
+  if(@ARGV >= 2 && $ARGV[0] =~ /^-?-f(ile)?$/i)
+  {
+    shift;
+    push(@search_files, shift);
+  }
+  elsif($ARGV[0] =~ /^-?-allow_dupes?$/i)
+  {
+    $allow_dupes = 1;
+  }
+  else
+  {
+    last;
+  }
 }
 
-if(@ARGV >= 0 && $ARGV[0] =~ /.+:\d+[:\-]\d+/)
+if(@ARGV >= 0 && $ARGV[0] =~ /.+:(\d+|\*)/)
 {
   $searches_list = shift;
+}
+elsif(@search_files == 0)
+{
+  print_usage();
 }
 
 my @ref_files = @ARGV;
@@ -196,41 +214,52 @@ sub search_file
       # Print substrings on this chromosome
       for(my $i = 0; $i < @$array_ref; $i++)
       {
-        my ($start,$length,$end) = @{$array_ref->[$i]};
+        my ($start,$length,$end,$all) = @{$array_ref->[$i]};
 
-        if($start < 0)
+        if($all)
         {
-          # still in 1-based coords
-          $start += length($seq)+1;
-        }
-
-        if(!defined($length))
-        {
-          if($end < 0)
-          {
-            $end += length($seq)+1;
-          }
-
-          $length = $end-$start+1;
-          print ">$name:$start-$end\n";
+          print ">$name\n";
         }
         else
         {
-          $end = $start+$length-1;
-          print ">$name:$start:$length\n";
-        }
+          if($start < 0)
+          {
+            # still in 1-based coords
+            $start += length($seq)+1;
+          }
 
-        if($end > length($seq)) {
-          print STDERR "# Warning: $name:$start:$length is out of bounds of " .
-                       "$name:1:".length($seq)."\n";
-        }
+          if(!defined($length))
+          {
+            if($end < 0)
+            {
+              $end += length($seq)+1;
+            }
 
-        # Correct for 1-based coords here (convert to 0-based)
-        print substr($seq, $start-1, $length)."\n";
+            $length = $end-$start+1;
+            print ">$name:$start-$end\n";
+          }
+          else
+          {
+            $end = $start+$length-1;
+            print ">$name:$start:$length\n";
+          }
+
+          if($end > length($seq))
+          {
+            print STDERR "# Warning: $name:$start:$length is out of bounds of " .
+                         "$name:1:".length($seq)."\n";
+          }
+
+          # Correct for 1-based coords here (convert to 0-based)
+          print substr($seq, $start-1, $length)."\n";
+        }
       }
-    
-      # Only return the first result for each search - so exit
-      delete($search_chrs{$name});
+
+      if(!$allow_dupes)
+      {
+        # Only return the first result for each search - so exit
+        delete($search_chrs{$name});
+      }
     }
   
     if(keys(%search_chrs) == 0)
@@ -253,8 +282,9 @@ sub parse_search_term
     $file_err = "";
   }
 
-  my ($chr,$start,$length,$end);
-  
+  # All initially undefined - some will be defined
+  my ($chr, $start, $length, $end, $all);
+
   if($search =~ /^(.*):(-?\d+):(\d+)$/)
   {
     $chr = $1;
@@ -293,6 +323,11 @@ sub parse_search_term
                   $file_err);
     }
   }
+  elsif($search =~ /^(.*):\*$/)
+  {
+    $chr = $1;
+    $all = 1;
+  }
   else
   {
     print_usage("Invalid position argument '$search'" .
@@ -305,5 +340,5 @@ sub parse_search_term
     $search_chrs{$chr} = [];
   }
   
-  push(@{$search_chrs{$chr}}, [$start, $length, $end]);
+  push(@{$search_chrs{$chr}}, [$start, $length, $end, $all]);
 }
