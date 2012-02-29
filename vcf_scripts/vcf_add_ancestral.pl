@@ -38,7 +38,7 @@ if(@ARGV < 5)
 # Ancestral Reference from:
 # ftp://ftp.ebi.ac.uk/pub/databases/ensembl/jherrero/ancestral/
 #
-# It uses the same coordinates as PanTro2
+# It uses the same coordinates as PanTro2 / hg19
 #
 # Contains:
 # ACGT => confident
@@ -105,7 +105,7 @@ my @anc_chrs = keys %$anc_ref_hash;
 # looks like: >ANCESTOR_for_chromosome:CHIMP2.1:1:1:229974691:1
 for my $key (@anc_chrs)
 {
-  if($key =~ /ANCESTOR_for_chromosome:CHIMP2.1:(?:chr)?([\dXY]*)([ab]*):/i)
+  if($key =~ /ANCESTOR_for_chromosome:[^:]*:(?:chr)?([\dXY]*)([ab]*):/i)
   {
     my $chr = "chr".uc($1).lc($2);
     $anc_ref_hash->{$chr} = $anc_ref_hash->{$key};

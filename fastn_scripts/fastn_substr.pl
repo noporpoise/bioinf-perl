@@ -24,7 +24,7 @@ sub print_usage
 "  * Regions must be 'chr:start:length,..' or 'chr:start-end,..' or 'chrX:*'\n" .
 "  * (coordinates are 1-based)  \n" .
 "  * Start/end positions <0 mean X bp from the end\n" .
-"  * --file <f.pos>  is a file with each line chr:pos:len or chr:pos-end\n";
+"  * --file <f.pos>  is a file with each line chr:pos:len or chr:pos-end\n" .
 "  * --allow_dupes   if multiple entries have the same name\n";
 
   exit;
