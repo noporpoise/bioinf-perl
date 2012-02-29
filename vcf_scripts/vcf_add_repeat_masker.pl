@@ -68,7 +68,8 @@ while($rmsk_line = <RMSK>)
   my $rmsk_chr = get_clean_chr_name($rmsk_cols[5]);
   my $rmsk_start = $rmsk_cols[6];
   my $rmsk_end = $rmsk_cols[7];
-  my $rmsk_class = $rmsk_cols[11];
+  #my $rmsk_class = $rmsk_cols[11];
+  my $rmsk_class = $rmsk_cols[12];
 
   if($rmsk_class =~ /\?$/)
   {
@@ -84,15 +85,10 @@ while($rmsk_line = <RMSK>)
 
   if(!defined($repeat_elements_by_chr{$rmsk_chr}))
   {
-    $repeat_elements_by_chr{$rmsk_chr} = {};
-  }
-  
-  if(!defined($repeat_elements_by_chr{$rmsk_chr}->{$rmsk_class}))
-  {
-    $repeat_elements_by_chr{$rmsk_chr}->{$rmsk_class} = [];
+    $repeat_elements_by_chr{$rmsk_chr} = [];
   }
 
-  push(@{$repeat_elements_by_chr{$rmsk_chr}->{$rmsk_class}},
+  push(@{$repeat_elements_by_chr{$rmsk_chr}},
        [$rmsk_start, $rmsk_end+1, $repeat]);
 }
 
@@ -100,15 +96,12 @@ close(RMSK);
 
 my @rmsk_classes = sort {$a cmp $b} keys %num_per_class;
 
-my %interval_lists = ();
+my %intervals_per_chrom = ();
 
-for my $rmsk_chr (keys %repeat_elements_by_chr)
+for my $chr (keys %repeat_elements_by_chr)
 {
-  for my $rmsk_class (@rmsk_classes)
-  {
-    $interval_lists{$rmsk_chr}->{$rmsk_class}
-      = new IntervalList(@{$repeat_elements_by_chr{$rmsk_chr}->{$rmsk_class}});
-  }
+  $intervals_per_chrom{$chr}
+    = new IntervalList(@{$repeat_elements_by_chr{$chr}});
 }
 
 #
@@ -117,19 +110,12 @@ for my $rmsk_chr (keys %repeat_elements_by_chr)
 my $vcf = new VCFFile($vcf_handle);
 
 # Add header tags
-for my $class (@rmsk_classes)
-{
-  my $descrip = "Distance (bp) left to nearset element '$class' (0 => inside)";
-  $vcf->add_header_tag("INFO", "rmsk_".$class."_left", 1, "Integer", $descrip);
-  $descrip = "Distance (bp) right to nearset element '$class' (0 => inside)";
-  $vcf->add_header_tag("INFO", "rmsk_".$class."_right", 1, "Integer", $descrip);
-}
+$vcf->add_header_tag("INFO", "rmsk", 1, "String", "RMSK elements a variant is inside");
 
 # Print VCF header
 $vcf->print_header();
 
 my $total_num_entries = 0;
-my %num_in_repeat_class = ();
 my %missing_chrs = ();
 
 my $vcf_entry;
@@ -143,9 +129,9 @@ while(defined($vcf_entry = $vcf->read_entry()))
   my $var_start = $vcf_entry->{'true_POS'};
   my $var_end = $var_start + length($vcf_entry->{'true_REF'});
 
-  my $interval_lists_hashref = $interval_lists{$chr};
+  my $interval_list = $intervals_per_chrom{$chr};
 
-  if(!defined($interval_lists_hashref))
+  if(!defined($interval_list))
   {
     if(!defined($missing_chrs{$chr}))
     {
@@ -155,57 +141,14 @@ while(defined($vcf_entry = $vcf->read_entry()))
     next;
   }
 
-  for my $rmsk_class (@rmsk_classes)
+  my @hits = $interval_list->fetch($var_start, $var_end);
+  
+  if(@hits > 0)
   {
-    my ($hits_arr, $left_arr, $right_arr)
-      = $interval_lists_hashref->{$rmsk_class}->fetch_nearest($var_start,
-                                                              $var_end);
-
-    
-    my $left_dist = 0;
-    my $right_dist = 0;
-    
-    if(@$hits_arr == 0)
-    {
-      # Get distance to hits either side, or '.' if there were none
-      $left_dist = @$left_arr > 0 ? $var_start - $left_arr->[0]->{'end'} : ".";
-      $right_dist = @$right_arr > 0 ? $right_arr->[0]->{'start'} - $var_end : ".";
-    }
-    else
-    {
-      $num_in_repeat_class{$rmsk_class}++;
-    }
-
-    $vcf_entry->{'INFO'}->{'rmsk_'.$rmsk_class.'_left'} = $left_dist;
-    $vcf_entry->{'INFO'}->{'rmsk_'.$rmsk_class.'_right'} = $right_dist;
+    $vcf_entry->{'INFO'}->{'rmsk'} = join(",",map {$_->{'class'}} @hits);
   }
 
   $vcf->print_entry($vcf_entry);
-}
-
-
-print STDERR "vcf_add_repeat_masker.pl: of " .
-             num2str($total_num_entries) . " VCF entries:\n";
-
-my @sorted_classes = sort {$num_in_repeat_class{$b} <=> $num_in_repeat_class{$a}}
-                     keys %num_in_repeat_class;
-
-@sorted_classes = uniq(@sorted_classes, @rmsk_classes);
-
-for my $class (@sorted_classes)
-{
-  my $count = $num_in_repeat_class{$class};
-
-  if(!defined($count))
-  {
-    $count = 0;
-  }
-  
-  my $percent = 100 * $count / $total_num_entries;
-
-  print STDERR "  " . num2str($count) .
-               " (" . sprintf("%.2f", $percent) . "%) " .
-               " are in repeat class $class\n";
 }
 
 close($vcf_handle);

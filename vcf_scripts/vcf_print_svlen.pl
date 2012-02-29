@@ -15,6 +15,7 @@ sub print_usage
 
   print STDERR "Usage: ./vcf_print_svlen.pl [--abs|--tag <t>] <max_svlen> [file.vcf]\n";
   print STDERR "  Print SVLENs\n";
+  print STDERR "  --tag specify which INFO tag to use\n";
   exit;
 }
 
