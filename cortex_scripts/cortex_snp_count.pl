@@ -6,10 +6,10 @@ use warnings;
 use CortexCovgFile;
 
 #
-# Get distribution of indel sizes
+# Get number of SNPs/MNPs in a cortex call file
 #
 # Isaac Turner <isaac.turner@dtc.ox.ac.uk>
-# 13 Nov 2011
+# 04 March 2012
 
 ## Config
 my $csvsep = ",";
@@ -22,34 +22,23 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
   
-  print STDERR "Usage: ./cortex_indel_sizes.pl [--kmer <k>] [.colour_covgs]\n";
+  print STDERR "Usage: ./cortex_snp_count.pl <kmer_size> [.colour_covgs]\n";
   print STDERR "  Print number of indels of each size\n";
-  print STDERR "  --kmer <k>  only count 'clean' indels when called with k\n";
   exit;
 }
 
-my $k_limit;
-
-if(@ARGV > 3)
+if(@ARGV < 1 || @ARGV > 2)
 {
   print_usage();
 }
-elsif(@ARGV >= 2)
-{
-  my $arg = shift;
-  $k_limit = shift;
-  
-  if($arg !~ /^-?-kmer$/i)
-  {
-    print_usage("Unexpected argument '$arg'");
-  }
-  elsif($k_limit !~ /^\d+$/ || $k_limit <= 0)
-  {
-    print_usage("--kmer value invalid '$k_limit'");
-  }
-}
 
+my $kmer_size = shift;
 my $covg_file = shift;
+
+if($kmer_size !~ /^\d+$/ || $kmer_size <= 0)
+{
+  print_usage("<kmer_size> value invalid '$kmer_size'");
+}
 
 #
 # Open .colour_covgs handle
@@ -72,7 +61,7 @@ else
 
 my $covgfile = new CortexCovgFile($covg_handle);
 
-my @indel_sizes = ();
+my @mnps_sizes = ();
 
 # Start reading bubbles
 my ($flank_5p, $flank_3p, $branches) = $covgfile->read_bubble_entry();
@@ -82,10 +71,10 @@ while(defined($flank_5p))
   my $branch1_len = length($branches->[0]->{'seq'});
   my $branch2_len = length($branches->[1]->{'seq'});
 
-  if(!defined($k_limit) || $branch1_len <= $k_limit || $branch2_len <= $k_limit)
+  if($branch1_len == $branch2_len)
   {
-    my $indel_size = abs($branch1_len - $branch2_len);
-    $indel_sizes[$indel_size]++;
+    my $size = $branch2_len - $kmer_size + 1;
+    $mnps_sizes[$size]++;
   }
 
   ($flank_5p, $flank_3p, $branches) = $covgfile->read_bubble_entry();
@@ -93,8 +82,8 @@ while(defined($flank_5p))
 
 close($covg_handle);
 
-print "indel_size".$csvsep."count\n";
-for(my $i = 0; $i < @indel_sizes; $i++)
+print "NPsize".$csvsep."count\n";
+for(my $i = 0; $i < @mnps_sizes; $i++)
 {
-  print $i . $csvsep . (defined($indel_sizes[$i]) ? $indel_sizes[$i] : 0) . "\n";
+  print $i . $csvsep . (defined($mnps_sizes[$i]) ? $mnps_sizes[$i] : 0) . "\n";
 }
