@@ -13,8 +13,9 @@ sub print_usage
   }
 
   print STDERR "Usage: ./vcf_add_ins_del_tags.pl [file.vcf]\n";
-  print STDERR "  Adds INDEL=INS|DEL INFO tag using AA and SVLEN tags\n";
-  print STDERR "  Also adds AALEN=(derived-ancestral allele leng)\n";
+  print STDERR "  Adds INFO tags using AA and SVLEN INFO tags:\n";
+  print STDERR "   * INDEL=INS|DEL (for clean insertions / deletions)\n";
+  print STDERR "   * AALEN=(derived-ancestral allele length)\n";
   exit;
 }
 

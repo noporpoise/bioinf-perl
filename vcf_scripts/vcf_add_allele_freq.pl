@@ -79,7 +79,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     }
     else
     {
-      die("Invalid entry '$vcf_entry->{$sample}'");
+      die("vcf_add_allele_freq.pl: Invalid entry '$vcf_entry->{$sample}'");
     }
   }
 
