@@ -5,6 +5,10 @@ use warnings;
 
 use List::MoreUtils qw(uniq);
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+
 use VCFFile;
 use GeneticsModule;
 use IntervalList;

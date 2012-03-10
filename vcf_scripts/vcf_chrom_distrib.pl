@@ -5,6 +5,10 @@ use warnings;
 
 use POSIX qw(ceil);
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+
 use VCFFile;
 use UsefulModule;
 

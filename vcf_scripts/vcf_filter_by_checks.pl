@@ -3,6 +3,10 @@
 use strict;
 use warnings;
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+
 use VCFFile;
 use UsefulModule; # num2str
 

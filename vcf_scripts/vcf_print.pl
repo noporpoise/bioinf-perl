@@ -3,9 +3,13 @@
 use strict;
 use warnings;
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+
 use VCFFile;
 
-# dev: add merge
+# dev: add support for multiple VCF files
 
 sub print_usage
 {
