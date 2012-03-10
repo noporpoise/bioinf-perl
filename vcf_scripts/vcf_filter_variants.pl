@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use VCFFile;
-use UsefulModule; # for num2str
+use UsefulModule; # for num2str & pretty_fraction
 
 sub print_usage
 {
@@ -14,16 +14,19 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_filter_variants.pl [--invert] <INDEL|CLEAN_INDEL|SNP|MNP|NP> [in.vcf]\n";
-  print STDERR "  Prints variants were SVLEN != 0\n";
-  print STDERR "  --invert      Everything but option\n";
-  print STDERR "  \n";
-  print STDERR "  Options:\n";
-  print STDERR "   INDEL        SVLEN != 0\n";
-  print STDERR "   CLEAN_INDEL  (SVLEN != 0) & (one allele 0bp)\n";
-  print STDERR "   SNP          both alleles 1bp\n";
-  print STDERR "   MNP          (SVLEN == 0) & (allele length > 1)\n";
-  print STDERR "   NP           SVLEN == 0\n";
+  print STDERR "" .
+"Usage: ./vcf_filter_variants.pl [--invert] <INDEL|CLEAN_INDEL|SNP|MNP|NP> " .
+  "[in.vcf]\n" .
+"  Prints variants were SVLEN != 0\n" .
+"  --invert      Everything but option\n" .
+"  \n" .
+"  Options:\n" .
+"   INDEL        SVLEN != 0\n" .
+"   CLEAN_INDEL  (SVLEN != 0) & (one allele 0bp)\n" .
+"   SNP          both alleles 1bp\n" .
+"   MNP          (SVLEN == 0) & (allele length > 1)\n" .
+"   NP           SVLEN == 0\n";
+
   exit;
 }
 
@@ -43,7 +46,7 @@ if(@ARGV > 1 && $ARGV[0] =~ /^-?-c(lean)?$/i)
 my $filter = shift;
 $filter = uc($filter);
 
-my @filters = qw(INDEL CLEAN_INDEL SNP MNP NP);
+my @filters = qw(INDEL INDELS CLEAN_INDEL CLEAN_INDELS SNP SNPS MNP MNPS NP NPS);
 
 if(!grep {$_ eq $filter} @filters)
 {
@@ -88,27 +91,27 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   my $print;
 
-  if($filter eq "INDEL")
+  if($filter eq "INDEL" || $filter eq "INDELS")
   {
     $print = ($vcf_entry->{'INFO'}->{'SVLEN'} != 0);
   }
-  elsif($filter eq "CLEAN_INDEL")
+  elsif($filter eq "CLEAN_INDEL" || $filter eq "CLEAN_INDELS")
   {
     $print = ($vcf_entry->{'INFO'}->{'SVLEN'} != 0 &&
               (length($vcf_entry->{'true_REF'}) == 0 ||
                length($vcf_entry->{'true_ALT'}) == 0));
   }
-  elsif($filter eq "SNP")
+  elsif($filter eq "SNP" || $filter eq "SNPS")
   {
     $print = (length($vcf_entry->{'true_REF'}) == 1 &&
               length($vcf_entry->{'true_ALT'}) == 1);
   }
-  elsif($filter eq "MNP")
+  elsif($filter eq "MNP" || $filter eq "MNPS")
   {
     $print = ($vcf_entry->{'INFO'}->{'SVLEN'} == 0 &&
               length($vcf_entry->{'true_REF'}) > 1);
   }
-  elsif($filter eq "NP")
+  elsif($filter eq "NP" || $filter eq "NPS")
   {
     $print = ($vcf_entry->{'INFO'}->{'SVLEN'} == 0);
   }
@@ -121,10 +124,9 @@ while(defined($vcf_entry = $vcf->read_entry()))
 }
 
 # Print filtered rate
-my $printed_percent = 100 * $num_of_printed / $num_of_variants;
-
-print STDERR "vcf_filter_variants.pl: (".($filter_invert ? "not " : "")."$filter) " .
-             num2str($num_of_printed) . " / " . num2str($num_of_variants) . " " .
-             "(" . sprintf("%.2f", $printed_percent) . "%) variants printed\n";
+print STDERR "vcf_filter_variants.pl: " .
+             "(" . ($filter_invert ? "not " : "") . $filter . ") " .
+             pretty_fraction($num_of_printed, $num_of_variants) . " " .
+             "variants printed\n";
 
 close($vcf_handle);

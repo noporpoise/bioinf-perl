@@ -3,9 +3,10 @@
 use strict;
 use warnings;
 
-use VCFFile;
-
 use List::Util qw(min max);
+
+use VCFFile;
+use UsefulModule;
 
 sub print_usage
 {
@@ -15,7 +16,7 @@ sub print_usage
 
   print STDERR "" .
 "Usage: ./vcf_filter_slippage.pl [--invert | --flag <flag>] [in.vcf]\n" .
-"  Prints (or flags) slippage indels.  Slippage can only be on clean indels.\n" .
+"  Prints (or flags) slippage indels.  Slippage can only be on clean indels.\n".
 "  Requires INFO tags 'left_flank' and 'right_flank'\n" .
 "  \n" .
 "  --invert       Print or flag non slippage indels\n" .
@@ -93,10 +94,15 @@ if(defined($flag))
 
 $vcf->print_header();
 
+my $num_of_variants = 0;
+my $num_of_printed = 0;
+
 my $vcf_entry;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
+  $num_of_variants++;
+
   my $ref = $vcf_entry->{'true_REF'};
   my $alt = $vcf_entry->{'true_ALT'};
 
@@ -136,15 +142,26 @@ while(defined($vcf_entry = $vcf->read_entry()))
   {
     # Print all, tag those that are filtered
     $vcf_entry->{'INFO'}->{$flag} = $slippage_dist;
-
     $vcf->print_entry($vcf_entry);
+    
+    if($is_slippage)
+    {
+      $num_of_printed++;
+    }
   }
   elsif($is_slippage != $invert)
   {
     # Just print / filter
     $vcf->print_entry($vcf_entry);
+    $num_of_printed++;
   }
 }
+
+# Print filtered rate
+print STDERR "vcf_filter_slippage.pl: " .
+              "(" . (!defined($flag) && $invert ? "not " : "") . "slippage) " .
+              pretty_fraction($num_of_printed, $num_of_variants) . " " .
+              "variants printed\n";
 
 close($vcf_handle);
 

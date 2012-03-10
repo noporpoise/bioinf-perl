@@ -13,13 +13,13 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./vcf_print_svlen.pl [--abs|--tag <t>] <max_svlen> [file.vcf]\n";
+  print STDERR "Usage: ./vcf_print_svlen.pl [--abs|--tag <t>] [file.vcf]\n";
   print STDERR "  Print SVLENs\n";
   print STDERR "  --tag specify which INFO tag to use\n";
   exit;
 }
 
-if(@ARGV < 1 || @ARGV > 5)
+if(@ARGV > 4)
 {
   print_usage();
 }
@@ -45,19 +45,12 @@ while(@ARGV > 0)
   }
 }
 
-if(@ARGV < 1 || @ARGV > 2)
+if(@ARGV > 1)
 {
   print_usage();
 }
 
-my $max_svlen = shift;
 my $vcf_file = shift;
-
-if($max_svlen !~ /^\d+$/)
-{
-  print_usage("max_svlen should be a positive integer " .
-              "('$max_svlen' not allowed)");
-}
 
 #
 # Open VCF Handle
@@ -85,8 +78,8 @@ my $vcf = new VCFFile($vcf_handle);
 
 my $vcf_entry;
 
-my @ins = map {0} 0..$max_svlen;
-my @del = map {0} 0..$max_svlen;
+my @ins = ();
+my @del = ();
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
@@ -99,19 +92,13 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   if($svlen >= 0)
   {
-    if($svlen <= $max_svlen)
-    {
-      $ins[$svlen]++;
-    }
+    $ins[$svlen]++;
   }
   else
   {
     # deletion
     $svlen = abs($svlen);
-    if($svlen <= $max_svlen)
-    {
-      $del[$svlen]++;
-    }
+    $del[$svlen]++;
   }
 }
 
@@ -119,8 +106,10 @@ close($vcf_handle);
 
 if(!$abs)
 {
-  print join("\n", map {"-".$_.",".$del[$_]} reverse(1..$max_svlen))."\n";
+  print join("\n", map { "-" . $_ . "," . (defined($del[$_]) ? $del[$_] : 0) }
+                     reverse(1..$#del)) . "\n";
 }
 
-print join("\n", map {$_.",".$ins[$_]} 0..$max_svlen)."\n";
+print join("\n", map {$_ . "," . (defined($ins[$_]) ? $ins[$_] : 0) }
+                   0..$#ins) . "\n";
 

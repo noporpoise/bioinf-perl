@@ -166,11 +166,11 @@ while(defined($vcf_entry = $vcf->read_entry()))
     }
 
     my $anc_ref = substr($anc_ref_hash->{$chr},
-                         $vcf_entry->{'true_POS'}-1, # because perl uses 0-based
+                         $pos-1, # because perl uses 0-based
                          length($ref_allele));
 
     my $anc_alt = substr($anc_ref_hash->{$chr},
-                         $vcf_entry->{'true_POS'}-1, # because perl uses 0-based
+                         $pos-1, # because perl uses 0-based
                          length($alt_allele));
 
     my $ref_matches = ancestral_match($anc_ref, $ref_allele);

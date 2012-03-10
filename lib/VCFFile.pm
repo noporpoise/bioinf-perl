@@ -581,6 +581,29 @@ sub unread_entry
   push(@{$self->{_unread_entries}}, $entry);
 }
 
+#
+# my $vcf = new VCFFile("in.vcf");
+# my $entry = $vcf->read_entry();
+#
+# $entry->{'CHROM'} is chromosome as in VCF
+# $entry->{'POS'} is positions as in VCF
+#
+# $entry->{'REF'} is the reference allele as in the VCF
+# $entry->{'ALT'} is the alternative allele as in the VCF
+# $entry->{'true_REF'} is the bases of the ref allele that are actually affected
+# $entry->{'true_ALT'} is the bases of the alt allele that are actually affected
+#  e.g. REF='A';ALT='C';  true_REF='A';true_ALT='C' (SNP - no change)
+#  e.g. REF='A';ALT='AC';  true_REF='';true_ALT='C' (indel)
+#
+# $entry->{'true_POS'} is the position (1-based) of the first affected base,
+#   or the base AFTER a clean insertion.  In other words,
+#   for SNPS $vcf_entry->{'POS'} == $vcf_entry->{'true_POS'}
+#   for indels $vcf_entry->{'POS'} == $vcf_entry->{'true_POS'} - 1
+#
+#   $entry->{'true_POS'}+length($entry->{'true_REF'}) == base after the variant
+#   $entry->{'true_POS'}-1 == base before the variant
+#
+
 sub read_entry
 {
   my ($self) = @_;
@@ -694,6 +717,7 @@ sub read_entry
   return \%entry;
 }
 
+# Print using columns read from VCF (set POS, REF, ALT - not true_X..)
 sub print_entry
 {
   my ($self, $entry, $out_handle) = @_;
