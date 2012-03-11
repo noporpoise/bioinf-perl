@@ -98,12 +98,15 @@ while(defined($flank_5p))
 
 print "Transition (Ts) A<->G;  Transversion: all other SNPs\n";
 print "Twice as many Tv values than Ts, but 2/3rds of SNPs are Ts\n";
-print "Ts: $num_of_transitions; Tv: $num_of_transversions\n";
+print "Ts: ".num2str($num_of_transitions)."; " .
+      "Tv: ".num2str($num_of_transversions)."\n";
 
 if($num_of_transversions > 0)
 {
   print sprintf("%.3f", $num_of_transitions / $num_of_transversions) .
         " Tv / Ts\n";
 }
+
+print "Total SNPs: ".num2str($num_of_transitions+$num_of_transversions)."\n";
 
 close($covg_handle);

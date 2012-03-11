@@ -9,8 +9,6 @@ use lib $FindBin::Bin;
 
 use VCFFile;
 
-# dev: add support for multiple VCF files
-
 sub print_usage
 {
   for my $err (@_) {

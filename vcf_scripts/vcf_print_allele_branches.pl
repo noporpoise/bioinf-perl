@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use List::Util qw(min max);
+
 # Use current directory to find modules
 use FindBin;
 use lib $FindBin::Bin;
@@ -10,8 +12,6 @@ use lib $FindBin::Bin;
 use GeneticsModule;
 use VCFFile;
 use FASTNFile;
-
-use List::Util qw(min max);
 
 sub print_usage
 {

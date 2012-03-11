@@ -3,9 +3,13 @@
 use strict;
 use warnings;
 
-use VCFFile;
-
 use List::Util qw(min max);
+
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+
+use VCFFile;
 
 sub print_usage
 {
