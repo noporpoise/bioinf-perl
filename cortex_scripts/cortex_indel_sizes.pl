@@ -3,13 +3,11 @@
 use strict;
 use warnings;
 
-use CortexCovgFile;
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
 
-#
-# Get distribution of indel sizes
-#
-# Isaac Turner <isaac.turner@dtc.ox.ac.uk>
-# 13 Nov 2011
+use CortexCovgFile;
 
 ## Config
 my $csvsep = ",";

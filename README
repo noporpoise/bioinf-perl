@@ -7,3 +7,9 @@ Move lib/*.pm files to a directory in perl's @INC.  To add a directory to perl's
 
 PERL5LIB=${PERL5LIB}:${HOME}/perl/lib/
 export PERL5LIB
+
+
+== Development ==
+
+Todo:
+- create vcf_merge.pl

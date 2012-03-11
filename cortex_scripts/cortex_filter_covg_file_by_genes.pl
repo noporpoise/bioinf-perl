@@ -5,14 +5,12 @@ use warnings;
 
 use List::Util qw(min);
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+
 use CortexCovgFile;
 use UsefulModule;
-
-#
-# Get distribution of indel sizes
-#
-# Isaac Turner <isaac.turner@dtc.ox.ac.uk>
-# 13 Nov 2011
 
 ## Config
 my $csvsep = ",";

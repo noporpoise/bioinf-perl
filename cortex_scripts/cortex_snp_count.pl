@@ -3,13 +3,11 @@
 use strict;
 use warnings;
 
-use CortexCovgFile;
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
 
-#
-# Get number of SNPs/MNPs in a cortex call file
-#
-# Isaac Turner <isaac.turner@dtc.ox.ac.uk>
-# 04 March 2012
+use CortexCovgFile;
 
 ## Config
 my $csvsep = ",";
@@ -23,7 +21,7 @@ sub print_usage
   }
   
   print STDERR "Usage: ./cortex_snp_count.pl <kmer_size> [.colour_covgs]\n";
-  print STDERR "  Print number of indels of each size\n";
+  print STDERR "  Print number of SNPs as well as MNPs of each size\n";
   exit;
 }
 
@@ -73,7 +71,7 @@ while(defined($flank_5p))
 
   if($branch1_len == $branch2_len)
   {
-    my $size = $branch2_len - $kmer_size + 1;
+    my $size = $branch2_len - $kmer_size;
     $mnps_sizes[$size]++;
   }
 
@@ -83,7 +81,7 @@ while(defined($flank_5p))
 close($covg_handle);
 
 print "NPsize".$csvsep."count\n";
-for(my $i = 0; $i < @mnps_sizes; $i++)
+for(my $i = 1; $i < @mnps_sizes; $i++)
 {
   print $i . $csvsep . (defined($mnps_sizes[$i]) ? $mnps_sizes[$i] : 0) . "\n";
 }

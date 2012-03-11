@@ -3,9 +3,13 @@
 use strict;
 use warnings;
 
-use UsefulModule; # num2str
+use POSIX qw(ceil);
 
-use POSIX qw/ceil/;
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+
+use UsefulModule; # num2str
 
 #
 # Calculate amount of memory required by cortex

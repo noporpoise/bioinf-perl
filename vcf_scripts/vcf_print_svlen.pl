@@ -114,6 +114,13 @@ if(!$abs)
                      reverse(1..$#del)) . "\n";
 }
 
+my $ins_start = 0;
+
+while(!defined($ins[$ins_start]))
+{
+  $ins_start++;
+}
+
 print join("\n", map {$_ . "," . (defined($ins[$_]) ? $ins[$_] : 0) }
-                   0..$#ins) . "\n";
+                   $ins_start..$#ins) . "\n";
 
