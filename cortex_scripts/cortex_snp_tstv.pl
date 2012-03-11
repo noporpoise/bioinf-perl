@@ -8,6 +8,7 @@ use FindBin;
 use lib $FindBin::Bin;
 
 use CortexCovgFile;
+use UsefulModule;
 
 ## Config
 my $csvsep = ",";
