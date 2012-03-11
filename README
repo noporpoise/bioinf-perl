@@ -13,3 +13,4 @@ export PERL5LIB
 
 Todo:
 - create vcf_merge.pl
+- create vcf_remove_dupes.pl
