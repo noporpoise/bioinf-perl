@@ -220,7 +220,7 @@ sub get_left_aligned_position
 
   # align to the left
   # while base before variant (on the reference) equals last base of indel
-  while(substr($ref_genomes{$chr}, $pos-1, 1) eq uc(substr($indel, -1)))
+  while($pos > 0 && substr($ref_genomes{$chr}, $pos-1, 1) eq uc(substr($indel, -1)))
   {
     $indel = substr($indel, -1) . substr($indel, 0, -1);
     $pos--;
@@ -236,7 +236,8 @@ sub get_right_aligned_position
 
   # align to the right
   # while base after variant (on the reference) equals first base of indel
-  while(substr($ref_genomes{$chr}, $pos+$ref_allele_length, 1) eq
+  while($pos < length($ref_genomes{$chr}) &&
+        substr($ref_genomes{$chr}, $pos+$ref_allele_length, 1) eq
         uc(substr($indel, 0, 1)))
   {
     $indel = substr($indel, 1) . substr($indel, 0, 1);
