@@ -160,9 +160,11 @@ sub read_next_fastq
     croak("FASTQ file - invalid sequence line '".substr($sequence,0,50)."'");
   }
 
-  for(my $i = 0; defined($line = $self->peak_line()) && substr($line,0,1) ne "@"; $i++)
+  for(my $i = 0;
+      length($quality) < length($sequence) &&
+      defined($line = $self->read_line());
+      $i++)
   {
-    $line = $self->read_line();
     chomp($line);
     $quality .= $line;
   }
@@ -173,6 +175,10 @@ sub read_next_fastq
   }
   elsif(length($sequence) != length($quality))
   {
+    print STDERR '@'."$title\n";
+    print STDERR "$sequence\n";
+    print STDERR "$quality\n";
+
     croak("FASTQ file: length of sequence (".length($sequence).") does not match " .
           "length of quality line (".length($quality).") for read '$title' " .
           (defined($self->{_descriptor}) ? "in ".$self->{_descriptor}.":"
