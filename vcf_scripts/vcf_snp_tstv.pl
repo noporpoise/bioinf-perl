@@ -7,7 +7,7 @@ use warnings;
 use FindBin;
 use lib $FindBin::Bin;
 
-use CortexCovgFile;
+use VCFFile;
 use UsefulModule;
 
 ## Config
@@ -22,7 +22,7 @@ sub print_usage
   }
   
   print STDERR
-"Usage: ./vcf_snp_tstv.pl <kmer_size> [in.vcf]
+"Usage: ./vcf_snp_tstv.pl [in.vcf]
   Transition (Ts): A <-> G; Transversion (Tv) is all other substitutions
   Although there are twice as many Tv as Tv combinations, Ts make up
   approximately 2/3rds of all SNPs[1]
@@ -32,12 +32,11 @@ sub print_usage
   exit;
 }
 
-if(@ARGV < 1 || @ARGV > 2)
+if(@ARGV > 1)
 {
   print_usage();
 }
 
-my $kmer_size = shift;
 my $vcf_file = shift;
 
 if($kmer_size !~ /^\d+$/ || $kmer_size <= 0)
