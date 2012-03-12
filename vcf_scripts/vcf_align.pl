@@ -82,16 +82,16 @@ my %ref_genomes = %$ref_genomes_hashref;
 # Change chromosome to uppercase
 while(my ($key,$value) = each(%ref_genomes))
 {
-  my $new_key = get_clean_chr_name($key);
+  #my $new_key = get_clean_chr_name($key);
 
-  if($new_key ne $key)
-  {
-    $ref_genomes{$new_key} = uc($ref_genomes{$key});
-    delete($ref_genomes{$key});
-  }
-  else {
+  #if($new_key ne $key)
+  #{
+  #  $ref_genomes{$new_key} = uc($ref_genomes{$key});
+  #  delete($ref_genomes{$key});
+  #}
+  #else {
     $ref_genomes{$key} = uc($ref_genomes{$key});
-  }
+  #}
 }
 
 #
