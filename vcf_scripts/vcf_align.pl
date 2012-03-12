@@ -78,20 +78,10 @@ my ($ref_genomes_hashref, $qual) = read_all_from_files(@ref_files);
 
 my %ref_genomes = %$ref_genomes_hashref;
 
-# Correct '1..' to 'chr1...' etc
 # Change chromosome to uppercase
 while(my ($key,$value) = each(%ref_genomes))
 {
-  #my $new_key = get_clean_chr_name($key);
-
-  #if($new_key ne $key)
-  #{
-  #  $ref_genomes{$new_key} = uc($ref_genomes{$key});
-  #  delete($ref_genomes{$key});
-  #}
-  #else {
-    $ref_genomes{$key} = uc($ref_genomes{$key});
-  #}
+  $ref_genomes{$key} = uc($ref_genomes{$key});
 }
 
 #
@@ -200,13 +190,13 @@ my @missing_chr_names = sort keys %missing_chrs;
 
 if(@missing_chr_names > 0)
 {
-  print STDERR "vcf_add_flanks.pl: Missing chromosomes: " .
+  print STDERR "vcf_align.pl: Missing chromosomes: " .
                join(", ", @missing_chr_names) . "\n";
 }
 
 if($num_ref_mismatch > 0)
 {
-  print STDERR "vcf_add_flanks.pl: " .
+  print STDERR "vcf_align.pl: " .
                pretty_fraction($num_ref_mismatch, $num_of_variants) . " " .
                "variants removed for not matching the reference\n";
 }
