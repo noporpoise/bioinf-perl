@@ -160,8 +160,9 @@ sub read_next_fastq
     croak("FASTQ file - invalid sequence line '".substr($sequence,0,50)."'");
   }
 
-  for(my $i = 0; $i < $num_of_seq_lines && defined($line = $self->read_line()); $i++)
+  for(my $i = 0; defined($line = $self->peak_line()) && substr($line,0,1) ne "@"; $i++)
   {
+    $line = $self->read_line();
     chomp($line);
     $quality .= $line;
   }
