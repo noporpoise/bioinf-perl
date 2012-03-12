@@ -39,11 +39,6 @@ if(@ARGV > 1)
 
 my $vcf_file = shift;
 
-if($kmer_size !~ /^\d+$/ || $kmer_size <= 0)
-{
-  print_usage("<kmer_size> value invalid '$kmer_size'");
-}
-
 #
 # Open VCF Handle
 #
