@@ -42,7 +42,7 @@ for my $file (@files)
     my $handle;
     open($handle, $file) or print_usage("Cannot open fasta/q file '$file'");
     parse_file($handle);
-    close($handle, $file);
+    close($handle);
   }
 }
 
