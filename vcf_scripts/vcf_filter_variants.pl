@@ -21,7 +21,7 @@ sub print_usage
   print STDERR "" .
 "Usage: ./vcf_filter_variants.pl [--invert] <INDEL|CLEAN_INDEL|SNP|MNP|NP> " .
   "[in.vcf]\n" .
-"  Prints variants were SVLEN != 0\n" .
+"  Prints variants of a particular type\n" .
 "  --invert      Everything but option\n" .
 "  \n" .
 "  Options:\n" .
