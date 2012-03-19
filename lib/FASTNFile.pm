@@ -19,17 +19,20 @@ sub new
   my $next_line = <$handle>;
   my $is_fastq = -1;
   
-  if(defined($next_line))
+  my $tmp_line = $next_line;
+  chomp($tmp_line);
+  
+  if(defined($tmp_line) && length($tmp_line) > 0)
   {
-    if($next_line =~ /^@/) {
+    if($tmp_line =~ /^@/) {
       $is_fastq = 1;
     }
-    elsif($next_line =~ /^>/) {
+    elsif($tmp_line =~ /^>/) {
       $is_fastq = 0;
     }
     else {
-      my $len = min(length($next_line),10);
-      croak("Invalid first line '".substr($next_line,0,$len)."...'");
+      my $len = min(length($tmp_line),10);
+      croak("Invalid first line '" . substr($tmp_line, 0, $len) . "...'");
     }
   }
 
