@@ -345,6 +345,11 @@ sub print_FASTQ
 
   print $out "+\n";
 
+  if(!defined($qualitites))
+  {
+    $qualitites = "!" x length($seq);
+  }
+
   if(defined($line_wrap) && $line_wrap > 0)
   {
     print_wrap($qualitites, $line_wrap, $out);
