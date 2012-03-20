@@ -72,7 +72,7 @@ if($justify ne "left" && $justify ne "right")
 #
 my $vcf_handle;
 
-if($vcf_file ne "-")
+if(defined($vcf_file) && $vcf_file ne "-")
 {
   open($vcf_handle, $vcf_file)
     or print_usage("Cannot open VCF file '$vcf_file'\n");

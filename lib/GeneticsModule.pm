@@ -8,7 +8,8 @@ use Carp;
 use base 'Exporter';
 
 our @EXPORT = qw(get_clean_chr_name rev_comp complement rev_comp_cyclic
-                 dna_word_group dna_pattern_group dna_weak_strong_group);
+                 dna_rev_comp_group dna_word_group
+                 dna_pattern_group dna_weak_strong_group);
 
 
 sub get_clean_chr_name
@@ -86,6 +87,15 @@ sub complement
   }
 
   return $complement;
+}
+
+sub dna_rev_comp_group
+{
+  my ($seq) = @_;
+
+  my $rev = rev_comp($seq);
+
+  return ($seq le $rev ? $seq : $rev);
 }
 
 sub rev_comp_cyclic
