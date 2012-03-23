@@ -7,10 +7,25 @@ use Carp;
 
 use base 'Exporter';
 
-our @EXPORT = qw(get_clean_chr_name rev_comp complement rev_comp_cyclic
+our @EXPORT = qw(get_clean_chr_name
+                 gc_content
+                 rev_comp complement rev_comp_cyclic
                  dna_rev_comp_group dna_word_group
                  dna_pattern_group dna_weak_strong_group);
 
+
+sub gc_content
+{
+  my ($seq) = @_;
+  my $gc = 0;
+
+  while($seq =~ /([gc]+)/gi)
+  {
+    $gc += length($1);
+  }
+
+  return $gc;
+}
 
 sub get_clean_chr_name
 {
