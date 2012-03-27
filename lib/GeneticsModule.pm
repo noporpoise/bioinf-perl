@@ -95,7 +95,8 @@ sub complement
 
     if(!defined($chr))
     {
-      carp("rev_comp: Cannot complement base '".substr($seq,$i,1)."'");
+      carp("rev_comp: Cannot complement base '".substr($seq,$i,1)."' " .
+           "in string '$seq'");
     }
 
     substr($complement, $i, 1) = $chr;
