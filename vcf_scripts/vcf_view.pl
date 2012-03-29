@@ -22,45 +22,52 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./vcf_view.pl [--only_snps|--only_indels|--only_both|--as_vcf] [in.vcf]
-  --only_snps   Only print SNPs
-  --only_indels Only print 
-  --only_both   \n";
+"Usage: ./vcf_view.pl [OPTIONS] [in.vcf]
+
+OPTIONS:
+  --snps      Variants must have snps
+  --indels    Variants must have indels
+  --no_snps   Variants must not have snps
+  --no_indels Variants must not have indels
+  --as_vcf    Print in VCF format\n";
 
   exit;
 }
 
-if(@ARGV > 3)
+if(@ARGV > 4)
 {
   print_usage();
 }
 
-my $only_snps = 0;
-my $only_indels = 0;
-my $only_both = 0;
-my $view_all = 1;
+my $require_snps = 0;
+my $no_snps = 0;
+
+my $require_indels = 0;
+my $no_indels = 0;
 
 my $view_as_vcf = 0;
 
 while(@ARGV > 0)
 {
-  if($ARGV[0] =~ /^-?-only_snps$/i)
+  if($ARGV[0] =~ /^-?-snps$/i)
   {
     shift;
-    $only_snps = 1;
-    $view_all = 0;
+    $require_snps = 1;
   }
-  elsif($ARGV[0] =~ /^-?-only_indels$/i)
+  elsif($ARGV[0] =~ /^-?-no_snps$/i)
   {
     shift;
-    $only_indels = 1;
-    $view_all = 0;
+    $no_snps = 1;
   }
-  elsif($ARGV[0] =~ /^-?-only_both$/i)
+  elsif($ARGV[0] =~ /^-?-indels$/i)
   {
     shift;
-    $only_both = 1;
-    $view_all = 0;
+    $require_indels = 1;
+  }
+  elsif($ARGV[0] =~ /^-?-no_indels$/i)
+  {
+    shift;
+    $no_indels = 1;
   }
   elsif($ARGV[0] =~ /^-?-as_vcf$/i)
   {
@@ -73,16 +80,21 @@ while(@ARGV > 0)
   }
 }
 
-if(sum($only_snps, $only_indels, $only_both, $view_all) != 1)
+if($require_snps && $no_snps)
 {
-  print_usage("Can only specify one of --only_snps, --only_indels, --only_both");
+  print_usage("Cannot specify both --no_snps and --snps");
+}
+
+if($require_indels && $no_indels)
+{
+  print_usage("Cannot specify both --no_indels and --indels");
 }
 
 my $vcf_file = shift;
 
 if(@ARGV > 0)
 {
-  print_usage("Unexpected option '$ARGV[0]'");
+  print_usage("excess option '$ARGV[0]'");
 }
 
 #
@@ -111,16 +123,32 @@ my $vcf = new VCFFile($vcf_handle);
 
 if($view_as_vcf)
 {
-  if($only_snps) {
-    $vcf->add_header_metainfo("vcf_view", "Only SNPs");
+  my $description = "";
+
+  if($no_snps)
+  {
+    $description .= "NoSNPs";
   }
-  elsif($only_indels) {
-    $vcf->add_header_metainfo("vcf_view", "Only indels");
+  elsif($require_snps)
+  {
+    $description .= "RequireSNPs";
   }
-  elsif($only_both) {
-    $vcf->add_header_metainfo("vcf_view", "Only both");
+  
+  if($no_snps)
+  {
+    $description .= "NoIndels";
+  }
+  elsif($require_snps)
+  {
+    $description .= "RequireIndels";
+  }
+  
+  if($description eq "")
+  {
+    $description = "All";
   }
 
+  $vcf->add_header_metainfo("vcf_view", $description);
   $vcf->print_header();
 }
 
@@ -170,10 +198,10 @@ while(defined($vcf_entry = $vcf->read_entry()))
     $has_indels = ($sep =~ / /);
   }
 
-  if($view_all ||
-     $only_snps && $has_snps && !$has_indels ||
-     $only_indels && !$has_snps && $has_indels ||
-     $only_both && $has_snps && $has_indels)
+  if(!($no_snps && $has_snps) &&
+     !($no_indels && $has_indels) &&
+     (!$require_snps || $has_snps) &&
+     (!$require_indels || $has_indels))
   {
     if($view_as_vcf)
     {
