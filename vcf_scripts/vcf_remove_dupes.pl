@@ -82,7 +82,7 @@ while(defined($next_entry = $vcf->read_entry()))
   $prev_entry = $next_entry;
 }
 
-print "vcf_remove_dupes.pl: " .
+print STDERR "vcf_remove_dupes.pl: " .
       pretty_fraction($num_of_printed, $num_of_entries) . " variants printed\n";
 
 close($vcf_handle);

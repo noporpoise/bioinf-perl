@@ -92,11 +92,13 @@ else
 my ($ref_genomes_hashref, $qual) = read_all_from_files(@ref_files);
 
 my %ref_genomes = %$ref_genomes_hashref;
+my %ref_genomes_lengths = ();
 
 # Change chromosome to uppercase
 while(my ($key,$value) = each(%ref_genomes))
 {
   $ref_genomes{$key} = uc($ref_genomes{$key});
+  $ref_genomes_lengths{$key} = length($ref_genomes{$key});
 }
 
 #
@@ -148,6 +150,12 @@ while(defined($vcf_entry = $vcf->read_entry()))
   if(!defined($ref_genomes{$chr}))
   {
     $missing_chrs{$chr} = 1;
+  }
+  elsif($ref_genomes_lengths{$chr} < $var_start+length($ref_allele))
+  {
+    print STDERR "vcf_align.pl - Error: var " . $vcf_entry->{'ID'} . " at " .
+                 "$chr:$var_start:".length($ref_allele)." is out of bounds of ".
+                 "$chr:1:".$ref_genomes_lengths{$chr}."\n";
   }
   elsif(substr($ref_genomes{$chr}, $var_start, length($ref_allele)) ne
         uc($ref_allele))
