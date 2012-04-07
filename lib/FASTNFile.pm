@@ -303,6 +303,20 @@ sub print_wrap
   }
 }
 
+sub print_entry
+{
+  my ($self, $title, $seq, $qualities, $line_wrap, $out) = @_;
+
+  if($self->is_fastq())
+  {
+    print_FASTQ($title, $seq, $qualities, $line_wrap, $out);
+  }
+  else
+  {
+    print_FASTA($title, $seq, $line_wrap, $out);
+  }
+}
+
 sub print_FASTA
 {
   my ($title, $seq, $line_wrap, $out) = @_;
