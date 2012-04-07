@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use List::Util qw(min max);
+use File::Basename;
 
 use FASTNFile;
 
@@ -73,8 +74,12 @@ else
 # Create FASTNFile
 my $fastn = new FASTNFile($fastn_fh);
 
-
-if(!defined($fastn_file))
+# Get filename
+if(defined($fastn_file))
+{
+  $fastn_file = basename($fastn_file);
+}
+else
 {
   my $ext = $fastn->is_fastq() ? ".fq" : ".fa";
   $fastn_file = "split".$ext;
