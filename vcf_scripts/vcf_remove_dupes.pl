@@ -71,7 +71,8 @@ while(defined($next_entry = $vcf->read_entry()))
 {
   $num_of_entries++;
 
-  if($next_entry->{'POS'} != $prev_entry->{'POS'} ||
+  if($next_entry->{'CHROM'} ne $prev_entry->{'CHROM'} ||
+     $next_entry->{'POS'} != $prev_entry->{'POS'} ||
      uc($next_entry->{'REF'}) ne uc($prev_entry->{'REF'}) || 
      uc($next_entry->{'ALT'}) ne uc($prev_entry->{'ALT'}))
   {
