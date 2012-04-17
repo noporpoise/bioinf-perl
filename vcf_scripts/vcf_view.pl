@@ -172,6 +172,12 @@ if(defined($ref_file))
 #
 my $vcf = new VCFFile($vcf_handle);
 
+if(defined($ref_file))
+{
+  # Set the reference genome chromosome names
+  $vcf->set_ref_chrom_names(keys %ref_genomes);
+}
+
 if($view_as_vcf)
 {
   my $description = "";
@@ -284,30 +290,58 @@ while(defined($vcf_entry = $vcf->read_entry()))
       if($flank_size > 0)
       {
         my $chr = $vcf_entry->{'CHROM'};
+        my $ref_chr = $vcf->guess_ref_chrom_name($chr);
 
-        $left_flank = $vcf_entry->{'INFO'}->{'left_flank'};
-        $right_flank = $vcf_entry->{'INFO'}->{'right_flank'};
-
-        if(defined($left_flank) && length($left_flank) >= $flank_size &&
-           defined($right_flank) && length($right_flank) >= $flank_size)
+        if(defined($ref_file) && defined($ref_genomes{$ref_chr}))
         {
-          $left_flank = substr($left_flank, -$flank_size);
-          $right_flank = substr($right_flank, 0, $flank_size);
+          # get as 0-based
+          my $var_pos = $vcf_entry->{'true_POS'} - 1;
+          my $chrom_length = length($ref_genomes{$ref_chr});
 
-          $sep = ("|" x $flank_size) . $sep . ("|" x $flank_size);
+          if($var_pos >= $chrom_length)
+          {
+            print STDERR "vcf_view.pl - Warning: variant " .
+                         "'".$vcf_entry->{'ID'}."' " .
+                         "[$chr:".$vcf_entry->{'POS'}."] outside of ref " .
+                         "'$ref_chr' [length:$chrom_length]\n";
+          }
+          else
+          {
+            my $left_start = max(0, $var_pos - $flank_size);
+            my $left_length = $var_pos - $left_start;
+
+            $left_flank = substr($ref_genomes{$ref_chr},
+                                 $left_start,
+                                 $left_length);
+
+            my $right_start = $var_pos - 1 + length($vcf_entry->{'true_REF'});
+            my $right_length = min($chrom_length - $right_start, $flank_size);
+
+            $right_flank = substr($ref_genomes{$ref_chr},
+                                  $right_start,
+                                  $right_length);
+
+            $sep = ("|"x$left_length) . $sep . ("|"x$right_length);
+          }
         }
-        elsif(defined($ref_file) && defined($ref_genomes{$chr}))
+        else
         {
-          $left_flank = substr($ref_genomes{$chr},
-                               $vcf_entry->{'true_POS'} - 1 - $flank_size,
-                               $flank_size);
+          my $info_left = $vcf_entry->{'INFO'}->{'left_flank'};
+          my $info_right = $vcf_entry->{'INFO'}->{'right_flank'};
 
-          $right_flank = substr($ref_genomes{$chr},
-                                $vcf_entry->{'true_POS'} - 1 +
-                                  length($vcf_entry->{'true_REF'}),
-                                $flank_size);
+          if(defined($info_left))
+          {
+            my $length = min($flank_size, length($info_left));
+            $left_flank = substr($info_left, -$length);
+            $sep = ("|"x$length).$sep;
+          }
 
-          $sep = ("|"x$flank_size) . $sep . ("|"x$flank_size);
+          if(defined($info_left))
+          {
+            my $length = min($flank_size, length($info_right));
+            $left_flank = substr($info_right, 0, $length);
+            $sep = $sep.("|"x$length);
+          }
         }
       }
 

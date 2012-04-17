@@ -21,7 +21,8 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./vcf_align.pl [--tag <name>|--remove_ref_mismatch] <LEFT|RIGHT> <in.vcf> <ref1.fa ..>
+"Usage: ./vcf_align.pl [--tag <name>|--remove_ref_mismatch] <LEFT|RIGHT> " .
+  "<in.vcf> <ref1.fa ..>
   Shift clean indel variants to the left/right.  Variants that do not match
   the reference and those that are not clean indels are printed unchanged.
   FASTA entry names must match VCF CHROM column.  If <in.vcf> is '-', reads
@@ -278,12 +279,17 @@ print STDERR "vcf_align.pl: average ambiguity per variant: " .
              sprintf("%.3f", $total_position_diff / $num_of_variants) .
              " bp\n";
 
-my $clean_indel_rate = $total_position_diff / $num_of_clean_indels_matching_ref;
+if($num_of_clean_indels_matching_ref > 0)
+{
+  my $clean_indel_rate
+    = $total_position_diff / $num_of_clean_indels_matching_ref;
 
-print STDERR "vcf_align.pl: average ambiguity per clean indel matching " .
-             "the ref: " . sprintf("%.3f", $clean_indel_rate) . " bp\n";
+  print STDERR "vcf_align.pl: average ambiguity per clean indel matching " .
+               "the ref: " . sprintf("%.3f", $clean_indel_rate) . " bp\n";
+}
 
-print STDERR "vcf_align.pl: maximum variant ambiguity: ".$max_position_diff." bp\n";
+print STDERR "vcf_align.pl: maximum variant ambiguity: " .
+             $max_position_diff . " bp\n";
 
 close($vcf_handle);
 
