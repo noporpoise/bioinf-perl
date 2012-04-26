@@ -290,38 +290,52 @@ sub read_align_entry
 # static methods
 #
 
+# read
 sub estimate_contig_rate
 {
-  my ($covgs_ptr, $kmer_size, $read_length, $epsilon, @read_depths) = @_;
+  my ($covgs_ptr, $kmer_size, $read_length_bp, $epsilon, @read_depths) = @_;
   
   if(@read_depths == 0)
   {
     croak("estimate_contig_rate(..) Missing arguments $!");
   }
   
-  my ($num_of_read_arrivals) = get_num_of_read_arrivals($covgs_ptr);
+  my $num_of_read_arrivals = get_num_of_read_arrivals($covgs_ptr);
 
-  my $contig_length_in_k = @$covgs_ptr;
+  my $contig_length_in_k = @$covgs_ptr - 2; # we ignore first and last
+  my $read_length_in_k = $read_length_bp - $kmer_size + 1;
+
   my $epsilon_correction = (1 - $kmer_size * $epsilon);
-  
+
   my @results = ();
 
-  for my $depth (@read_depths)
+  for my $read_depth (@read_depths)
   {
-    my $count = ($num_of_read_arrivals * $read_length) /
-                ($epsilon_correction * $contig_length_in_k * $depth);
+    # Effective covg for given read depth
+    my $effective_covg = $read_length_in_k * $read_depth / $read_length_bp;
+
+    # Covg on the contig
+    my $actual_covg = ($num_of_read_arrivals * $read_length_in_k) /
+                       $contig_length_in_k;
+
+    # Covg if contig happened once
+    my $covg_for_single_copy = $epsilon_correction * $effective_covg;
+
+    my $count = $actual_covg / $covg_for_single_copy;
+
     push(@results, $count);
   }
 
-  return (@results == 0 ? $results[0] : @results);
+  return @results == 1 ? $results[0] : @results;
 }
 
 sub get_num_of_read_arrivals
 {
   my ($covgs_ptr) = @_;
 
-  if(!defined($covgs_ptr)) {
-    croak("get_num_of_read_arrivals_zam(..) Missing arguments $!");
+  if(!defined($covgs_ptr))
+  {
+    croak("get_num_of_read_arrivals(..) Missing arguments $!");
   }
 
   my $total = $covgs_ptr->[1];
@@ -340,7 +354,7 @@ sub get_num_of_read_arrivals
       $total += $jump;
     }
   }
-  
+
   return $total;
 }
 
