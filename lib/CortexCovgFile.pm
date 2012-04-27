@@ -27,7 +27,7 @@ use List::Util qw(min max sum);
 
 use base 'Exporter';
 
-our @EXPORT = qw{get_num_of_read_arrivals estimate_contig_rate};
+our @EXPORT = qw{get_num_of_read_arrivals estimate_contig_count};
 
 
 sub new
@@ -291,15 +291,15 @@ sub read_align_entry
 #
 
 # read
-sub estimate_contig_rate
+sub estimate_contig_count
 {
   my ($covgs_ptr, $kmer_size, $read_length_bp, $epsilon, @read_depths) = @_;
-  
+
   if(@read_depths == 0)
   {
     croak("estimate_contig_rate(..) Missing arguments $!");
   }
-  
+
   my $num_of_read_arrivals = get_num_of_read_arrivals($covgs_ptr);
 
   my $contig_length_in_k = @$covgs_ptr - 2; # we ignore first and last
