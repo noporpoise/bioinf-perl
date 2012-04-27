@@ -550,7 +550,7 @@ sub guess_ref_chrom_name
   # Look for just the name at the start, e.g. '>10' '> chr10' '> chromosome 10'
   for my $name (@ref_chroms)
   {
-    if($name =~ /^\s*(chr(om(osome)?)?)?\s*$chrom_stripped([^a-z0-9]|$)/i)
+    if($name =~ /^\s*(chr(om(osome)?)?)?\s*$chrom_stripped([^a-z0-9\-\_]|$)/i)
     {
       $self->{_ref_chroms_guessed}->{$name} = 1;
       return $name;
@@ -560,7 +560,7 @@ sub guess_ref_chrom_name
   # Look for 'chr 10' 'chromosome 10' anywhere etc
   for my $name (@ref_chroms)
   {
-    if($name =~ /(chr(om(osome)?)?)?\s*$chrom_stripped([^a-z0-9]|$)/i)
+    if($name =~ /(chr(om(osome)?)?)?\s*$chrom_stripped([^a-z0-9\-\_]|$)/i)
     {
       $self->{_ref_chroms_guessed}->{$name} = 1;
       return $name;
@@ -570,7 +570,7 @@ sub guess_ref_chrom_name
   # Look for 'chr 10' 'chromosome 10' anywhere etc
   for my $name (@ref_chroms)
   {
-    if($name =~ /(chr(om(osome)?)?)?\s*$chrom_stripped([^a-z0-9]|$)/i)
+    if($name =~ /(chr(om(osome)?)?)?\s*$chrom_stripped([^a-z0-9\-\_]|$)/i)
     {
       $self->{_ref_chroms_guessed}->{$name} = 1;
       return $name;
