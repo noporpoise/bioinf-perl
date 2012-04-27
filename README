@@ -5,7 +5,7 @@ turner.isaac@gmail.com
 
 == Install ==
 
-0) git pull git://github.com/noporpoise/bioinf-perl.git
+0) git clone git://github.com/noporpoise/bioinf-perl.git
 
 1) Add the lib directory to perl's @INC path by adding the following lines to
    your ~/.profile
