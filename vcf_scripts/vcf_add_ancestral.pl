@@ -10,7 +10,7 @@ use lib $FindBin::Bin;
 use Fcntl qw(SEEK_CUR);
 
 use VCFFile;
-use FASTNFile;
+use RefGenome;
 use UsefulModule;
 
 use List::Util qw(min max);
@@ -103,29 +103,9 @@ my @mapping_columns = qw(name flags chr pos MAPQ CIGAR
 # Load Ancestral Reference
 #
 print STDERR "vcf_add_ancestral_to_indels.pl: Loading ancestral ref...\n";
-my ($anc_ref_hash) = read_all_from_files(@ancestral_ref_files);
 
-# Set the reference genome chromosome names
-$vcf->set_ref_chrom_names(keys %$anc_ref_hash);
-
-# Ancestral FASTA looks like: >ANCESTOR_for_chromosome:CHIMP2.1:1:1:229974691:1
-#my @anc_chrs = keys %$anc_ref_hash;
-#
-#for my $key (@anc_chrs)
-#{
-#  if($key =~ /ANCESTOR_for_chromosome:[^:]*:(?:chr)?([\dXY]*)([ab]*):/i)
-#  {
-#    my $chr = "chr".uc($1).lc($2);
-#    $anc_ref_hash->{$chr} = $anc_ref_hash->{$key};
-#    delete($anc_ref_hash->{$key});
-    #print STDERR "vcf_add_ancestral.pl: Loaded '$chr'\n";
-#  }
-#  else
-#  {
-    #print STDERR "vcf_add_ancestral.pl: Ancestral ref ignored: $key\n";
-#  }
-#}
-
+my $ancestral = new RefGenome(uppercase => 1);
+$ancestral->load_from_files(@ancestral_ref_files);
 
 #
 # Print VCF header
@@ -168,21 +148,16 @@ while(defined($vcf_entry = $vcf->read_entry()))
     # Nucleotide Polymorphism (NP) - use ancestral allele
     $num_of_np++;
 
-    my $ref_name = $vcf->guess_ref_chrom_name($chr);
+    # $pos-1 because perl uses 0-based
+    my $anc_ref = $ancestral->get_chr_substr($chr, $pos-1, length($ref_allele));
+    my $anc_alt = $ancestral->get_chr_substr($chr, $pos-1, length($alt_allele));
 
-    if(!defined($ref_name))
+    if(!defined($anc_ref))
     {
-      print STDERR "vcf_add_ancestral.pl: Ancestor lacks chromosome '$chr'\n";
+      print STDERR "vcf_add_ancestral.pl Error: " .
+                   "Ancestor lacks chromosome '$chr'\n";
       die();
     }
-
-    my $anc_ref = substr($anc_ref_hash->{$ref_name},
-                         $pos-1, # because perl uses 0-based
-                         length($ref_allele));
-
-    my $anc_alt = substr($anc_ref_hash->{$ref_name},
-                         $pos-1, # because perl uses 0-based
-                         length($alt_allele));
 
     my $ref_matches = ancestral_match($anc_ref, $ref_allele);
     my $alt_matches = ancestral_match($anc_alt, $alt_allele);
