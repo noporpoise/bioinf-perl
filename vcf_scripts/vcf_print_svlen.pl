@@ -20,7 +20,7 @@ sub print_usage
   }
 
   print STDERR "Usage: ./vcf_print_svlen.pl [--abs|--tag <t>] [file.vcf]\n";
-  print STDERR "  Print SVLENs\n";
+  print STDERR "  Print size distribution of SVLENs\n";
   print STDERR "  --tag specify which INFO tag to use\n";
   exit;
 }
