@@ -157,7 +157,7 @@ sub guess_name_pairs
     $plain_name =~ s/^chr//g;
 
     my $plain_stripped = $plain_name;
-    $plain_stripped =~ s/^\w+([0-9a-z])$/\1/gi;
+    $plain_stripped =~ s/^\w+([0-9a-z])$/$1/gi;
 
     my ($result_plain, $result_fasta);
 
@@ -214,6 +214,13 @@ sub guess_chrom_fasta_name
   {
     return undef;
   }
+}
+
+sub get_guesses_hashref
+{
+  my ($self) = @_;
+
+  return $self->{_guess_names};
 }
 
 sub get_chr_names
