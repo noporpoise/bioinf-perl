@@ -26,7 +26,8 @@ sub print_usage
   the reference and those that are not clean indels are printed unchanged.
   FASTA entry names must match VCF CHROM column.  If <in.vcf> is '-', reads
   from STDIN.
-  --tag <tag_name>       INFO tag to label variation in position\n
+
+  --tag <tag_name>       INFO tag to label variation in position
   --remove_ref_mismatch  Remove variants that do not match the reference\n";
 
   exit;
@@ -120,7 +121,6 @@ my $max_position_diff = 0;
 my $total_position_diff = 0;
 
 my %missing_chrs = ();
-my %missing_chrs_lengths = ();
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
@@ -231,18 +231,11 @@ while(defined($vcf_entry = $vcf->read_entry()))
 }
 
 my @missing_chr_names = sort keys %missing_chrs;
-my @missing_chr_lengths = sort keys %missing_chrs_lengths;
 
 if(@missing_chr_names > 0)
 {
-  print STDERR "vcf_align.pl: Missing chromosomes: " .
+  print STDERR "vcf_align.pl Warning: Missing chromosomes: " .
                join(", ", @missing_chr_names) . "\n";
-}
-
-if(@missing_chr_lengths > 0)
-{
-  print STDERR "vcf_align.pl: Missing chromosome lengths: " .
-               join(", ", @missing_chr_lengths) . "\n";
 }
 
 if($num_ref_mismatch > 0)

@@ -156,13 +156,17 @@ sub guess_name_pairs
   {
     $plain_name =~ s/^chr//g;
 
+    my $plain_stripped = $plain_name;
+    $plain_stripped =~ s/^\w+([0-9a-z])$/\1/gi;
+
     my ($result_plain, $result_fasta);
 
     for my $fasta_name (@$fasta_names_arr)
     {
-      if($fasta_name =~ /^\s*(chr(om(osome)?)?)?\s*$plain_name([^a-z0-9\-\_]|$)/i ||
-         $fasta_name =~ /(chr(om(osome)?)?)?\s*$plain_name([^a-z0-9\-\_]|$)/i ||
-         $fasta_name =~ /(chr(om(osome)?)?):\w+:(chr(om(osome)?)?)$plain_name([^a-z0-9]|$)/i)
+      if($fasta_name =~ /^\s*(chr(om(osome)?)?)?\s*$plain_name\b/i ||
+         $fasta_name =~ /\b(chr(om(osome)?)?)?\s*$plain_name\b/i ||
+         $fasta_name =~ /\b(chr(om(osome)?)?):\w+:(chr(om(osome)?)?)$plain_name\b/i ||
+         $fasta_name =~ /(\w|\b)$plain_stripped\b/i)
       {
         # Look for just the name at the start, e.g. '>10' '> chr10' '> chromosome 10'
         $result_plain = $plain_name;
