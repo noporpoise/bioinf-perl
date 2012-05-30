@@ -8,7 +8,10 @@ use Carp;
 
 # All methods are object methods except these:
 use base 'Exporter';
-our @EXPORT = qw(get_standard_vcf_columns is_snp get_clean_indel);
+our @EXPORT = qw(get_standard_vcf_columns
+                 vcf_sort_variants
+                 vcf_add_filter_txt
+                 is_snp get_clean_indel);
 
 my @header_tag_columns = qw(ALT FILTER FORMAT INFO);
 my @header_tag_types = qw(Integer Float Character String Flag);
@@ -745,6 +748,60 @@ sub print_entry
   }
 
   print $out_handle "\n";
+}
+
+sub order_variants
+{
+  my $order = $a->{'CHROM'} cmp $b->{'CHROM'};
+
+  if(($order = $a->{'CHROM'} cmp $b->{'CHROM'}) != 0)
+  {
+    return $order;
+  }
+
+  if(($order = $a->{'POS'} <=> $b->{'POS'}) != 0)
+  {
+    return $order;
+  }
+  
+  if(($order = $a->{'INFO'}->{'SVLEN'} <=> $b->{'INFO'}->{'SVLEN'}) != 0)
+  {
+    return $order;
+  }
+
+  if(($order = uc($a->{'REF'}) cmp uc($b->{'REF'})) != 0)
+  {
+    return $order;
+  }
+
+  if(($order = uc($a->{'ALT'}) cmp uc($b->{'ALT'})) != 0)
+  {
+    return $order;
+  }
+
+  return 0;
+}
+
+sub vcf_sort_variants
+{
+  my ($variants) = @_;
+
+  @$variants = sort order_variants @$variants;
+}
+
+# Add FILTER column txt
+sub vcf_add_filter_txt
+{
+  my ($variant, $filter_txt) = @_;
+
+  if($variant->{'FILTER'} eq "." || $variant->{'FILTER'} =~ /^PASS$/i)
+  {
+    $variant->{'FILTER'} = $filter_txt;
+  }
+  else
+  {
+    $variant->{'FILTER'} = $variant->{'FILTER'}.";".$filter_txt;
+  }
 }
 
 # returns 0 or 1
