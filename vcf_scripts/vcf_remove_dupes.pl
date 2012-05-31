@@ -170,11 +170,15 @@ sub print_variants
   }
   else
   {
+    # vcf-sort doesn't sort by ALT allele!
+    # Have to use VCFFile::vcf_sort_variants
+
     # Copy and sort variants (by chrom, pos, SVLEN, ref-allele, alt-allele)
     # so as not to upset original ordering
     my @tmp_variants = @variants;
     vcf_sort_variants(\@tmp_variants);
 
+    # Consider lists of dupes together
     my @dupes = ($tmp_variants[0]);
 
     for(my $i = 1; $i < @tmp_variants; $i++)
