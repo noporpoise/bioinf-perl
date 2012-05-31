@@ -20,9 +20,9 @@ sub print_usage
 
   print STDERR "" .
 "Usage: ./vcf_filter_by_info.pl [--invert] <file.vcf> [<FIELD> <OP> <SEARCH>] ..
-  <OP> must be one of == != > >= < <= eq eqi ne gt ge lt le =~
-       eqi is case-insensitive comparison.
-       =~ peforms a regex and =~i peforms a case-insensitive regex\n";
+  <OP> must be one of: =~ =~i !~ !~i == != > >= < <= eq eqi ne gt ge lt le
+       =~i, !~i & eqi are case-insensitive comparisons
+       =~ peforms a regex and !~ is the same as using --invert with =~\n";
   exit;
 }
 
@@ -56,6 +56,11 @@ for(my $i = 0; $i < @ARGV; $i += 3)
   if($op eq "=")
   {
     $op = "==";
+  }
+
+  if(!grep {$op eq $_} qw(=~ =~i !~ !~i == != > >= < <= eq eqi ne gt ge lt le))
+  {
+    print_usage("Unknown operator '$op'");
   }
 
   push(@searches, [$field, $op, $search]);
@@ -136,14 +141,21 @@ sub cmp_search
 
   switch($op)
   {
+    # Regex
     case "=~" { return ($value =~ /$search_str/); }
     case "=~i" { return ($value =~ /$search_str/i); }
+    case "!~" { return ($value !~ /$search_str/); }
+    case "!~i" { return ($value !~ /$search_str/i); }
+
+    # Numerical comparisons
     case "==" { return ($value == $search_str); }
     case "!=" { return ($value != $search_str); }
     case ">"  { return ($value >  $search_str); }
     case ">=" { return ($value >= $search_str); }
     case "<"  { return ($value <  $search_str); }
     case "<=" { return ($value <= $search_str); }
+
+    # String comparisons
     case "eq" { return ($value eq $search_str); }
     case "eqi" { return (lc($value) eq lc($search_str)); }
     case "ne" { return ($value ne $search_str); }
