@@ -12,7 +12,7 @@ use lib $FindBin::Bin;
 use VCFFile;
 use UsefulModule; # for pretty_fraction
 
-use constant {DUPE_SELECT_NONE => 0,
+use constant {DUPE_SELECT_NOT_SET => 0,
               DUPE_SELECT_LOWEST_TAG => 1,
               DUPE_SELECT_HIGHEST_TAG => 2,
               DUPE_SELECT_FIRST => 3,
@@ -34,7 +34,7 @@ sub print_usage
   --take_first         OR
   --take_last          OR
   
-  --filter_text <txt>  Add to / set the filter column instead of removing\n";
+  --filter_txt <txt>  Add to / set the filter column instead of removing\n";
 
   exit;
 }
@@ -92,6 +92,12 @@ while(@ARGV >= 1)
 
 my $vcf_file = shift;
 
+# Set default behaviour
+if(!defined($select_dupe))
+{
+  $select_dupe = defined($filter_txt) ? DUPE_SELECT_NOT_SET : DUPE_SELECT_FIRST;
+}
+
 #
 # Open VCF Handle
 #
@@ -122,31 +128,31 @@ $vcf->print_header();
 my $num_of_entries = 0;
 my $num_of_printed = 0;
 
-my @prev_variants = ();
+my @variants = ();
 
 my $curr_variant = $vcf->read_entry();
 
 if(defined($curr_variant))
 {
   $num_of_entries++;
-  push(@prev_variants, $curr_variant);
+  push(@variants, $curr_variant);
 }
 
 while(defined($curr_variant = $vcf->read_entry()))
 {
   $num_of_entries++;
 
-  if($curr_variant->{'CHROM'} ne $prev_variants[0]->{'CHROM'} ||
-     $curr_variant->{'POS'} != $prev_variants[0]->{'POS'})
+  if($curr_variant->{'CHROM'} ne $variants[0]->{'CHROM'} ||
+     $curr_variant->{'POS'} != $variants[0]->{'POS'})
   {
-    print_prev_variants();
-    @prev_variants = ();
+    print_variants();
+    @variants = ();
   }
 
-  push(@prev_variants, $curr_variant);
+  push(@variants, $curr_variant);
 }
 
-print_prev_variants();
+print_variants();
 
 print STDERR "vcf_remove_dupes.pl: " .
       pretty_fraction($num_of_printed, $num_of_entries) . " variants printed\n";
@@ -155,44 +161,84 @@ close($vcf_handle);
 
 
 
-sub print_prev_variants
+sub print_variants
 {
-  if(@prev_variants == 1)
+  if(@variants == 1)
   {
-    print_variants(@prev_variants);
+    $vcf->print_entry($variants[0]);
+    $num_of_printed++;
   }
   else
   {
-    vcf_sort_variants(\@prev_variants);
+    # Copy and sort variants (by chrom, pos, SVLEN, ref-allele, alt-allele)
+    # so as not to upset original ordering
+    my @tmp_variants = @variants;
+    vcf_sort_variants(\@tmp_variants);
 
-    my @dupes = ($prev_variants[0]);
+    my @dupes = ($tmp_variants[0]);
 
-    for(my $i = 1; $i < @prev_variants; $i++)
+    for(my $i = 1; $i < @tmp_variants; $i++)
     {
-      if(uc($prev_variants[$i]->{'ALT'}) ne uc($dupes[0]->{'ALT'}))
+      if(uc($tmp_variants[$i]->{'ALT'}) ne uc($dupes[0]->{'ALT'}))
       {
-        print_variants(@dupes);
+        process_dupes(@dupes);
         @dupes = ();
       }
 
-      push(@dupes, $prev_variants[$i]);
+      push(@dupes, $tmp_variants[$i]);
     }
 
-    print_variants(@dupes);
+    process_dupes(@dupes);
+
+    if(defined($filter_txt))
+    {
+      # If filter_txt is set then we print all
+      for my $variant (@variants)
+      {
+        $vcf->print_entry($variant);
+        $num_of_printed++;
+      }
+    }
+    else
+    {
+      # Print only those that have print defined
+      for my $variant (@variants)
+      {
+        if(defined($variant->{'print'}))
+        {
+          $vcf->print_entry($variant);
+          $num_of_printed++;
+        }
+      }
+    }
   }
 }
 
-sub print_variants
+# Two or more duplicate variants
+sub process_dupes
 {
+  # print "process_dupes: " . join(",", map {$_->{'ID'}} @_) . "\n";
+
   if(@_ == 1)
   {
-    # Not dupe
-    $vcf->print_entry($_[0]);
-    $num_of_printed++;
+    # No dupes - nothing to be done
+    $_[0]->{'print'} = 1;
+    return;
   }
-  elsif(defined($select_dupe))
+  elsif($select_dupe == DUPE_SELECT_NOT_SET)
   {
-    # Select the variant with the highest/lowest INFO field value
+    if(defined($filter_txt))
+    {
+      # Print all variants, but labelled in the FILTER column
+      for my $variant (@_)
+      {
+        vcf_add_filter_txt($variant, $filter_txt);
+      }
+    }
+  }
+  else
+  {
+    # Select one variant
     my $selected_variant;
 
     if($select_dupe == DUPE_SELECT_HIGHEST_TAG)
@@ -214,41 +260,18 @@ sub print_variants
       $selected_variant = $_[$#_];
     }
 
+    $selected_variant->{'print'} = 1;
+
     if(defined($filter_txt))
     {
-      # Print all variants, labelling all but the selected one in FILTER column
+      # Labelling all but the selected one in FILTER column
       for my $variant (@_)
       {
         if($selected_variant != $variant)
         {
           vcf_add_filter_txt($variant, $filter_txt);
         }
-
-        $vcf->print_entry($variant);
-        $num_of_printed++;
       }
     }
-    else
-    {
-      # Only print selected variant
-      $vcf->print_entry($selected_variant);
-      $num_of_printed++;
-    }
-  }
-  elsif(defined($filter_txt))
-  {
-    # Print all variants, but labelled in the FILTER column
-    for my $variant (@_)
-    {
-      vcf_add_filter_txt($variant, $filter_txt);
-      $vcf->print_entry($variant);
-      $num_of_printed++;
-    }
-  }
-  else
-  {
-    # Print only the first variant
-    $vcf->print_entry($_[0]);
-    $num_of_printed++;
   }
 }

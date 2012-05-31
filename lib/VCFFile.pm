@@ -750,7 +750,8 @@ sub print_entry
   print $out_handle "\n";
 }
 
-sub order_variants
+# cmp variants (by chrom, pos, SVLEN, ref-allele, alt-allele)
+sub cmp_variants
 {
   my $order = $a->{'CHROM'} cmp $b->{'CHROM'};
 
@@ -782,11 +783,12 @@ sub order_variants
   return 0;
 }
 
+# sort variants (by chrom, pos, SVLEN, ref-allele, alt-allele)
 sub vcf_sort_variants
 {
   my ($variants) = @_;
 
-  @$variants = sort order_variants @$variants;
+  @$variants = sort cmp_variants @$variants;
 }
 
 # Add FILTER column txt
