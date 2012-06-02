@@ -245,6 +245,16 @@ sub process_dupes
     # Select one variant
     my $selected_variant;
 
+    # Check tag is defined for all entries
+    if(($select_dupe == DUPE_SELECT_HIGHEST_TAG ||
+        $select_dupe == DUPE_SELECT_LOWEST_TAG) &&
+       (my @missing = grep {!defined($_->{'INFO'}->{$select_tag})} @_))
+    {
+      print STDERR "vcf_remove_dupes.pl Error: Variant '$missing[0]->{'ID'}' " .
+                   "is missing INFO tag '$select_tag'\n";
+      exit;
+    }
+
     if($select_dupe == DUPE_SELECT_HIGHEST_TAG)
     {
       $selected_variant = reduce { $a->{'INFO'}->{$select_tag} >=
