@@ -155,7 +155,9 @@ while(defined($vcf_entry = $vcf->read_entry()))
           $num_of_small_non_tandem++;
         }
 
-        if(defined(my $polarised_len = $vcf_entry->{'INFO'}->{'AALEN'}) &&
+        my $polarised_len;
+
+        if(defined($polarised_len = $vcf_entry->{'INFO'}->{'AALEN'}) &&
            $polarised_len ne ".")
         {
           if($polarised_len > 0)
