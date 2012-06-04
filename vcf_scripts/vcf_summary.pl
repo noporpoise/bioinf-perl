@@ -285,7 +285,7 @@ sub print_arr_stats
   }
   else
   {
-    $median = $elements->[$elements/2];
+    $median = $arr->[$elements/2];
   }
 
   return "min: $arr->[0]; mean: $mean; median: $median; max: $arr->[$elements-1];";
