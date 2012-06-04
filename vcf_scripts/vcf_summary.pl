@@ -210,14 +210,14 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
 close($vcf_handle);
 
-@ins_sizes = sort(@ins_sizes);
-@del_sizes = sort(@del_sizes);
+@ins_sizes = sort {$a <=> $b} @ins_sizes;
+@del_sizes = sort {$a <=> $b} @del_sizes;
 
-@ins_sizes_tandem = sort(@ins_sizes_tandem);
-@del_sizes_tandem = sort(@del_sizes_tandem);
+@ins_sizes_tandem = sort {$a <=> $b} @ins_sizes_tandem;
+@del_sizes_tandem = sort {$a <=> $b} @del_sizes_tandem;
 
-@ins_sizes_non_tandem = sort(@ins_sizes_non_tandem);
-@del_sizes_non_tandem = sort(@del_sizes_non_tandem);
+@ins_sizes_non_tandem = sort {$a <=> $b} @ins_sizes_non_tandem;
+@del_sizes_non_tandem = sort {$a <=> $b} @del_sizes_non_tandem;
 
 # Print results
 print "-- Overview --\n";
