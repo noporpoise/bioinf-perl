@@ -288,7 +288,8 @@ sub print_arr_stats
     $median = $arr->[$elements/2];
   }
 
-  return "min: $arr->[0]; mean: $mean; median: $median; max: $arr->[$elements-1];";
+  return "min: $arr->[0]; mean: " . sprintf("%.3f", $mean) . "; " .
+         "median: " . sprintf("%.3f", $median) . "; max: $arr->[$elements-1];";
 }
 
 sub is_slippage
