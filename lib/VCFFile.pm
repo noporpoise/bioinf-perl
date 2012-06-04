@@ -11,7 +11,8 @@ use base 'Exporter';
 our @EXPORT = qw(get_standard_vcf_columns
                  vcf_sort_variants
                  vcf_add_filter_txt
-                 is_snp get_clean_indel);
+                 is_snp get_clean_indel
+                 vcf_get_ancestral_true_allele);
 
 my @header_tag_columns = qw(ALT FILTER FORMAT INFO);
 my @header_tag_types = qw(Integer Float Character String Flag);
@@ -694,6 +695,24 @@ sub read_entry
   # Correct SVLEN
   $entry{'INFO'}->{'SVLEN'} = length($entry{'ALT'}) - length($entry{'REF'});
 
+  # Correct AALEN
+  if(defined($entry{'INFO'}->{'AA'}))
+  {
+    if($entry{'INFO'}->{'AA'} == 0)
+    {
+      $entry{'INFO'}->{'AALEN'} = length($entry{'ALT'}) - length($entry{'REF'});
+    }
+    elsif($entry{'INFO'}->{'AA'} == 1)
+    {
+      $entry{'INFO'}->{'AALEN'} = length($entry{'REF'}) - length($entry{'ALT'});
+    }
+    else
+    {
+      # Invalid AA value
+      $entry{'INFO'}->{'AALEN'} = undef;
+    }
+  }
+
   if(length($entry{'REF'}) != 1 || length($entry{'ALT'}) != 1)
   {
     # variant is not a SNP
@@ -834,6 +853,20 @@ sub get_clean_indel
   {
     return undef;
   }
+}
+
+sub vcf_get_ancestral_true_allele
+{
+  my ($vcf_entry) = @_;
+
+  my $ancestral = $vcf_entry->{'INFO'}->{'AA'};
+
+  if(!defined($ancestral))
+  {
+    return undef;
+  }
+
+  return ($ancestral == 0 ? $vcf_entry->{'true_REF'} : $vcf_entry->{'true_ALT'});
 }
 
 1;
