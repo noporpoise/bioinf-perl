@@ -696,7 +696,7 @@ sub read_entry
   $entry{'INFO'}->{'SVLEN'} = length($entry{'ALT'}) - length($entry{'REF'});
 
   # Correct AALEN
-  if(defined($entry{'INFO'}->{'AA'}))
+  if(defined($entry{'INFO'}->{'AA'}) && $entry{'INFO'}->{'AA'} =~ /^\d$/)
   {
     if($entry{'INFO'}->{'AA'} == 0)
     {
