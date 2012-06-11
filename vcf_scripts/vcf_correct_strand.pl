@@ -174,12 +174,19 @@ if(@missing_chr_names > 0)
 
 print STDERR "vcf_align.pl: " .
              pretty_fraction($num_of_ref_mismatch, $num_of_variants) . " " .
-             "variants did not match the reference " .
-             ($remove_ref_mismatch ? "(removed)" : "(left in)") . "\n";
+             "variants did not match the reference\n";
 
 print STDERR "vcf_align.pl: " .
              pretty_fraction($num_of_switched,
                              $num_of_ref_mismatch) . " " .
              "mismatches were switched successfully\n";
+
+my $num_of_remaining_mismatches = $num_of_ref_mismatch - $num_of_switched;
+
+print STDERR "vcf_align.pl: " .
+             pretty_fraction($num_of_remaining_mismatches,
+                             $num_of_ref_mismatch) . " " .
+             "mismatches couldn't be fixed and were " .
+             ($remove_ref_mismatch ? "removed" : "left in") . "\n";
 
 close($vcf_handle);
