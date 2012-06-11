@@ -120,13 +120,6 @@ if(!$abs)
                      reverse(1..$#del)) . "\n";
 }
 
-my $ins_start = 0;
-
-while(!defined($ins[$ins_start]))
-{
-  $ins_start++;
-}
-
 print join("\n", map {$_ . $csvsep . (defined($ins[$_]) ? $ins[$_] : 0) }
-                   $ins_start..$#ins) . "\n";
+                   1..$#ins) . "\n";
 
