@@ -309,9 +309,15 @@ sub _check_valid_header_tag
       return 0;
     }
   }
-  elsif(defined($tag->{'Number'}) || defined($tag->{'Type'}))
+  elsif(defined($tag->{'Number'}) && $tag->{'Number'} != 0)
   {
-    #carp("VCF header ALT/FILTER tags cannot have Number or Type attributes\n");
+    carp("VCF header ALT/FILTER tags cannot have Number attributes\n");
+    return 0;
+  }
+  elsif(defined($tag->{'Type'}))
+  {
+    carp("VCF header ALT/FILTER tags cannot have Type attributes " .
+         "('$tag->{'Type'}')\n");
     return 0;
   }
 
@@ -389,7 +395,9 @@ sub print_header
     $desc =~ s/\\/\\\\/g;
     $desc =~ s/\"/\\\"/g;
 
-    if($tag->{'column'} =~ /^(?:ALT|FILTER)$/)
+    print "";
+
+    if($tag->{'column'} =~ /^(ALT|FILTER)$/i)
     {
       print $out "##" . $tag->{'column'} . "=<" .
                  "ID=" . $tag->{'ID'} . "," .
@@ -465,10 +473,6 @@ sub add_header_tag
   # INFO, FILTER, FORMAT.. column is in upper case
   $tag_col = uc($tag_col);
 
-  # Integer, String.. lowercase with uppercase first letter
-  $tag_type = lc($tag_type);
-  substr($tag_type,0,1) = uc(substr($tag_type,0,1));
-
   my $tag = {'column' => $tag_col,
              'ID' => $tag_id,
              'Description' => $tag_description};
@@ -478,8 +482,12 @@ sub add_header_tag
     $tag->{'Number'} = $tag_number;
   }
 
-  if(defined($tag_number))
+  if(defined($tag_type))
   {
+    # Integer, String.. lowercase with uppercase first letter
+    $tag_type = lc($tag_type);
+    substr($tag_type,0,1) = uc(substr($tag_type,0,1));
+
     $tag->{'Type'} = $tag_type;
   }
 
@@ -489,6 +497,11 @@ sub add_header_tag
   if(_check_valid_header_tag($tag))
   {
     $self->{_header_tags}->{$tag_id} = $tag;
+  }
+  else
+  {
+    print STDERR "VCFFile::add_header_tag(): " .
+                 "Not a valid header tag: '$tag_id'\n";
   }
 }
 

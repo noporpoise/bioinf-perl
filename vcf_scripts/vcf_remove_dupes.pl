@@ -44,7 +44,9 @@ if(@ARGV > 5)
   print_usage();
 }
 
+# How to select a single variant from a set of dupes
 my $select_dupe;
+# Tag to use in selection
 my $select_tag;
 
 my $filter_txt;
@@ -122,6 +124,36 @@ else
 # Read VCF
 #
 my $vcf = new VCFFile($vcf_handle);
+
+if(defined($filter_txt))
+{
+  my $description;
+  
+  if($select_dupe == DUPE_SELECT_FIRST)
+  {
+    $description = "Duplicated variant that was not the first seen";
+  }
+  elsif($select_dupe == DUPE_SELECT_FIRST)
+  {
+    $description = "Duplicated variant that was not the last seen";
+  }
+  elsif($select_dupe == DUPE_SELECT_LOWEST_TAG)
+  {
+    $description = "Duplicated variant that didn't have the lowest value of " .
+                   $select_tag;
+  }
+  elsif($select_dupe == DUPE_SELECT_HIGHEST_TAG)
+  {
+    $description = "Duplicated variant that didn't have the highest value of " .
+                   $select_tag;
+  }
+  else
+  {
+    $description = "Duplicated variant";
+  }
+
+  $vcf->add_header_tag("FILTER", $filter_txt, 0, undef, $description);
+}
 
 $vcf->print_header();
 
