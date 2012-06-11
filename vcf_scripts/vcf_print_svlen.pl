@@ -116,10 +116,10 @@ print "size".$csvsep."count\n";
 
 if(!$abs)
 {
-  print join("\n", map { "-" . $_ . $csvsep . (defined($del[$_]) ? $del[$_] : 0) }
-                     reverse(1..$#del)) . "\n";
+  print join("", map { "-".$_.$csvsep.(defined($del[$_]) ? $del[$_] : 0)."\n" }
+                   reverse(1..$#del));
 }
 
-print join("\n", map {$_ . $csvsep . (defined($ins[$_]) ? $ins[$_] : 0) }
-                   1..$#ins) . "\n";
+print join("", map {$_ . $csvsep . (defined($ins[$_]) ? $ins[$_] : 0) . "\n" }
+                 1..$#ins);
 
