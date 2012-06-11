@@ -85,23 +85,23 @@ my $num_of_clean_indels = 0;
 my $num_of_transitions = 0;
 my $num_of_transversions = 0;
 
-my $num_of_small_indels = 0;
-my $num_of_small_tandem = 0;
-my $num_of_small_non_tandem = 0;
+my $num_of_indels = 0;
+my $num_of_tandem = 0;
+my $num_of_non_tandem = 0;
 
 # Ins/del ratios
-my $num_of_small_del = 0;
-my $num_of_small_ins = 0;
+my $num_of_del = 0;
+my $num_of_ins = 0;
 my @ins_sizes = ();
 my @del_sizes = ();
 
-my $num_of_small_tandem_del = 0;
-my $num_of_small_tandem_ins = 0;
+my $num_of_tandem_del = 0;
+my $num_of_tandem_ins = 0;
 my @ins_sizes_tandem = ();
 my @del_sizes_tandem = ();
 
-my $num_of_small_non_tandem_del = 0;
-my $num_of_small_non_tandem_ins = 0;
+my $num_of_non_tandem_del = 0;
+my $num_of_non_tandem_ins = 0;
 my @ins_sizes_non_tandem = ();
 my @del_sizes_non_tandem = ();
 
@@ -136,7 +136,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
     if((!defined($max_indel) || abs($svlen) <= $max_indel))
     {
-      $num_of_small_indels++;
+      $num_of_indels++;
 
       # tandem
       my $left_flank = $vcf_entry->{'INFO'}->{'left_flank'};
@@ -148,11 +148,11 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
         if($is_tandem)
         {
-          $num_of_small_tandem++;
+          $num_of_tandem++;
         }
         else
         {
-          $num_of_small_non_tandem++;
+          $num_of_non_tandem++;
         }
 
         my $polarised_len;
@@ -162,12 +162,12 @@ while(defined($vcf_entry = $vcf->read_entry()))
         {
           if($polarised_len > 0)
           {
-            $num_of_small_ins++;
+            $num_of_ins++;
             push(@ins_sizes, $polarised_len);
           }
           else
           {
-            $num_of_small_del++;
+            $num_of_del++;
             push(@del_sizes, -$polarised_len);
           }
 
@@ -175,12 +175,12 @@ while(defined($vcf_entry = $vcf->read_entry()))
           {
             if($polarised_len > 0)
             {
-              $num_of_small_tandem_ins++;
+              $num_of_tandem_ins++;
               push(@ins_sizes_tandem, $polarised_len);
             }
             else
             {
-              $num_of_small_tandem_del++;
+              $num_of_tandem_del++;
               push(@del_sizes_tandem, -$polarised_len);
             }
           }
@@ -188,12 +188,12 @@ while(defined($vcf_entry = $vcf->read_entry()))
           {
             if($polarised_len > 0)
             {
-              $num_of_small_non_tandem_ins++;
+              $num_of_non_tandem_ins++;
               push(@ins_sizes_non_tandem, $polarised_len);
             }
             else
             {
-              $num_of_small_non_tandem_del++;
+              $num_of_non_tandem_del++;
               push(@del_sizes_non_tandem, -$polarised_len);
             }
           }
@@ -221,10 +221,15 @@ close($vcf_handle);
 
 # Print results
 print "-- Overview --\n";
+
 my $num_of_snps = $num_of_transitions+$num_of_transversions;
-print "SNPs:         ".pretty_fraction($num_of_snps, $num_of_variants)." of variants\n";
-print "clean indels: ".pretty_fraction($num_of_clean_indels, $num_of_variants)." of variants\n";
-print "complex:      ".pretty_fraction($num_of_complex, $num_of_variants)." of variants\n";
+
+print "SNPs:         " .
+      pretty_fraction($num_of_snps, $num_of_variants) . " of variants\n";
+print "clean indels: " . pretty_fraction($num_of_clean_indels, $num_of_variants) .
+      " of variants\n";
+print "complex:      " . pretty_fraction($num_of_complex, $num_of_variants) .
+      " of variants\n";
 
 # Print Ts/Tv results
 print "-- SNPs --\n";
@@ -239,26 +244,40 @@ if($num_of_transversions > 0)
 
 # small indel results
 print "-- Indels --\n";
-print "clean indels: ".pretty_fraction($num_of_small_indels, $num_of_variants)." of variants\n";
-print "  ins: ".pretty_fraction($num_of_small_ins, $num_of_small_ins+$num_of_small_del)."\n";
+print "clean indels: " . pretty_fraction($num_of_indels, $num_of_variants) .
+      " of variants\n";
+print "  ins: ".pretty_fraction($num_of_ins, $num_of_ins+$num_of_del)."\n";
 print "  ins distrib: ".print_arr_stats(\@ins_sizes)."\n";
 print "  del distrib: ".print_arr_stats(\@del_sizes)."\n";
 
-my $total_tandem_nontandem = $num_of_small_tandem + $num_of_small_non_tandem;
-print "  tandem:       ".pretty_fraction($num_of_small_tandem, $total_tandem_nontandem)." of small indels\n";
-if($num_of_small_tandem > 0)
+my $total_tandem_nontandem = $num_of_tandem + $num_of_non_tandem;
+
+print "  tandem:       " .
+      pretty_fraction($num_of_tandem, $total_tandem_nontandem) .
+      " of small indels\n";
+
+if($num_of_tandem > 0)
 {
-  print "    ins: ".pretty_fraction($num_of_small_tandem_ins, $num_of_small_tandem_ins+$num_of_small_tandem_del)."\n";
+  my $polarised_tandem = $num_of_tandem_ins + $num_of_tandem_del;
+
+  print "    ins: ".pretty_fraction($num_of_tandem_ins, $polarised_tandem)."\n";
   print "    ins distrib: ".print_arr_stats(\@ins_sizes_tandem)."\n";
   print "    del distrib: ".print_arr_stats(\@del_sizes_tandem)."\n";
 }
 
-print "  non-tandem:   ".pretty_fraction($num_of_small_non_tandem, $total_tandem_nontandem)." of small indels\n";
-if($num_of_small_non_tandem > 0)
+print "  non-tandem:   " .
+      pretty_fraction($num_of_non_tandem, $total_tandem_nontandem) . " " .
+      "of small indels\n";
+
+if($num_of_non_tandem > 0)
 {
-  print "    ins: ".pretty_fraction($num_of_small_non_tandem_ins, $num_of_small_non_tandem_ins+$num_of_small_non_tandem_del)."\n";
-  print "    ins distrib: ".print_arr_stats(\@ins_sizes_non_tandem)."\n";
-  print "    del distrib: ".print_arr_stats(\@del_sizes_non_tandem)."\n";
+  my $polarised_non_tandem = $num_of_non_tandem_ins +
+                             $num_of_non_tandem_del;
+  print "    ins: " . pretty_fraction($num_of_non_tandem_ins,
+                                      $polarised_non_tandem) . "\n";
+
+  print "    ins distrib: " . print_arr_stats(\@ins_sizes_non_tandem) . "\n";
+  print "    del distrib: " . print_arr_stats(\@del_sizes_non_tandem) . "\n";
 }
 
 sub print_arr_stats
@@ -289,7 +308,7 @@ sub print_arr_stats
   }
 
   return "min: $arr->[0]; mean: " . sprintf("%.3f", $mean) . "; " .
-         "median: " . sprintf("%.3f", $median) . "; max: $arr->[$elements-1];";
+         "median: " . sprintf("%.1f", $median) . "; max: $arr->[$elements-1];";
 }
 
 sub is_slippage
