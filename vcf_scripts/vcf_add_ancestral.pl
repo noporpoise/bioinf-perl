@@ -37,7 +37,7 @@ sub print_usage
   exit;
 }
 
-if(@ARGV < 5)
+if(@ARGV < 4)
 {
   print_usage();
 }
@@ -109,7 +109,7 @@ print STDERR "vcf_add_ancestral_to_indels.pl: Loading ancestral ref...\n";
 
 my $ancestral;
 
-if(@ancestral_ref_files != 1 || $ancestral_ref_files[0] ne "-")
+if(@ancestral_ref_files > 1 || $ancestral_ref_files[0] ne "-")
 {
   $ancestral = new RefGenome(uppercase => 1);
   $ancestral->load_from_files(@ancestral_ref_files);
