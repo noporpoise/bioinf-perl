@@ -20,13 +20,13 @@ sub print_usage
 
   print STDERR "" .
 "Usage: ./vcf_filter_slippage.pl [OPTIONS] [in.vcf]
-  Prints (or flags) slippage indels.  Slippage can only be on clean indels.
+  Prints and flags slippage indels.  Slippage can only be on clean indels.
   Requires INFO tags 'left_flank' and 'right_flank'
 
-  --only <tandem|non>  Print or flag non slippage indels
+  --only <tandem|non>  Print only tandem/non-tandem events (+ SNPs etc)
   --non_flag <tag>     INFO flag non-tandem (slippage < SVLEN)
   --tandem_flag <tag>  INFO flag tandem (slippage >= SVLEN)
-  --dist_tag <tag>     INFO tag with amount of slippage\n";
+  --dist_tag <tag>     INFO tag with amount of slippage (bp shared with flank)\n";
   exit;
 }
 
