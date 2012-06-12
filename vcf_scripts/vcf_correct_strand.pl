@@ -88,8 +88,6 @@ my $num_of_switched = 0;
 
 my %missing_chrs = ();
 
-# When the reference allele is a deletion (0bp long allele) there is no way it cannot match the genome
-
 while(defined($vcf_entry = $vcf->read_entry()))
 {
   $num_of_variants++;

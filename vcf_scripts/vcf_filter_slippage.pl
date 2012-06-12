@@ -95,13 +95,16 @@ if(@ARGV > 0)
 {
   print_usage();
 }
-elsif(defined($tandem_flag) && $filter eq "tandem")
+elsif(defined($filter))
 {
-  print_usage("Did you mean to flag tandems and filter them out??");
-}
-elsif(defined($non_tandem_flag) && $filter eq "non")
-{
-  print_usage("Did you mean to flag non-tandems and filter them out??");
+  if(defined($tandem_flag) && $filter eq "tandem")
+  {
+    print_usage("Did you mean to flag tandems and filter them out??");
+  }
+  if(defined($non_tandem_flag) && $filter eq "non")
+  {
+    print_usage("Did you mean to flag non-tandems and filter them out??");
+  }
 }
 
 #
