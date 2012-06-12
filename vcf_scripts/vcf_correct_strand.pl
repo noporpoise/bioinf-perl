@@ -135,12 +135,20 @@ while(defined($vcf_entry = $vcf->read_entry()))
         {
           my $genotype = $vcf_entry->{$sample};
           
-          if($genotype =~ /^([01])([\/\|])([01])(.*)$/)
+          if($genotype =~ /^([01])([\/\|])([01]):(\d+),(\d+)(.*)/)
           {
-            my $gt1 = $1 == 0 ? 1 : 0;
-            my $gt2 = $3 == 0 ? 1 : 0;
+            my ($gt1,$gt_sep,$gt2,$covg1,$covg2,$end) = ($1,$2,$3,$4,$5,$6);
 
-            $vcf_entry->{$sample} = $gt1.$2.$gt2.$4;
+            # There is a special case that doesn't need switching
+            if(!($gt1 == 0 && $gt2 == 1 && $gt_sep eq "/"))
+            {
+              # Swap
+              $gt1 = $gt1 == 0 ? 1 : 0;
+              $gt2 = $gt2 == 0 ? 1 : 0;
+              ($covg1,$covg2) = ($covg2,$covg1);
+            }
+
+            $vcf_entry->{$sample} = $gt1.$gt_sep.$gt2.":".$covg1.",".$covg2.$end;
           }
           else
           {
