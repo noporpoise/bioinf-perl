@@ -68,6 +68,10 @@ while(@ARGV > 0)
   {
     print_usage("Unknown option '$ARGV[0]'");
   }
+  else
+  {
+    last;
+  }
 }
 
 my $vcf_file = shift;
