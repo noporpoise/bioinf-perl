@@ -212,7 +212,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     }
   }
 
-  if(!$unfixed_mismatch || $remove_ref_mismatch)
+  if(!$unfixed_mismatch || !$remove_ref_mismatch)
   {
     $vcf->print_entry($vcf_entry);
   }
@@ -245,13 +245,13 @@ print STDERR "vcf_correct_strand.pl: " .
 
 if(defined($flag_mismatches))
 {
-  print STDERR "vcf_correct_strand: variants that don't match the ref genome " .
+  print STDERR "vcf_correct_strand.pl: variants that don't match the ref genome " .
                "were labelled with '$flag_mismatches' flag\n";
 }
 
 if(defined($flag_swapped))
 {
-  print STDERR "vcf_correct_strand: variants that had alleles swapped were " .
+  print STDERR "vcf_correct_strand.pl: variants that had alleles swapped were " .
                "labelled with '$flag_swapped' flag\n";
 }
 
