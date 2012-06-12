@@ -20,11 +20,13 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./vcf_correct_strand.pl [--remove_mismatches] <in.vcf> <ref1.fa ..>
+"Usage: ./vcf_correct_strand.pl [OPTIONS] <in.vcf> <ref1.fa ..>
   If the REF allele doesn't match the reference but the ALT allele does, switch
   them and correct the genotypes.
   
-  --remove_mismatches  Remove mismatches that cannot be fixed\n";
+  --remove_mismatches     Remove mismatches that cannot be fixed
+  --flag_mismatches <tag> Stick an INFO flag on variants still don't match
+  --flag_swapped <tag>    Stick an INFO flag on variants that are swapped\n";
 
   exit;
 }
@@ -35,15 +37,47 @@ if(@ARGV < 2)
 }
 
 my $remove_ref_mismatch = 0;
+my ($flag_mismatches, $flag_swapped);
 
-if($ARGV[0] =~ /^-?-remove_mismatches$/i)
+while(@ARGV > 0)
 {
-  shift;
-  $remove_ref_mismatch = 1;
+  if($ARGV[0] =~ /^-?-remove_mismatches$/i)
+  {
+    shift;
+    $remove_ref_mismatch = 1;
+  }
+  elsif($ARGV[0] =~ /^-?-flag_mismatches$/i)
+  {
+    shift;
+
+    if(!defined($flag_mismatches = shift))
+    {
+      print_usage("--flag_mismatches <tag> needs a tag name!");
+    }
+  }
+  elsif($ARGV[0] =~ /^-?-flag_swapped$/i)
+  {
+    shift;
+
+    if(!defined($flag_swapped = shift))
+    {
+      print_usage("--flag_swapped <tag> needs a tag name!");
+    }
+  }
+  elsif(substr($ARGV[0],0,1) eq "-")
+  {
+    print_usage("Unknown option '$ARGV[0]'");
+  }
 }
 
 my $vcf_file = shift;
 my @ref_files = @ARGV;
+
+if($remove_ref_mismatch && defined($flag_mismatches))
+{
+  print_usage("Cannot set --remove_ref_mismatch and --flag_mismatches... " .
+              "it just doesn't make sense!");
+}
 
 #
 # Open VCF Handle
@@ -125,6 +159,11 @@ while(defined($vcf_entry = $vcf->read_entry()))
         # Switch!
         $num_of_switched++;
 
+        if(defined($flag_swapped))
+        {
+          $vcf_entry->{'INFO_flags'}->{$flag_swapped} = 1;
+        }
+
         # Switch alleles
         my $tmp = $vcf_entry->{'REF'};
         $vcf_entry->{'REF'} = $vcf_entry->{'ALT'};
@@ -160,6 +199,11 @@ while(defined($vcf_entry = $vcf->read_entry()))
       {
         # Couldn't fix mismatch
         $unfixed_mismatch = 1;
+
+        if(defined($flag_mismatches))
+        {
+          $vcf_entry->{'INFO_flags'}->{$flag_mismatches} = 1;
+        }
       }
     }
   }
@@ -174,25 +218,37 @@ my @missing_chr_names = sort keys %missing_chrs;
 
 if(@missing_chr_names > 0)
 {
-  print STDERR "vcf_align.pl Warning: Missing chromosomes: " .
+  print STDERR "vcf_correct_strand.pl Warning: Missing chromosomes: " .
                join(", ", @missing_chr_names) . "\n";
 }
 
-print STDERR "vcf_align.pl: " .
+print STDERR "vcf_correct_strand.pl: " .
              pretty_fraction($num_of_ref_mismatch, $num_of_variants) . " " .
              "variants did not match the reference\n";
 
-print STDERR "vcf_align.pl: " .
+print STDERR "vcf_correct_strand.pl: " .
              pretty_fraction($num_of_switched,
                              $num_of_ref_mismatch) . " " .
              "mismatches were switched successfully\n";
 
 my $num_of_remaining_mismatches = $num_of_ref_mismatch - $num_of_switched;
 
-print STDERR "vcf_align.pl: " .
+print STDERR "vcf_correct_strand.pl: " .
              pretty_fraction($num_of_remaining_mismatches,
                              $num_of_ref_mismatch) . " " .
              "mismatches couldn't be fixed and were " .
              ($remove_ref_mismatch ? "removed" : "left in") . "\n";
+
+if(defined($flag_mismatches))
+{
+  print STDERR "vcf_correct_strand: variants that don't match the ref genome " .
+               "were labelled with '$flag_mismatches' flag\n";
+}
+
+if(defined($flag_swapped))
+{
+  print STDERR "vcf_correct_strand: variants that had alleles swapped were " .
+               "labelled with '$flag_swapped' flag\n";
+}
 
 close($vcf_handle);
