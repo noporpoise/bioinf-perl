@@ -166,7 +166,7 @@ while(defined($vcf_entry = $vcf->read_entry))
 
   my $print = print_var(@filters);
 
-  if($print != $invert)
+  if($print)
   {
     $num_of_filtered_entries++;
     $vcf->print_entry($vcf_entry);
@@ -220,5 +220,5 @@ sub print_var
     }
   }
 
-  return ($num_of_required == $num_of_required_filters && !$fail);
+  return ($num_of_required == $num_of_required_filters && !$fail) != $invert;
 }
