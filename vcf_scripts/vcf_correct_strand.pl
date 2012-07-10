@@ -141,22 +141,28 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   my $max_allele_len = max(length($ref_allele), length($alt_allele));
 
-  if($genome->get_chr_length($chr) < $var_start + $max_allele_len)
-  {
-    print STDERR "vcf_correct_strand.pl: var " . $vcf_entry->{'ID'} . " at " .
-                  "$chr:$var_start:$max_allele_len is out of " .
-                  "bounds of $chr:1:" . $genome->get_chr_length($chr) . "\n";
-  }
-
-  my $genome_seq = $genome->get_chr_substr($chr, $var_start, $max_allele_len);
-
   my $unfixed_mismatch = 0;
 
-  if(!defined($genome_seq))
+  my $genome_seq;
+
+  if(!$genome->chr_exists($chr))
   {
     $missing_chrs{$chr} = 1;
   }
   else
+  {
+    $genome_seq = $genome->get_chr_substr($chr, $var_start, $max_allele_len);
+
+    if($genome->get_chr_length($chr) < $var_start + $max_allele_len)
+    {
+      print STDERR "vcf_correct_strand.pl: var " . $vcf_entry->{'ID'} . " at " .
+                   "$chr:$var_start:$max_allele_len is out of " .
+                   "bounds of $chr:1:" . $genome->get_chr_length($chr) . "\n";
+      $genome_seq = undef;
+    }
+  }
+
+  if(defined($genome_seq))
   {
     my $genome_seq_ref = substr($genome_seq, 0, length($ref_allele));
     my $genome_seq_alt = substr($genome_seq, 0, length($alt_allele));
@@ -256,12 +262,12 @@ while(defined($vcf_entry = $vcf->read_entry()))
 }
 
 my @format_field_names
-  = grep {uc($_) ne "GT" && uc($_) ne "COV" && uc($_) ne "CONF"}
+  = grep {uc($_) ne "GT" && uc($_) ne "COV"}
     sort keys %format_fields;
 
 print STDERR "vcf_correct_strand.pl: Ignored format fields: " .
              join(",", @format_field_names) . "\n";
-print STDERR "                       (I only understand GT,COVG,CONF)\n";
+print STDERR "                       (I only manipulate GT & COVG)\n";
 
 my @missing_chr_names = sort keys %missing_chrs;
 
