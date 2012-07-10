@@ -141,6 +141,13 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   my $max_allele_len = max(length($ref_allele), length($alt_allele));
 
+  if($genome->get_chr_length($chr) < $var_start + $max_allele_len)
+  {
+    print STDERR "vcf_correct_strand.pl: var " . $vcf_entry->{'ID'} . " at " .
+                  "$chr:$var_start:$max_allele_len is out of " .
+                  "bounds of $chr:1:" . $genome->get_chr_length($chr) . "\n";
+  }
+
   my $genome_seq = $genome->get_chr_substr($chr, $var_start, $max_allele_len);
 
   my $unfixed_mismatch = 0;
