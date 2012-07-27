@@ -198,18 +198,6 @@ sub print_list
           $new_entry->{$sample} = {};
         }
 
-        # Check if any of the variants have GT confidence
-        my $has_conf = 0;
-
-        # Loop through variants
-        for(my $var = $start; !$has_conf && $var <= $end; $var++)
-        {
-          if(grep {$_ eq "GT_CONF"} @{$vars_at_same_pos[$var]->{'FORMAT'}})
-          {
-            $has_conf = 1;
-          }
-        }
-
         # Get ploidy
         my $ploidy;
         for(my $var = $start; !defined($ploidy) && $var <= $end; $var++)
@@ -232,8 +220,9 @@ sub print_list
           for(my $var = $start; $var <= $end; $var++)
           {
             my $gt_conf = $vars_at_same_pos[$var]->{$sample}->{'GT_CONF'};
+            my $sample_gt = $vars_at_same_pos[$var]->{$sample}->{'GT_CONF'};
 
-            if(defined($gt_conf) && $gt_conf ne ".")
+            if(defined($gt_conf) && defined($sample_gt) && $gt_conf ne ".")
             {
               if(!defined($max_gt_conf_var) ||
                  $max_gt_conf_var->{$sample}->{'GT_CONF'}
