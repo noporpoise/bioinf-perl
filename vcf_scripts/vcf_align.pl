@@ -71,6 +71,11 @@ my $justify = lc(shift);
 my $vcf_file = shift;
 my @ref_files = @ARGV;
 
+if(@ref_files == 0)
+{
+  print_usage("Not enough arguments.");
+}
+
 if($justify ne "left" && $justify ne "right")
 {
   print_usage("neither 'left' nor 'right' given");
