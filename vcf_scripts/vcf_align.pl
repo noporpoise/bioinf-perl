@@ -112,7 +112,7 @@ $genome->load_from_files(@ref_files);
 my $vcf = new VCFFile($vcf_handle);
 
 # Print non-PASS variants straight to stdout if -p passed
-$vcf->set_filter_failed($failed_vars_out);
+if(defined($failed_vars_out)) { $vcf->set_filter_failed($failed_vars_out);}
 
 # Add justify info to header and print
 $vcf->add_header_metainfo("variants_justified", $justify);
