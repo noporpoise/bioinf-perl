@@ -13,7 +13,7 @@ sub print_usage
 
   print STDERR "" .
 "usage: ./md5check.pl <file1 ..>
-  Compares multiple md5sum output lists
+  Compares multiple md5sum output lists.
 
   Example output:
     06ba2ae0897750fe14ac0b8b51b8cd4e  file1.txt.gz [2]
@@ -43,20 +43,23 @@ for my $file (@ARGV)
   {
     chomp($line);
 
-    my ($hash, $name) = split("  ", $line);
+    if($line !~ /^\s*$/)
+    {
+      my ($hash, $name) = split("  ", $line);
   
-    if(!defined($file_hashes{$name}))
-    {
-      $file_hashes{$name} = {};
-      $file_hashes{$name}->{$hash} = [$file];
-    }
-    elsif(!defined($file_hashes{$name}->{$hash}))
-    {
-      $file_hashes{$name}->{$hash} = [$file];
-    }
-    else
-    {
-      push(@{$file_hashes{$name}->{$hash}}, $file);
+      if(!defined($file_hashes{$name}))
+      {
+        $file_hashes{$name} = {};
+        $file_hashes{$name}->{$hash} = [$file];
+      }
+      elsif(!defined($file_hashes{$name}->{$hash}))
+      {
+        $file_hashes{$name}->{$hash} = [$file];
+      }
+      else
+      {
+        push(@{$file_hashes{$name}->{$hash}}, $file);
+      }
     }
   }
 
