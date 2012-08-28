@@ -804,12 +804,22 @@ sub _read_entry_from_file
     }
   }
 
-  if(length($entry{'REF'}) != 1 || length($entry{'ALT'}) != 1)
+  my $min_length = min(length($entry{'REF'}), length($entry{'ALT'}));
+  my $padding_bases = 0;
+
+  while($padding_bases < $min_length &&
+        uc(substr($entry{'REF'}, $padding_bases, 1)) eq
+        uc(substr($entry{'ALT'}, $padding_bases, 1)))
   {
-    # variant is not a SNP
-    $entry{'true_REF'} = substr($entry{'REF'}, 1);
-    $entry{'true_ALT'} = substr($entry{'ALT'}, 1);
-    $entry{'true_POS'} = $entry{'POS'} + 1;
+    $padding_bases++;
+  }
+
+  if($padding_bases > 0)
+  {
+    # variant has a padding base
+    $entry{'true_REF'} = substr($entry{'REF'}, $padding_bases);
+    $entry{'true_ALT'} = substr($entry{'ALT'}, $padding_bases);
+    $entry{'true_POS'} = $entry{'POS'} + $padding_bases;
   }
   else
   {
