@@ -8,10 +8,10 @@ use Carp;
 
 # All methods are object methods except these:
 use base 'Exporter';
-our @EXPORT = qw(get_standard_vcf_columns
+our @EXPORT = qw(vcf_get_standard_columns
                  vcf_sort_variants
                  vcf_add_filter_txt
-                 is_snp get_clean_indel
+                 vcf_is_snp vcf_get_clean_indel
                  vcf_get_ancestral_true_allele);
 
 my @header_tag_columns = qw(ALT FILTER FORMAT INFO);
@@ -119,7 +119,7 @@ sub new
     # Test this assumption - error if not true
     my @col_values = split(/\t/, $next_line);
 
-    my @expected_cols = get_standard_vcf_columns();
+    my @expected_cols = vcf_get_standard_columns();
 
     # Can be more columns that standard to include all samples,
     # but fewer needs to be reported (fatal)
@@ -149,7 +149,7 @@ sub new
 
   # Get sample names
   my %usual_fields = ();
-  my @standard_cols = get_standard_vcf_columns();
+  my @standard_cols = vcf_get_standard_columns();
 
   for my $standard_col (@standard_cols) {
     $usual_fields{uc($standard_col)} = 1;
@@ -600,7 +600,7 @@ sub set_columns_with_arr
 }
 
 # Static VCF method
-sub get_standard_vcf_columns
+sub vcf_get_standard_columns
 {
   return qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT);
 }
@@ -804,6 +804,7 @@ sub _read_entry_from_file
     }
   }
 
+  # Strip padding bases off to get true alleles
   my $min_length = min(length($entry{'REF'}), length($entry{'ALT'}));
   my $padding_bases = 0;
 
@@ -957,7 +958,7 @@ sub get_ploidy
 }
 
 # returns 0 or 1
-sub is_snp
+sub vcf_is_snp
 {
   my ($vcf_entry) = @_;
 
@@ -968,7 +969,7 @@ sub is_snp
 }
 
 # returns undef or $indel
-sub get_clean_indel
+sub vcf_get_clean_indel
 {
   my ($vcf_entry) = @_;
 

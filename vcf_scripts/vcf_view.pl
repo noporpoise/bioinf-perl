@@ -230,7 +230,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
   my $has_snps = 0;
   my $has_indels = 0;
 
-  if(is_snp($vcf_entry))
+  if(vcf_is_snp($vcf_entry))
   {
     $has_snps = 1;
     $sep = "*";
@@ -241,7 +241,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
       $allele2 = $mismatch_colour.$allele2.$stop_colour;
     }
   }
-  elsif(defined(get_clean_indel($vcf_entry)))
+  elsif(defined(vcf_get_clean_indel($vcf_entry)))
   {
     $has_indels = 1;
 
