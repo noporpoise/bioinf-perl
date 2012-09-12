@@ -180,6 +180,12 @@ sub new
   return $self;
 }
 
+sub close_vcf
+{
+  my ($self) = @_;
+  close($self->{_handle}) or carp("Cannot close VCF file handle");
+}
+
 sub _peek_line
 {
   my ($self) = @_;
@@ -457,7 +463,8 @@ sub get_header
   my $header_str = "";
 
   # Print header to a string
-  open(my $fh_str, '>', \$header_str)
+  my $fh_str;
+  open($fh_str, '>', \$header_str)
     or die("Could not open string for writing");
 
   $self->print_header($fh_str);

@@ -15,7 +15,7 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
 
-  print STDERR "Usage: ./fastn_lengths.pl [--bases] [file]\n";
+  print STDERR "Usage: ./fastn_lengths.pl [--bases] [file1 ..]\n";
   print STDERR " Print the length of each sequence.  " .
                "If file not given (or '-') reads from STDIN\n";
   print STDERR " --bases only count [ACGT] bases, not `N's\n";
@@ -32,10 +32,6 @@ elsif(@ARGV > 0 && $ARGV[0] =~ /^-?-b(ases?)?$/i)
 {
   shift;
   $bases_only = 1;
-}
-elsif(@ARGV > 1)
-{
-  print_usage();
 }
 
 print "chr,length\n";
