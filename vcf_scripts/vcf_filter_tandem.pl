@@ -19,14 +19,14 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./vcf_filter_slippage.pl [OPTIONS] [in.vcf]
-  Prints and flags slippage indels.  Slippage can only be on clean indels.
-  Requires INFO tags 'left_flank' and 'right_flank'
+"Usage: ./vcf_filter_tandem.pl [OPTIONS] [in.vcf]
+  Filter or tag clean indels which match their flank. Requires INFO tags
+  'left_flank' and 'right_flank'.  With no arguments, will only summarise VCF. 
 
   --only <tandem|non>  Print only tandem/non-tandem events (+ SNPs etc)
-  --non_flag <tag>     INFO flag non-tandem (slippage < SVLEN)
-  --tandem_flag <tag>  INFO flag tandem (slippage >= SVLEN)
-  --dist_tag <tag>     INFO tag with amount of slippage (bp shared with flank)\n";
+  --non_flag <tag>     INFO flag non-tandem ('slippage' < SVLEN)
+  --tandem_flag <tag>  INFO flag tandem ('slippage' >= SVLEN)
+  --dist_tag <tag>     INFO tag with amount of 'slippage' (bp shared with flank)\n";
   exit;
 }
 
@@ -99,6 +99,8 @@ while(@ARGV > 0)
 
 my $vcf_file = shift;
 
+my $only_summarise = !any_defined($filter, $tandem_flag, $non_tandem_flag, $dist_tag);
+
 if(@ARGV > 0)
 {
   print_usage();
@@ -160,7 +162,10 @@ if(defined($non_tandem_flag))
                        "Non-tandem indels (distance of slippage < length)");
 }
 
-$vcf->print_header();
+if(!$only_summarise)
+{
+  $vcf->print_header();
+}
 
 my $num_of_variants = 0;
 my $num_of_indels = 0;
@@ -232,7 +237,8 @@ while(defined($vcf_entry = $vcf->read_entry()))
     $vcf_entry->{'INFO'}->{$dist_tag} = $slippage_dist;
   }
 
-  if(!defined($filter) || ($filter eq "tandem") == $is_tandem)
+  if(!$only_summarise &&
+     (!defined($filter) || ($filter eq "tandem") == $is_tandem))
   {
     $vcf->print_entry($vcf_entry);
     $num_of_printed++;
@@ -240,32 +246,35 @@ while(defined($vcf_entry = $vcf->read_entry()))
 }
 
 # Print
-print STDERR "vcf_filter_slippage.pl: " .
-              pretty_fraction($num_of_printed, $num_of_variants) . " " .
-              "variants printed";
-
-if(defined($filter))
+if(!$only_summarise)
 {
-  print STDERR " (".($filter eq "non" ? "" : "non-")."tandem indels removed)";
+  print STDERR "vcf_filter_tandem.pl: " .
+               pretty_fraction($num_of_printed, $num_of_variants) . " " .
+               "variants printed";
+
+  if(defined($filter))
+  {
+    print STDERR " (".($filter eq "non" ? "" : "non-")."tandem indels removed)";
+  }
+
+  print STDERR "\n";
 }
 
-print STDERR "\n";
-
-print STDERR "vcf_filter_slippage.pl: " .
+print STDERR "vcf_filter_tandem.pl: " .
               pretty_fraction($num_of_indels, $num_of_variants) . " " .
               "variants were clean indels\n";
 
 if($num_of_indels > 0)
 {
-  print STDERR "vcf_filter_slippage.pl: " .
+  print STDERR "vcf_filter_tandem.pl: " .
                 pretty_fraction($num_of_tandem, $num_of_indels) . " " .
                 "indels are tandem\n";
 
-  print STDERR "vcf_filter_slippage.pl: " .
+  print STDERR "vcf_filter_tandem.pl: " .
                 pretty_fraction($num_of_indels-$num_of_tandem, $num_of_indels) .
                 " indels are non-tandem\n";
 
-  print STDERR "vcf_filter_slippage.pl: mean slippage per indel is " .
+  print STDERR "vcf_filter_tandem.pl: mean 'slippage' per indel is " .
                sprintf("%.3f", $total_slippage / $num_of_indels) . "bp\n";
 }
 
@@ -290,3 +299,5 @@ sub get_match
 
   return $len;
 }
+
+sub any_defined { defined($_) && return 1 for @_; 0 }
