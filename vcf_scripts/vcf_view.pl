@@ -319,7 +319,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
                                                   $left_start,
                                                   $left_length);
 
-            my $right_start = $var_pos - 1 + length($vcf_entry->{'true_REF'});
+            my $right_start = $var_pos + length($vcf_entry->{'true_REF'});
             my $right_length = min($chrom_length - $right_start, $flank_size);
 
             $right_flank = $genome->get_chr_substr($chr,
