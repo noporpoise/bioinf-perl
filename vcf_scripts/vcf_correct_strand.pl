@@ -264,24 +264,19 @@ while(defined($vcf_entry = $vcf->read_entry()))
               # Switch genotype [01] => [10], . => .
               my %switch_gt = ('1' => '0', '0' => '1', '.' => '.');
 
-              if(!defined($gt1 = $switch_gt{"$gt1"}) ||
-                 !defined($gt2 = $switch_gt{"$gt2"}))
-              {
-                die("Invalid GT format '".$vcf_entry->{$sample}->{'GT'}."' " .
-                    "[var:$vcf_entry->{'ID'}; sample:$sample]");
-              }
-
               if(!$keep_phased)
               {
                 # Change separator to / (i.e. not genotyped anymore)
                 $gt_sep = '/';
               }
 
-              $vcf_entry->{$sample}->{'GT'} = $gt1.$gt_sep.$gt2;
+              $vcf_entry->{$sample}->{'GT'}
+                = $switch_gt{"$gt1"}.$gt_sep.$switch_gt{"$gt2"};
             }
             else
             {
-              die("Invalid GT format [var:$vcf_entry->{'ID'}; sample:$sample]");
+              die("Invalid GT format '".$vcf_entry->{$sample}->{'GT'}."' " .
+                  "[var:$vcf_entry->{'ID'}; sample:$sample]");
             }
           }
 
