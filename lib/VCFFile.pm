@@ -410,9 +410,26 @@ sub print_header
   # Print metainfo lines
   my $header_metainfo = $self->{_header_metainfo};
 
+  if(!defined($header_metainfo->{'fileformat'}))
+  {
+    $header_metainfo->{'fileformat'} = "VCFv4.0";
+  }
+
+  if(!defined($header_metainfo->{'fileDate'}))
+  {
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    $header_metainfo->{'fileDate'} = sprintf("%02d/%02d/%02d", $mday, $mon+1, $year % 100);
+  }
+
+  print $out "##fileformat=".$header_metainfo->{'fileformat'}."\n";
+  print $out "##fileDate=".$header_metainfo->{'fileDate'}."\n";
+
   for my $key (sort keys %$header_metainfo)
   {
-    print $out "##$key=$header_metainfo->{$key}\n";
+    if($key ne "fileformat" && $key ne "fileDate")
+    {
+      print $out "##$key=$header_metainfo->{$key}\n";
+    }
   }
 
   # Print unknowns
