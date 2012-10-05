@@ -12,7 +12,12 @@ our @EXPORT = qw(vcf_get_standard_columns
                  vcf_sort_variants
                  vcf_add_filter_txt
                  vcf_is_snp vcf_get_clean_indel
-                 vcf_get_ancestral_true_allele);
+                 vcf_get_ancestral_true_allele
+                 vcf_get_flanks
+                 vcf_get_alt_allele_genome_substr0
+                 vcf_get_ancestral_genome_substr0
+                 vcf_get_derived_genome_substr0
+                 vcf_get_ref_alt_genome_lengths);
 
 my @header_tag_columns = qw(ALT FILTER FORMAT INFO);
 my @header_tag_types = qw(Integer Float Character String Flag);
@@ -1023,6 +1028,152 @@ sub vcf_get_ancestral_true_allele
   }
 
   return ($ancestral == 0 ? $vcf_entry->{'true_REF'} : $vcf_entry->{'true_ALT'});
+}
+
+sub vcf_get_flanks
+{
+  my ($vcf_entry, $genome, $flank_size) = @_;
+
+  # Get position 0-based
+  my $var_start = $vcf_entry->{'true_POS'} - 1;
+  my $chr = $vcf_entry->{'CHROM'};
+  my $ref_allele = $vcf_entry->{'true_REF'};
+
+  my $left_flank_start = max(0, $var_start - $flank_size);
+  my $left_flank_length = $var_start - $left_flank_start;
+
+  my $right_flank_start = $var_start + length($ref_allele);
+  my $right_flank_end = min($right_flank_start + $flank_size,
+                            $genome->get_chr_length($chr));
+  my $right_flank_length = $right_flank_end - $right_flank_start;
+
+  my $left = $genome->get_chr_substr0($chr, $left_flank_start, $left_flank_length);
+  my $right = $genome->get_chr_substr0($chr, $right_flank_start, $right_flank_length);
+
+  return ($left, $right);
+}
+
+sub vcf_get_alt_allele_genome_substr0
+{
+  my ($vcf_entry, $genome, $start, $len) = @_;
+
+  my $chr = $vcf_entry->{'CHROM'};
+  my $chr_len = $genome->get_chr_length($chr);
+  my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
+
+  my $ref_start = $vcf_entry->{'true_POS'}-1;
+
+  my $alt_allele = $vcf_entry->{'true_ALT'};
+
+  my $ref_len = length($vcf_entry->{'true_REF'});
+  my $alt_len = length($alt_allele);
+
+  my $result = "";
+
+  if($start < $ref_start)
+  {
+    my $up_to = min($start+$len, $ref_start);
+    my $get_len = $up_to - $start;
+    my $sub = $genome->get_chr_substr0($chr, $start, $get_len);
+
+    #print "sub1: $sub\n";
+
+    $result .= $sub;
+    $start += $get_len;
+    $len -= $get_len;
+  }
+
+  if($len == 0)
+  {
+    return $result;
+  }
+
+  # Get derived allele sequence in place of reference
+  if($start >= $ref_start && $start < $ref_start + $alt_len)
+  {
+    my $offset = $start-$ref_start;
+    my $get_len = min($alt_len, $len) - $offset;
+    my $sub = substr($alt_allele, $offset, $get_len);
+
+    #print "sub2: $sub\n";
+
+    $result .= $sub;
+    $start += $get_len;
+    $len -= $get_len;
+  }
+
+  if($len == 0)
+  {
+    return $result;
+  }
+
+  # Get sequence after variant
+  if($start >= $ref_start + $alt_len)
+  {
+    # Convert start to REF coordinates
+    # svlen = length(alt) - length(ref)
+    $start -= $svlen;
+
+    my $up_to = min($start+$len, $chr_len);
+    my $get_len = $up_to - $start;
+    my $sub = $genome->get_chr_substr0($chr, $start, $get_len);
+
+    #print "sub3: $sub\n";
+
+    $result .= $sub;
+  }
+
+  return $result;
+}
+
+sub vcf_get_ancestral_genome_substr0
+{
+  my ($vcf_entry, $genome, $start, $len) = @_;
+
+  my $aa = $vcf_entry->{'INFO'}->{'AA'};
+
+  if(!defined($aa))
+  {
+    carp("VCF entry not polarised with AA info tag");
+  }
+
+  if($aa == 1)
+  {
+    return vcf_get_alt_allele_genome_substr0($vcf_entry, $genome, $start, $len);
+  }
+  else
+  {
+    return $genome->get_chr_substr0($vcf_entry->{'CHROM'}, $start, $len);
+  }
+}
+
+sub vcf_get_derived_genome_substr0
+{
+  my ($vcf_entry, $genome, $start, $len) = @_;
+
+  my $aa = $vcf_entry->{'INFO'}->{'AA'};
+
+  if(!defined($aa))
+  {
+    carp("VCF entry not polarised with AA info tag");
+  }
+
+  if($aa == 0)
+  {
+    return vcf_get_alt_allele_genome_substr0($vcf_entry, $genome, $start, $len);
+  }
+  else
+  {
+    return $genome->get_chr_substr0($vcf_entry->{'CHROM'}, $start, $len);
+  }
+}
+
+sub vcf_get_ref_alt_genome_lengths
+{
+  my ($vcf_entry, $genome) = @_;
+  my $chr_len = $genome->get_chr_length($vcf_entry->{'CHROM'});
+
+  return  ($chr_len, $chr_len + $vcf_entry->{'INFO'}->{'SVLEN'});
 }
 
 1;

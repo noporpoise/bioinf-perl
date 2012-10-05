@@ -288,8 +288,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     }
     else
     {
-      my $left_flank = "";
-      my $right_flank = "";
+      my ($lflank, $rflank) = ("","");
 
       if($flank_size > 0)
       {
@@ -312,21 +311,9 @@ while(defined($vcf_entry = $vcf->read_entry()))
           }
           else
           {
-            my $left_start = max(0, $var_pos - $flank_size);
-            my $left_length = $var_pos - $left_start;
+            ($lflank, $rflank) = vcf_get_flanks($vcf_entry, $genome, $flank_size);
 
-            $left_flank = $genome->get_chr_substr($chr,
-                                                  $left_start,
-                                                  $left_length);
-
-            my $right_start = $var_pos + length($vcf_entry->{'true_REF'});
-            my $right_length = min($chrom_length - $right_start, $flank_size);
-
-            $right_flank = $genome->get_chr_substr($chr,
-                                                   $right_start,
-                                                   $right_length);
-
-            $sep = ("|" x $left_length) . $sep . ("|" x $right_length);
+            $sep = ("|" x length($lflank)) . $sep . ("|" x length($rflank));
           }
         }
         else
@@ -337,23 +324,23 @@ while(defined($vcf_entry = $vcf->read_entry()))
           if(defined($info_left))
           {
             my $length = min($flank_size, length($info_left));
-            $left_flank = substr($info_left, -$length);
+            $lflank = substr($info_left, -$length);
             $sep = ("|"x$length).$sep;
           }
 
           if(defined($info_left))
           {
             my $length = min($flank_size, length($info_right));
-            $right_flank = substr($info_right, 0, $length);
+            $rflank = substr($info_right, 0, $length);
             $sep = $sep.("|"x$length);
           }
         }
       }
 
       print $vcf_entry->{'ID'}.":\n";
-      print $left_flank.$allele1.$right_flank."\n";
+      print $lflank.$allele1.$rflank."\n";
       print $sep."\n";
-      print $left_flank.$allele2.$right_flank."\n";
+      print $lflank.$allele2.$rflank."\n";
       print "\n";
     }
   }

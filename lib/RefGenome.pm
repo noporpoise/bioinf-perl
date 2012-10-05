@@ -287,6 +287,38 @@ sub get_chr_substr
             ($self->{_lengths}->{$name}+$offset-1));
 }
 
+sub get_chr_substr1
+{
+  my ($self, $chrom, $start, $end) = @_;
+
+  my $name = $self->guess_chrom_fasta_name($chrom);
+
+  if(!defined($name))
+  {
+    return undef;
+  }
+
+  return substr($self->{_chroms}->{$name}, $start-1, $end-$start+1)
+    or carp("Chromosome position out of bounds of 1-" .
+            ($self->{_lengths}->{$name}));
+}
+
+sub get_chr_substr0
+{
+  my ($self, $chrom, $start, $len) = @_;
+
+  my $name = $self->guess_chrom_fasta_name($chrom);
+
+  if(!defined($name))
+  {
+    return undef;
+  }
+
+  return substr($self->{_chroms}->{$name}, $start, $len)
+    or carp("Chromosome position out of bounds of 0-" .
+            ($self->{_lengths}->{$name}-1));
+}
+
 sub get_chr_length
 {
   my ($self, $chrom) = @_;
