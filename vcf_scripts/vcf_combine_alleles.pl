@@ -253,20 +253,17 @@ sub print_list
             {
               # Pick GT with highest confidence
               my $max_gt_conf_var;
+              my $max_gt_conf;
 
               for(my $var = $start; $var <= $end; $var++)
               {
-                my $gt_conf = $vars_at_same_pos[$var]->{$sample}->{'GT_CONF'};
-                my $sample_gt = $vars_at_same_pos[$var]->{$sample}->{'GT_CONF'};
+                my $gt_conf = get_gt_conf($vars_at_same_pos[$var], $sample);
 
-                if(defined($gt_conf) && defined($sample_gt) && $gt_conf ne ".")
+                if(defined($gt_conf) && $gt_conf ne "." &&
+                   (!defined($max_gt_conf_var) || $gt_conf > $max_gt_conf))
                 {
-                  if(!defined($max_gt_conf_var) ||
-                     $vars_at_same_pos[$var]->{$sample}->{'GT_CONF'}
-                       > $max_gt_conf_var->{$sample}->{'GT_CONF'})
-                  {
-                    $max_gt_conf_var = $vars_at_same_pos[$var];
-                  }
+                  $max_gt_conf_var = $vars_at_same_pos[$var];
+                  $max_gt_conf = $gt_conf;
                 }
               }
 
@@ -279,9 +276,9 @@ sub print_list
                 my @alts = split(",", $max_gt_conf_var->{'ALT'});
                 unshift(@alts, $max_gt_conf_var->{'REF'});
 
-                while($prev_gt =~ /([\/\|]*)(\d+)/g)
+                while($prev_gt =~ /([\/\|]*)(\.|\d+)/g)
                 {
-                  $new_gt_call .= $1.$alleles_hash{$alts[$2]};
+                  $new_gt_call .= $1.($2 ne "." ? $alleles_hash{$alts[$2]} : '.');
                 }
 
                 $new_entry->{$sample}->{'GT'} = $new_gt_call;
@@ -320,6 +317,14 @@ sub print_list
       }
     }
   }
+}
+
+sub get_gt_conf
+{
+  my ($var, $sample) = @_;
+
+  return defined($var->{$sample}->{'CONF'}) ? $var->{$sample}->{'CONF'}
+                                            : $var->{$sample}->{'GT_CONF'};
 }
 
 # When passed a list of genotypes, returns 1 if all are REF, 0 otherwise
