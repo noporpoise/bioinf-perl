@@ -169,14 +169,14 @@ sub search_file
       else
       {
         delete($read_names{$name});
-
-        if(scalar(keys(%read_names)) == 0)
-        {
-          last;
-        }
       }
 
       $fastn->print_entry($name, $seq, $qual);
+    
+      if(!$allow_dupes && scalar(keys(%read_names)) == 0)
+      {
+        last;
+      }
     }
   }
 
