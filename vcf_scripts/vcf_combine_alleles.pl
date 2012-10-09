@@ -281,6 +281,12 @@ sub print_list
                   $new_gt_call .= $1.($2 ne "." ? $alleles_hash{$alts[$2]} : '.');
                 }
 
+                if($new_gt_call eq "")
+                {
+                  # If no GT found (or invalid format), default to '.'s
+                  $new_gt_call = join("/", ('.') x $ploidy);
+                }
+
                 $new_entry->{$sample}->{'GT'} = $new_gt_call;
               }
             }
