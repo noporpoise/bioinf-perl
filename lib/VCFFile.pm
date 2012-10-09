@@ -1055,18 +1055,9 @@ sub vcf_get_flanks
 
 sub vcf_get_alt_allele_genome_substr0
 {
-  my ($vcf_entry, $genome, $start, $len) = @_;
-
-  my $chr = $vcf_entry->{'CHROM'};
-  my $chr_len = $genome->get_chr_length($chr);
-  my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
+  my ($vcf_entry, $chr, $genome, $start, $len) = @_;
 
   my $ref_start = $vcf_entry->{'true_POS'}-1;
-
-  my $alt_allele = $vcf_entry->{'true_ALT'};
-
-  my $ref_len = length($vcf_entry->{'true_REF'});
-  my $alt_len = length($alt_allele);
 
   my $result = "";
 
@@ -1075,8 +1066,6 @@ sub vcf_get_alt_allele_genome_substr0
     my $up_to = min($start+$len, $ref_start);
     my $get_len = $up_to - $start;
     my $sub = $genome->get_chr_substr0($chr, $start, $get_len);
-
-    #print "sub1: $sub\n";
 
     $result .= $sub;
     $start += $get_len;
@@ -1089,13 +1078,15 @@ sub vcf_get_alt_allele_genome_substr0
   }
 
   # Get derived allele sequence in place of reference
+  my $alt_allele = $vcf_entry->{'true_ALT'};
+  my $ref_len = length($vcf_entry->{'true_REF'});
+  my $alt_len = length($alt_allele);
+
   if($start >= $ref_start && $start < $ref_start + $alt_len)
   {
     my $offset = $start-$ref_start;
     my $get_len = min($alt_len, $len) - $offset;
     my $sub = substr($alt_allele, $offset, $get_len);
-
-    #print "sub2: $sub\n";
 
     $result .= $sub;
     $start += $get_len;
@@ -1108,6 +1099,9 @@ sub vcf_get_alt_allele_genome_substr0
   }
 
   # Get sequence after variant
+  my $chr_len = $genome->get_chr_length($chr);
+  my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
+
   if($start >= $ref_start + $alt_len)
   {
     # Convert start to REF coordinates
@@ -1118,8 +1112,6 @@ sub vcf_get_alt_allele_genome_substr0
     my $get_len = $up_to - $start;
     my $sub = $genome->get_chr_substr0($chr, $start, $get_len);
 
-    #print "sub3: $sub\n";
-
     $result .= $sub;
   }
 
@@ -1128,43 +1120,33 @@ sub vcf_get_alt_allele_genome_substr0
 
 sub vcf_get_ancestral_genome_substr0
 {
-  my ($vcf_entry, $genome, $start, $len) = @_;
+  my ($vcf_entry, $chr, $genome, $start, $len) = @_;
 
   my $aa = $vcf_entry->{'INFO'}->{'AA'};
 
-  if(!defined($aa))
-  {
-    carp("VCF entry not polarised with AA info tag");
-  }
-
   if($aa == 1)
   {
-    return vcf_get_alt_allele_genome_substr0($vcf_entry, $genome, $start, $len);
+    return vcf_get_alt_allele_genome_substr0($vcf_entry, $chr, $genome, $start, $len);
   }
   else
   {
-    return $genome->get_chr_substr0($vcf_entry->{'CHROM'}, $start, $len);
+    return $genome->get_chr_substr0($chr, $start, $len);
   }
 }
 
 sub vcf_get_derived_genome_substr0
 {
-  my ($vcf_entry, $genome, $start, $len) = @_;
+  my ($vcf_entry, $chr, $genome, $start, $len) = @_;
 
   my $aa = $vcf_entry->{'INFO'}->{'AA'};
 
-  if(!defined($aa))
-  {
-    carp("VCF entry not polarised with AA info tag");
-  }
-
   if($aa == 0)
   {
-    return vcf_get_alt_allele_genome_substr0($vcf_entry, $genome, $start, $len);
+    return vcf_get_alt_allele_genome_substr0($vcf_entry, $chr, $genome, $start, $len);
   }
   else
   {
-    return $genome->get_chr_substr0($vcf_entry->{'CHROM'}, $start, $len);
+    return $genome->get_chr_substr0($chr, $start, $len);
   }
 }
 
