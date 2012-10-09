@@ -9,7 +9,7 @@ use base 'Exporter';
 
 our @EXPORT = qw(get_clean_chr_name
                  gc_content
-                 rev_comp complement rev_comp_cyclic
+                 rev_comp complement_base complement rev_comp_cyclic
                  dna_rev_comp_group dna_word_group
                  dna_pattern_group dna_weak_strong_group);
 
@@ -77,17 +77,23 @@ sub rev_comp
   return $rev;
 }
 
+my %mapping = ('a' => 't', 'A' => 'T',
+               'c' => 'g', 'C' => 'G',
+               'g' => 'c', 'G' => 'C',
+               't' => 'a', 'T' => 'A');
+
+sub complement_base
+{
+  return $mapping{$_[0]};
+}
+
 sub complement
 {
   my ($seq) = @_;
 
-  my %mapping = ('a' => 't', 'A' => 'T',
-                 'c' => 'g', 'C' => 'G',
-                 'g' => 'c', 'G' => 'C',
-                 't' => 'a', 'T' => 'A');
-  
+  # Copy string
   my $complement = $seq;
-  
+
   # Complement
   for(my $i = 0; $i < length($seq); $i++)
   {
