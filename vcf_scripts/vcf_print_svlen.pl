@@ -7,6 +7,7 @@ use warnings;
 use FindBin;
 use lib $FindBin::Bin;
 
+use UsefulModule;
 use VCFFile;
 
 # config
@@ -95,31 +96,48 @@ if($skip_failed_vars) { $vcf->set_filter_failed(undef); }
 
 my $vcf_entry;
 
+my $num_of_variants = 0;
+my $num_of_usable_variants = 0;
+
 my @ins = ();
 my @del = ();
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
+  $num_of_variants++;
+
   my $svlen = $vcf_entry->{'INFO'}->{$tag};
 
-  if($abs)
+  if(defined($svlen))
   {
-    $svlen = abs($svlen);
-  }
+    $num_of_usable_variants++;
 
-  if($svlen >= 0)
-  {
-    $ins[$svlen]++;
-  }
-  else
-  {
-    # deletion
-    $svlen = abs($svlen);
-    $del[$svlen]++;
+    if($abs)
+    {
+      $svlen = abs($svlen);
+    }
+
+    if($svlen >= 0)
+    {
+      $ins[$svlen]++;
+    }
+    else
+    {
+      # deletion
+      $svlen = abs($svlen);
+      $del[$svlen]++;
+    }
   }
 }
 
 close($vcf_handle);
+
+print STDERR "vcf_print_svlen.pl: Printing distribution of tag '$tag'".
+             ($abs ? ' (abs value)' : '') . "\n";
+
+print STDERR "vcf_print_svlen.pl: " .
+             pretty_fraction($num_of_usable_variants, $num_of_variants)." ".
+             "variants had tag '$tag'\n";
 
 # Print header
 
