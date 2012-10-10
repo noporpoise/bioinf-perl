@@ -39,6 +39,7 @@ OPTIONS:
   --flanks <f> Print <f> bp of flank, using left_flank INFO tag or --ref file
   --colour     Print with colour
   
+  --with_vcf   Print vcf view AND show alignment
   --as_vcf     Print in VCF format\n";
 
   exit;
@@ -63,6 +64,7 @@ my $flank_size; # defaults to 0 if no ref, 20 if ref
 
 my $colour_output = 0;
 my $view_as_vcf = 0;
+my $view_with_vcf = 0;
 
 while(@ARGV > 0)
 {
@@ -90,6 +92,11 @@ while(@ARGV > 0)
   {
     shift;
     $view_as_vcf = 1;
+  }
+  elsif($ARGV[0] =~ /^-?-with_vcf$/i)
+  {
+    shift;
+    $view_with_vcf = 1;
   }
   elsif($ARGV[0] =~ /^-?-ref$/i)
   {
@@ -140,6 +147,11 @@ if($require_snps && $no_snps)
 if($require_indels && $no_indels)
 {
   print_usage("Cannot specify both --no_indels and --indels");
+}
+
+if($view_with_vcf)
+{
+  $view_as_vcf = 0;
 }
 
 my $vcf_file = shift;
@@ -339,6 +351,12 @@ while(defined($vcf_entry = $vcf->read_entry()))
       }
 
       print $vcf_entry->{'ID'}.":\n";
+
+      if($view_with_vcf)
+      {
+        $vcf->print_entry($vcf_entry);
+      }
+
       print $lflank.$allele1.$rflank."\n";
       print $sep."\n";
       print $lflank.$allele2.$rflank."\n";
