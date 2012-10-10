@@ -1036,7 +1036,13 @@ sub vcf_get_flanks
 
   # Get position 0-based
   my $var_start = $vcf_entry->{'true_POS'} - 1;
-  my $chr = $vcf_entry->{'CHROM'};
+  my $chr = $genome->guess_chrom_fasta_name($vcf_entry->{'CHROM'});
+
+  if(!defined($chr))
+  {
+    return ("","");
+  }
+
   my $ref_allele = $vcf_entry->{'true_REF'};
 
   my $left_flank_start = max(0, $var_start - $flank_size);

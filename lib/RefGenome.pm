@@ -14,8 +14,10 @@ use lib $FindBin::Bin;
 use FASTNFile;
 
 # All methods are object methods except these:
-use base 'Exporter';
-our @EXPORT = qw(guess_plain_name guess_fasta_name guess_name_pairs);
+#use base 'Exporter';
+#our @EXPORT = qw(guess_plain_name guess_fasta_name guess_name_pairs);
+# instead use:
+# my $chr = $genome->guess_chrom_fasta_name($vcf_entry->{'CHROM'});
 
 sub new
 {

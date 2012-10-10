@@ -26,7 +26,7 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./vcf_view.pl [OPTIONS] [in.vcf]
+"Usage: ./vcf_view.pl [OPTIONS] [in.vcf] [ref1.fa ..]
 
 OPTIONS:
   --snps       Variants must have snps
@@ -59,7 +59,7 @@ my $require_indels = 0;
 my $no_indels = 0;
 
 my @ref_files = ();
-my $flank_size = 0;
+my $flank_size; # defaults to 0 if no ref, 20 if ref
 
 my $colour_output = 0;
 my $view_as_vcf = 0;
@@ -143,10 +143,11 @@ if($require_indels && $no_indels)
 }
 
 my $vcf_file = shift;
+@ref_files = (@ref_files, @ARGV);
 
-if(@ARGV > 0)
+if(!defined($flank_size))
 {
-  print_usage("excess option '$ARGV[0]'");
+  $flank_size = @ref_files > 0 ? 30 : 0;
 }
 
 #
@@ -328,7 +329,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
             $sep = ("|"x$length).$sep;
           }
 
-          if(defined($info_left))
+          if(defined($info_right))
           {
             my $length = min($flank_size, length($info_right));
             $rflank = substr($info_right, 0, $length);
