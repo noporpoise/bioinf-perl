@@ -201,33 +201,33 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   my $chr = $vcf_entry->{'CHROM'};
 
-  # Get coordinates, convert to zero based
-  my $var_start = $vcf_entry->{'true_POS'}-1;
+  my $ref_allele = uc($vcf_entry->{'REF'});
+  my $alt_allele = uc($vcf_entry->{'ALT'});
 
-  my $ref_allele = uc($vcf_entry->{'true_REF'});
-  my $alt_allele = uc($vcf_entry->{'true_ALT'});
-
-  my $max_allele_len = max(length($ref_allele), length($alt_allele));
+  my $max_allele_len = max(length($vcf_entry->{'REF'}), length($vcf_entry->{'ALT'}));
 
   my $unfixed_mismatch = 0;
 
   my $genome_seq;
 
-  if(!$genome->chr_exists($chr))
+  my $ref_chrom = $genome->guess_chrom_fasta_name($chr);
+
+  if(!defined($ref_chrom))
   {
     $missing_chrs{$chr} = 1;
   }
+  elsif($genome->get_chr_length($ref_chrom) < $vcf_entry->{'POS'}-1 + $max_allele_len)
+  {
+    print STDERR "vcf_correct_strand.pl: var " . $vcf_entry->{'ID'} . " at " .
+                 "$chr:$vcf_entry->{'POS'}:$max_allele_len is out of " .
+                 "bounds of $chr:1:" . $genome->get_chr_length($chr) . "\n";
+    $genome_seq = undef;
+  }
   else
   {
-    $genome_seq = $genome->get_chr_substr($chr, $var_start, $max_allele_len);
+    $genome_seq = $genome->get_chr_substr($ref_chrom, $vcf_entry->{'POS'}-1,
+                                          $max_allele_len);
 
-    if($genome->get_chr_length($chr) < $var_start + $max_allele_len)
-    {
-      print STDERR "vcf_correct_strand.pl: var " . $vcf_entry->{'ID'} . " at " .
-                   "$chr:$var_start:$max_allele_len is out of " .
-                   "bounds of $chr:1:" . $genome->get_chr_length($chr) . "\n";
-      $genome_seq = undef;
-    }
   }
 
   if(defined($genome_seq))
@@ -256,9 +256,11 @@ while(defined($vcf_entry = $vcf->read_entry()))
         }
 
         # Switch alleles
-        my $tmp = $vcf_entry->{'REF'};
-        $vcf_entry->{'REF'} = $vcf_entry->{'ALT'};
-        $vcf_entry->{'ALT'} = $tmp;
+        ($vcf_entry->{'REF'}, $vcf_entry->{'ALT'})
+          = ($vcf_entry->{'ALT'}, $vcf_entry->{'REF'});
+
+        ($vcf_entry->{'true_REF'}, $vcf_entry->{'true_ALT'})
+          = ($vcf_entry->{'true_ALT'}, $vcf_entry->{'true_REF'});
 
         # Switch genotypes
         if(!defined($vcf_entry->{'FORMAT'}))
