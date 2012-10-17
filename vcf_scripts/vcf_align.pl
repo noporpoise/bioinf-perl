@@ -155,6 +155,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
   my $indel = vcf_get_clean_indel($vcf_entry);
 
   my $ref_length = $genome->get_chr_length($chr);
+  my $ref_chrom_name = $genome->guess_chrom_fasta_name($chr);
 
   if(!defined($ref_length))
   {
@@ -162,14 +163,14 @@ while(defined($vcf_entry = $vcf->read_entry()))
   }
   elsif($ref_length < $var_start+length($ref_allele))
   {
-    my $ref_chrom_name = $genome->guess_chrom_fasta_name($chr);
+    
     my $real_pos = $vcf_entry->{'POS'};
 
     print STDERR "vcf_align.pl Warning: var " . $vcf_entry->{'ID'} . " at " .
                   "$chr:$real_pos:" . length($ref_allele) . " is out of " .
                   "bounds of $ref_chrom_name:1:" . $ref_length . "\n";
   }
-  elsif($genome->get_chr_substr($chr, $var_start, length($ref_allele)) ne
+  elsif($genome->get_chr_substr0($ref_chrom_name, $var_start, length($ref_allele)) ne
         $ref_allele)
   {
     $num_ref_mismatch++;
@@ -265,7 +266,7 @@ if($num_ref_mismatch > 0)
 print STDERR "vcf_align.pl: " .
              pretty_fraction($num_of_clean_indels_matching_ref,
                              $num_of_variants) . " " .
-             "of variants are clean indels\n";
+             "of variants are clean indels matching the ref\n";
 
 print STDERR "vcf_align.pl: " .
              pretty_fraction($num_of_variants_moved, $num_of_variants) . " " .

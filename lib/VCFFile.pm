@@ -17,7 +17,8 @@ our @EXPORT = qw(vcf_get_standard_columns
                  vcf_get_alt_allele_genome_substr0
                  vcf_get_ancestral_genome_substr0
                  vcf_get_derived_genome_substr0
-                 vcf_get_ref_alt_genome_lengths);
+                 vcf_get_ref_alt_genome_lengths
+                 vcf_get_slippage);
 
 my @header_tag_columns = qw(ALT FILTER FORMAT INFO);
 my @header_tag_types = qw(Integer Float Character String Flag);
@@ -1162,6 +1163,51 @@ sub vcf_get_ref_alt_genome_lengths
   my $chr_len = $genome->get_chr_length($vcf_entry->{'CHROM'});
 
   return  ($chr_len, $chr_len + $vcf_entry->{'INFO'}->{'SVLEN'});
+}
+
+# Uses left_flank, right_flank to get slippage (aka microhomology) for a variant
+sub vcf_get_slippage
+{
+  my ($vcf_entry) = @_;
+
+  my $long_allele = $vcf_entry->{'true_REF'};
+  my $short_allele = $vcf_entry->{'true_ALT'};
+
+  if(length($long_allele) < length($short_allele))
+  {
+    # swap
+    ($long_allele, $short_allele) = ($short_allele, $long_allele);
+  }
+
+  my $left_flank_rev = reverse($vcf_entry->{'INFO'}->{'left_flank'});
+  my $right_flank = $vcf_entry->{'INFO'}->{'right_flank'};
+
+  my $indel = $long_allele;
+  my $indel_rev = reverse($indel);
+
+  my $result = get_match($left_flank_rev, $indel_rev) ."".
+               get_match($right_flank, $indel);
+
+  return $result;
+}
+
+sub get_match
+{
+  my ($str1, $str2) = @_;
+
+  $str1 = uc($str1);
+  $str2 = uc($str2);
+
+  my $len = min(length($str1), length($str2));
+
+  my $i = 0;
+
+  for($i = 0; $i < $len && substr($str1,$i,1) eq substr($str2,$i,1); $i++)
+  {
+
+  }
+
+  return substr($str1, 0, $i);
 }
 
 1;
