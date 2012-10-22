@@ -65,11 +65,11 @@ sub add_chr
 {
   my ($self, $name, $seq, $quals) = @_;
   
-  if($self->{'uppercase'})
+  if($self->{'_uppercase'})
   {
     $seq = uc($seq);
   }
-  elsif($self->{'lowercase'})
+  elsif($self->{'_lowercase'})
   {
     $seq = lc($seq);
   }
@@ -103,8 +103,8 @@ sub load_from_files
 {
   my ($self, @files) = @_;
 
-  my $uppercase = $self->{'uppercase'};
-  my $lowercase = $self->{'lowercase'};
+  my $uppercase = $self->{'_uppercase'};
+  my $lowercase = $self->{'_lowercase'};
 
   my ($ref_genomes_hashref, $quals) = read_all_from_files(@files);
 
