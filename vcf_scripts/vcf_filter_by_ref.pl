@@ -25,7 +25,8 @@ sub print_usage
   read from STDIN.
 
   OPTIONS:
-    -filter_n <k>  filter out variants with a non-ACGT base within <k> bp\n";
+    --tag <t>       Set the FILTER column of mismatches
+    --filter_n <k>  Filter out variants with a non-ACGT base within <k> bp\n";
 
   exit;
 }
@@ -45,15 +46,31 @@ if(@ARGV < 1)
 
 my $filter_out_ns = 0;
 my $filter_dist;
+my $filter_tag;
 
-if($ARGV[0] =~ /^-?-filter_n$/i)
+while(@ARGV > 2)
 {
-  shift;
-  $filter_dist = shift;
-
-  if(!defined($filter_dist) || $filter_dist !~ /^\d+$/)
+  if($ARGV[0] =~ /^-?-filter_n$/i)
   {
-    print_usage("--filter_n <k> must be given a positive integer");
+    shift;
+    $filter_dist = shift;
+
+    if(!defined($filter_dist) || $filter_dist !~ /^\d+$/)
+    {
+      print_usage("--filter_n <k> must be given a positive integer");
+    }
+  }
+  elsif($ARGV[0] =~ /^-?-tag$/i)
+  {
+    shift;
+    if(!defined($filter_tag = shift))
+    {
+      print_usage("--tag <txt>  requires a tag");
+    }
+  }
+  else
+  {
+    last;
   }
 }
 
@@ -123,6 +140,8 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   if(!$genome->chr_exists($chr))
   {
+    $print = 0;
+
     if(!defined($chrom_not_in_ref{$chr}))
     {
       $chrom_not_in_ref{$chr} = 1;
@@ -143,6 +162,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
     if($var_start + $var_length > $chrom_length)
     {
+      $print = 0;
       print STDERR "vcf_filter_by_ref.pl - Warning: variant " .
                    $vcf_entry->{'ID'} . " " .
                    "[".$chr.":".$vcf_entry->{'POS'}.":".$var_length."] " .
@@ -184,8 +204,13 @@ while(defined($vcf_entry = $vcf->read_entry()))
     }
   }
 
-  if($print)
+  if($print || defined($filter_tag))
   {
+    if(!$print)
+    {
+      vcf_add_filter_txt($vcf_entry, $filter_tag);
+    }
+
     $num_of_printed_entries++;
     $vcf->print_entry($vcf_entry);
   }
