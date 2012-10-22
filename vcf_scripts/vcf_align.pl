@@ -170,7 +170,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
                   "$chr:$real_pos:" . length($ref_allele) . " is out of " .
                   "bounds of $ref_chrom_name:1:" . $ref_length . "\n";
   }
-  elsif($genome->get_chr_substr0($ref_chrom_name, $var_start, length($ref_allele)) ne
+  elsif($genome->get_chr_substr0($chr, $var_start, length($ref_allele)) ne
         $ref_allele)
   {
     $num_ref_mismatch++;
@@ -235,7 +235,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
       my $indel_allele = length($ref_allele) > 0 ? 'true_REF' : 'true_ALT';
       $vcf_entry->{$indel_allele} = $new_indel;
 
-      my $prior_base = $genome->get_chr_substr($chr, $new_pos-1, 1);
+      my $prior_base = $genome->get_chr_substr0($chr, $new_pos-1, 1);
       $vcf_entry->{'REF'} = $prior_base.$vcf_entry->{'true_REF'};
       $vcf_entry->{'ALT'} = $prior_base.$vcf_entry->{'true_ALT'};
     }
@@ -293,12 +293,12 @@ close($vcf_handle);
 # $pos is 0-based
 sub get_left_aligned_position
 {
-  my ($ref_chr, $pos, $indel) = @_;
+  my ($chr, $pos, $indel) = @_;
 
   # align to the left
   # while base before variant (on the reference) equals last base of indel
   while($pos > 0 &&
-        $genome->get_chr_substr($ref_chr, $pos-1, 1) eq substr($indel, -1))
+        $genome->get_chr_substr0($chr, $pos-1, 1) eq substr($indel, -1))
   {
     $indel = substr($indel, -1) . substr($indel, 0, -1);
     $pos--;
@@ -310,12 +310,12 @@ sub get_left_aligned_position
 # $pos is 0-based
 sub get_right_aligned_position
 {
-  my ($ref_chr, $chr_length, $pos, $ref_allele_length, $indel) = @_;
+  my ($chr, $chr_length, $pos, $ref_allele_length, $indel) = @_;
 
   # align to the right
   # while base after variant (on the reference) equals first base of indel
-  while($pos < $chr_length &&
-        $genome->get_chr_substr($ref_chr, $pos+$ref_allele_length, 1) eq
+  while($pos+$ref_allele_length < $chr_length &&
+        $genome->get_chr_substr0($chr, $pos+$ref_allele_length, 1) eq
         substr($indel, 0, 1))
   {
     $indel = substr($indel, 1) . substr($indel, 0, 1);

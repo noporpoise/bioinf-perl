@@ -310,15 +310,15 @@ sub get_chr_substr0
 {
   my ($self, $chrom, $start, $len) = @_;
 
-  #my $name = $self->guess_chrom_fasta_name($chrom);
-  #if(!defined($name))
-  #{
-  #  return undef;
-  #}
+  my $name = $self->guess_chrom_fasta_name($chrom);
+  if(!defined($name))
+  {
+    return undef;
+  }
 
-  return substr($self->{_chroms}->{$chrom}, $start, $len)
+  return substr($self->{_chroms}->{$name}, $start, $len)
     or carp("Chromosome position out of bounds of 0-" .
-            ($self->{_lengths}->{$chrom}-1));
+            ($self->{_lengths}->{$name}-1));
 }
 
 sub get_chr_length
