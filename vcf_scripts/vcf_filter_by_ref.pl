@@ -25,7 +25,7 @@ sub print_usage
   read from STDIN.
 
   OPTIONS:
-    -filter_n <k>  filter out variants with an non-ACGT base within <k> bp\n";
+    -filter_n <k>  filter out variants with a non-ACGT base within <k> bp\n";
 
   exit;
 }
@@ -133,9 +133,10 @@ while(defined($vcf_entry = $vcf->read_entry()))
   }
   else
   {
-    my $ref_allele = uc($vcf_entry->{'true_REF'});
+    my $ref_allele = uc($vcf_entry->{'REF'});
 
-    my $var_start = $vcf_entry->{'true_POS'} - 1;
+    # $var_start is the 0-based position of the padding base(s)
+    my $var_start = $vcf_entry->{'POS'} - 1;
     my $var_length = length($ref_allele);
 
     my $chrom_length = $genome->get_chr_length($chr);
@@ -151,7 +152,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     }
     else
     {
-      my $ref_seq = $genome->get_chr_substr($chr, $var_start, $var_length);
+      my $ref_seq = $genome->get_chr_substr0($chr, $var_start, $var_length);
 
       if($ref_seq ne $ref_allele)
       {
@@ -160,10 +161,11 @@ while(defined($vcf_entry = $vcf->read_entry()))
       }
       elsif($filter_out_ns)
       {
-        my $region_start = max(0, $var_start - $filter_dist);
-        my $region_end = min($chrom_length-1, $var_start+$var_length);
+        my $region_start = max(0, $var_start - $filter_dist + 1);
+        my $region_end = min($chrom_length, $var_start+$var_length+$filter_dist);
+        my $region_len = $region_end - $region_start;
 
-        my $region = $genome->get_chr_substr($chr, $region_start, $region_end);
+        my $region = $genome->get_chr_substr0($chr, $region_start, $region_len);
 
         if($region =~ /[^acgt]/i)
         {
