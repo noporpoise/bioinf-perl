@@ -44,8 +44,8 @@ if(scalar(@ARGV) != scalar(@ARGV = grep {$_ !~ /^-?-p(ass(es)?)?$/i} @ARGV))
 
 my $invert = 0;
 my $clean_only = 0;
-my $filter_insertions = 0;
-my $filter_deletions = 0;
+my $filter_insertions;
+my $filter_deletions;
 my $filter_size;
 
 while(@ARGV > 0)
@@ -111,9 +111,17 @@ if(@ARGV > 0)
   print_usage();
 }
 
-if(!defined($filter_insertions))
+if(!defined($filter_insertions) && !defined($filter_deletions))
 {
-  print_usage("Must specify one of: +<size> | -<size> | INS | DEL");
+  print_usage("Must specify one of: +<size> | -<size> | INS | DEL | INDEL");
+}
+elsif(!defined($filter_insertions))
+{
+  $filter_insertions = 0;
+}
+elsif(!defined($filter_deletions))
+{
+  $filter_deletions = 0;
 }
 
 #
@@ -182,11 +190,25 @@ while(defined($vcf_entry = $vcf->read_entry))
   }
 }
 
+my $vars;
+
+if($filter_insertions && $filter_deletions)
+{
+  $vars = "insertions and deletions";
+}
+elsif($filter_insertions)
+{
+  $vars = "insertions";
+}
+else
+{
+  $vars = "deletions";
+}
+
 # Print filtered rate
 print STDERR "vcf_filter_ins_del.pl: " .
-             pretty_fraction($num_of_printed, $num_of_variants) . " " .
-             ($filter_insertions ? "insertions" : "deletions") . " " .
-             (defined($filter_size) ? "of size ".$filter_size."bp " : "") .
+             pretty_fraction($num_of_printed, $num_of_variants) . " $vars " .
+             (defined($filter_size) ? "of size " . $filter_size . "bp " : "") .
              "printed\n";
 
 if($num_of_missing_aa > 0)
