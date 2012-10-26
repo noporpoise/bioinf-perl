@@ -83,8 +83,10 @@ if($memWidth !~ /^[0-9]+$/ || $memWidth < 1) {
 print "width: $memWidth; height: $memHeight; colours: " .
       "$numOfColours; kmer_size: $kmerSize\n";
 
-my $num_of_hash_entries = 2**$memHeight * $memWidth;
+my $num_of_buckets = 2**$memHeight;
+my $num_of_hash_entries = $num_of_buckets * $memWidth;
 
+print num2str($num_of_buckets) . " buckets\n";
 print num2str($num_of_hash_entries) . " hash table entries\n";
 
 # Round entry size to nearest 8 bytes and multiply by the number of entries

@@ -116,15 +116,16 @@ my @mapping_columns = qw(name flags chr pos MAPQ CIGAR
 #
 # Load Ancestral Reference
 #
-print STDERR "vcf_add_ancestral_to_indels.pl: Loading ancestral ref...\n";
 
 my $ancestral;
 
 if(@ancestral_ref_files > 1 ||
    (@ancestral_ref_files > 0 && $ancestral_ref_files[0] ne "-"))
 {
+  print STDERR "vcf_add_ancestral.pl: Loading ancestral ref...\n";
   $ancestral = new RefGenome(uppercase => 1);
   $ancestral->load_from_files(@ancestral_ref_files);
+  print STDERR "vcf_add_ancestral.pl: Ancestral reference loaded.\n";
 }
 
 #
