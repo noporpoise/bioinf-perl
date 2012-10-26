@@ -166,7 +166,8 @@ while(defined($vcf_entry = $vcf->read_entry))
   my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
   my $print = 0;
 
-  if($svlen == 0)
+  if($svlen == 0 ||
+     ($clean_only && !defined($clean_indel = vcf_get_clean_indel($vcf_entry))))
   {
     # Do nothing
   }
@@ -174,7 +175,6 @@ while(defined($vcf_entry = $vcf->read_entry))
   {
     $num_of_missing_aa++;
   }
-  elsif(!$clean_only || defined($clean_indel = vcf_get_clean_indel($vcf_entry)))
   {
     my $size = ($aa eq "0" ? $svlen : -$svlen);
 
@@ -190,7 +190,7 @@ while(defined($vcf_entry = $vcf->read_entry))
   }
 }
 
-my $vars;
+my $vars = $clean_only ? "clean " : "";
 
 if($filter_insertions && $filter_deletions)
 {
@@ -215,7 +215,7 @@ if($num_of_missing_aa > 0)
 {
   print STDERR "vcf_filter_ins_del.pl: " .
                pretty_fraction($num_of_missing_aa, $num_of_variants) . " " .
-               "variants were missing AA info tag or it was not '0' or '1'\n";
+               "clean indels were missing AA info tag or it was not '0' or '1'\n";
 }
 
 close($vcf_handle);
