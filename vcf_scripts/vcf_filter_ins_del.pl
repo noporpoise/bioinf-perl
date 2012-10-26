@@ -17,12 +17,19 @@ sub print_usage
   }
   
   print STDERR "" .
-"Usage: ./vcf_filter_ins_del.pl [--clean|--invert|INS|DEL|+ins_size|-del_size] " .
-  "[in.vcf]
+"Usage: ./vcf_filter_ins_del.pl [OPTIONS] [in.vcf]
   Prints variants that passed the filtering.  If [in.vcf] is not passed or is '-'
-  then reads from stdin.
+  then reads from stdin.  Only prints variants with the AA=[0,1] INFO tag
 
-  --invert  Print variants that failed\n";
+  Options:
+   --clean   Only print a deletion where one path is of length 0
+   --invert  Print variants that failed
+   INS       Only print insertions (uses AA tag)
+   DEL       Only print deletions (uses AA tag)
+   INDEL     Print polarised insertions AND deletions
+   +size     Insertions of a given size
+   -size     Deletions of a given size
+   abs_size  Indels of a given size\n";
 
   exit;
 }
@@ -37,7 +44,8 @@ if(scalar(@ARGV) != scalar(@ARGV = grep {$_ !~ /^-?-p(ass(es)?)?$/i} @ARGV))
 
 my $invert = 0;
 my $clean_only = 0;
-my $filter_insertions;
+my $filter_insertions = 0;
+my $filter_deletions = 0;
 my $filter_size;
 
 while(@ARGV > 0)
@@ -60,12 +68,29 @@ while(@ARGV > 0)
   elsif($ARGV[0] =~ /^DEL$/i)
   {
     shift;
-    $filter_insertions = 0;
+    $filter_deletions = 1;
+  }
+  elsif($ARGV[0] =~ /^INDEL$/i)
+  {
+    shift;
+    $filter_insertions = 1;
+    $filter_deletions = 1;
   }
   elsif($ARGV[0] =~ /^([\+\-]?)(\d+)$/i)
   {
     shift;
-    $filter_insertions = (!defined($1) || $1 eq "+");
+
+    if(defined($1))
+    {
+      $filter_insertions = ($1 eq "+");
+      $filter_deletions = ($1 eq "-");
+    }
+    else
+    {
+      $filter_insertions = 1;
+      $filter_deletions = 1;
+    }
+
     $filter_size = $2;
   
     if($filter_size == 0)
@@ -130,24 +155,30 @@ while(defined($vcf_entry = $vcf->read_entry))
   $num_of_variants++;
 
   my $aa = $vcf_entry->{'INFO'}->{'AA'};
+  my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
+  my $print = 0;
 
-  if(!defined($aa) || ($aa ne "0" && $aa ne "1"))
+  if($svlen == 0)
+  {
+    # Do nothing
+  }
+  elsif(!defined($aa) || ($aa ne "0" && $aa ne "1"))
   {
     $num_of_missing_aa++;
   }
   elsif(!$clean_only || defined($clean_indel = vcf_get_clean_indel($vcf_entry)))
   {
-    my $svlen = $vcf_entry->{'INFO'}->{'SVLEN'};
     my $size = ($aa eq "0" ? $svlen : -$svlen);
 
-    my $print = (defined($size) && $filter_insertions == ($size > 0) &&
-                 (!defined($filter_size) || abs($svlen) == $filter_size));
+    $print = ($filter_insertions && $size > 0 ||
+              $filter_deletions && $size < 0) &&
+             (!defined($filter_size) || abs($svlen) == $filter_size);
+  }
 
-    if($print != $invert)
-    {
-      $num_of_printed++;
-      $vcf->print_entry($vcf_entry);
-    }
+  if($print != $invert)
+  {
+    $num_of_printed++;
+    $vcf->print_entry($vcf_entry);
   }
 }
 

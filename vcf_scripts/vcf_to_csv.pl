@@ -10,8 +10,8 @@ use lib $FindBin::Bin;
 use VCFFile;
 
 ## Config
-my $csvsep = ",";
-my $info_prefix = "INFO_";
+my $csvsep = "\t"; #","
+my $info_prefix = ""; #"INFO_"
 ##
 
 sub print_usage
