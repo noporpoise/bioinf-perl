@@ -48,7 +48,7 @@ Example '12,443' and '4 523 123.4521'.
 sub num2str
 {
   my $num = shift;
-  my $sep = shift; # optional
+  my $sep = shift; # optional: separator between thousands [default: ',']
   my $num_decimals = shift; # optional
   
   my @places = split(/\./, abs($num));
@@ -94,28 +94,26 @@ sub mem2str
 {
   my $num_bytes = shift;
   my $full_unit = shift;
+  my $decimals = shift;
 
-  # Don't want more than double digits
-  if($num_bytes > 2**38)
+  $full_unit = defined($full_unit) && $full_unit;
+
+  my @units = qw(B KB MB GB TB PB EB);
+  my @full_units = qw(bytes kilobytes megabytes gigabytes terabytes
+                      petabytes exabytes);
+
+  my $unit;
+  my $num_cpy = $num_bytes;
+  for($unit = 0; $num_cpy >= 1024 && $unit < @units; $unit++)
   {
-    return "" . num2str($num_bytes / (2**40)) . " " .
-           (defined($full_unit) ? "terabytes" : "TB");
+    $num_cpy /= 1024;
   }
-  elsif($num_bytes > 2**28)
-  {
-    return "" . num2str($num_bytes / (2**30)) . " " .
-           (defined($full_unit) ? "gigabytes" : "GB");
-  }
-  elsif($num_bytes > 2**18)
-  {
-    return "" . num2str($num_bytes / (2**20)) . " " .
-           (defined($full_unit) ? "megabytes" : "MB");
-  }
-  elsif($num_bytes > 2**8)
-  {
-    return "" . num2str($num_bytes / (2**10)) . " " .
-           (defined($full_unit) ? "kilobytes" : "kB");
-  }
+
+  my $bytes_in_unit = 2**(10 * $unit);
+  my $num_of_units = $num_bytes / $bytes_in_unit;
+
+  return num2str($num_of_units, undef, $decimals) . " " .
+         ($full_unit ? $full_units[$unit] : $units[$unit]);
 }
 
 sub pretty_fraction

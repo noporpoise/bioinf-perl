@@ -86,15 +86,15 @@ print "width: $memWidth; height: $memHeight; colours: " .
 my $num_of_buckets = 2**$memHeight;
 my $num_of_hash_entries = $num_of_buckets * $memWidth;
 
-print num2str($num_of_buckets) . " buckets\n";
-print num2str($num_of_hash_entries) . " hash table entries\n";
+print "Buckets: " . num2str($num_of_buckets) . "\n";
+print "Hashtable entries: " . num2str($num_of_hash_entries) . "\n";
 
 # Round entry size to nearest 8 bytes and multiply by the number of entries
 my $bytes = $num_of_hash_entries *
             ceil((8*ceil($kmerSize/31) + 5*$numOfColours + 1)/8)*8;
 
-print "Memory: " . num2str($bytes) . " bytes (" . mem2str($bytes) . ")\n";
+print "Memory: " . num2str($bytes) . " bytes (" . mem2str($bytes, 0, 1) . ")\n";
 
 print "Command: cortex_var_" . ($kmerSize > 31 ? "63" : "31") .
       "_c" . $numOfColours . " --kmer_size $kmerSize " .
-      "--mem_width $memWidth --mem_height $memHeight\n";
+      "--mem_height $memHeight --mem_width $memWidth\n";
