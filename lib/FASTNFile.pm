@@ -11,7 +11,8 @@ use List::Util qw(min);
 # is_fastq read_next read_all peek_line read_line
 
 use base 'Exporter';
-our @EXPORT = qw(read_all_from_files estimate_fastq_size print_FASTA print_FASTQ);
+our @EXPORT = qw(open_fastn_file close_fastn_file read_all_from_files
+                 estimate_fastq_size print_FASTA print_FASTQ);
 
 sub new
 {
@@ -227,6 +228,43 @@ sub read_all
   }
 }
 
+sub open_fastn_file
+{
+  my ($file) = @_;
+
+  my $handle;
+
+  if($file eq "-")
+  {
+    if(-p STDIN)
+    {
+      # STDIN is connected to a pipe
+      open($handle, "<&=STDIN") or croak("Cannot read STDIN pipe");
+    }
+    else
+    {
+      croak("Cannot open STDIN to read fasta/fastq");
+    }
+  }
+  else
+  {
+    open($handle, $file)
+      or croak("Cannot open fasta/fastq file '$file'");
+  }
+
+  my $fastn_file = new FASTNFile($handle, $file);
+
+  return $fastn_file;
+}
+
+sub close_fastn_file
+{
+  my ($self) = @_;
+
+  close($self->{_handle})
+      or print STDERR "Cannot close file '$self->{_descriptor}'\n";
+}
+
 #
 # load all reads from FASTA/Q files passed as arguments
 # returns hash of name -> (sequence,quality)
@@ -237,32 +275,11 @@ sub read_all_from_files
 
   for my $file (@_)
   {
-    my $handle;
+    my $fastn = open_fastn_file($file);
 
-    if($file eq "-")
-    {
-      if(-p STDIN)
-      {
-        # STDIN is connected to a pipe
-        open($handle, "<&=STDIN") or croak("Cannot read STDIN pipe");
-      }
-      else
-      {
-        croak("Cannot open STDIN to read fasta/fastq");
-      }
-    }
-    else
-    {
-      open($handle, $file)
-        or croak("Cannot open fasta/fastq file '$file'");
-    }
+    $fastn->read_all($reads_hashref, $qualities_hashref);
 
-    my $fastn_file = new FASTNFile($handle);
-
-    $fastn_file->read_all($reads_hashref, $qualities_hashref);
-
-    close($handle)
-      or print STDERR "Cannot close file '$file'\n";
+    close_fastn_file($fastn);
   }
 
   return ($reads_hashref, $qualities_hashref);
