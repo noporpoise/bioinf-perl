@@ -28,6 +28,7 @@ sub print_usage
     --ancestral      Use AA tags to print ancestral,derived instead of ref,alt
                      When AA tags not available, reverts to ref,alt
     --split          Prints 5' flank, alleles and 3' flank on different lines
+    --pad <k>        Pad alleles with k bases of surrounding sequence
     --trim <t>       Trim sequences longer than <t>\n";
 
   exit;
@@ -41,12 +42,13 @@ if(scalar(@ARGV) != scalar(@ARGV = grep {$_ !~ /^-?-p(ass(es)?)?$/i} @ARGV))
 }
 ##
 
-if(@ARGV < 2 || @ARGV > 5)
+if(@ARGV < 2)
 {
   print_usage();
 }
 
 my $trim;
+my $pad_alleles = 0;
 my $use_ancestral = 0;
 my $split_fasta = 0;
 
@@ -54,12 +56,24 @@ while(@ARGV > 0)
 {
   if($ARGV[0] =~ /^-?-trim$/i)
   {
-    $trim = shift(@ARGV);
+    shift;
+    $trim = shift;
 
     if($trim !~ /^\d+$/ || $trim == 0)
     {
       print_usage("Invalid trim value ('$trim') - " .
                   "must be positive integer (>0)");
+    }
+  }
+  elsif($ARGV[0] =~ /^-?-pad$/i)
+  {
+    shift;
+    $pad_alleles = shift;
+
+    if($pad_alleles !~ /^\d+$/ || $pad_alleles == 0)
+    {
+      print_usage("Invalid --pad value ('$pad_alleles') - " .
+                  "must be positive integer (>=0)");
     }
   }
   elsif($ARGV[0] =~ /^-?-ancestral$/i)
@@ -86,6 +100,11 @@ my $max_flank_size = shift;
 my $vcf_file = shift;
 my @ref_files = @ARGV;
 
+if(@ref_files == 0)
+{
+  push(@ref_files, '-');
+}
+
 if($max_flank_size !~ /^\d+$/)
 {
   print_usage("Max flank size must be a positive integer (>=0): $max_flank_size");
@@ -95,6 +114,8 @@ elsif(defined($trim) && $trim > $max_flank_size)
   print_usage("--trim cannot be larger than max flank size " .
               "(trim: $trim; flank: $max_flank_size)");
 }
+
+$max_flank_size += $pad_alleles;
 
 my $vcf_handle;
 
@@ -111,13 +132,11 @@ else
   print_usage("Must specify or pipe in a VCF file");
 }
 
+#
+# Load reference
+#
 my $genome = new RefGenome();
-
-if(@ref_files > 0)
-{
-  # Load reference
-  $genome->load_from_files(@ref_files);
-}
+$genome->load_from_files(@ref_files);
 
 #
 # Read VCF
@@ -132,8 +151,8 @@ my $vcf_entry;
 while(defined($vcf_entry = $vcf->read_entry()))
 {
   # Get flanks
-  my $left_flank = "";
-  my $right_flank = "";
+  my $lflank = "";
+  my $rflank = "";
 
   if($max_flank_size > 0)
   {
@@ -145,28 +164,43 @@ while(defined($vcf_entry = $vcf->read_entry()))
         print_usage("Flanks missing on entry $vcf_entry->{'ID'}");
       }
 
-      $left_flank = $vcf_entry->{'INFO'}->{'left_flank'};
-      $right_flank = $vcf_entry->{'INFO'}->{'right_flank'};
-  
-      if(length($left_flank) > $max_flank_size)
+      $lflank = $vcf_entry->{'INFO'}->{'left_flank'};
+      $rflank = $vcf_entry->{'INFO'}->{'right_flank'};
+
+      if(length($lflank) > $max_flank_size)
       {
-        $left_flank = substr($left_flank, 0, $max_flank_size);
+        $lflank = substr($lflank, -$max_flank_size);
       }
-    
-      if(length($left_flank) > $max_flank_size)
+
+      if(length($rflank) > $max_flank_size)
       {
-        $right_flank = substr($right_flank, -$max_flank_size);
+        $rflank = substr($rflank, 0, $max_flank_size);
       }
     }
     else
     {
-      ($left_flank, $right_flank) = vcf_get_flanks($vcf_entry, $genome, $max_flank_size);
+      ($lflank, $rflank) = vcf_get_flanks($vcf_entry, $genome, $max_flank_size);
     }
   }
 
   # Get alleles
   my $ref_allele = $vcf_entry->{'true_REF'};
   my $alt_allele = $vcf_entry->{'true_ALT'};
+
+  if($pad_alleles > 0)
+  {
+    # Work out how much padding we can get either side
+    my $lpad = min(length($lflank), $pad_alleles);
+    my $rpad = min(length($rflank), $pad_alleles);
+    # Add padding to the alleles
+    $ref_allele = substr($lflank, -$lpad).$ref_allele.substr($rflank, 0, $rpad);
+    $alt_allele = substr($lflank, -$lpad).$alt_allele.substr($rflank, 0, $rpad);
+    # Remove bases used in padding from the flanks
+    $lflank = substr($lflank, 0, length($lflank)-$lpad);
+    $rflank = substr($rflank, $rpad);
+  }
+
+  # Get alleles
   my $aa = $vcf_entry->{'INFO'}->{'AA'};
 
   my ($allele1, $allele2) = ($ref_allele, $alt_allele);
@@ -184,18 +218,18 @@ while(defined($vcf_entry = $vcf->read_entry()))
 
   if($split_fasta)
   {
-    print_to_fasta($vcf_entry->{'ID'}."_flank5", $left_flank);
+    print_to_fasta($vcf_entry->{'ID'}."_flank5", $lflank);
     print_to_fasta($vcf_entry->{'ID'}.($using_ancestral ? "_anc" : "_ref"), $allele1);
     print_to_fasta($vcf_entry->{'ID'}.($using_ancestral ? "_der" : "_alt"), $allele2);
-    print_to_fasta($vcf_entry->{'ID'}."_flank3", $right_flank);
+    print_to_fasta($vcf_entry->{'ID'}."_flank3", $rflank);
   }
   else
   {
     print_to_fasta($vcf_entry->{'ID'}.($using_ancestral ? "_anc" : "_ref"),
-                   $left_flank . $allele1 . $right_flank);
+                   $lflank . $allele1 . $rflank);
 
     print_to_fasta($vcf_entry->{'ID'}.($using_ancestral ? "_der" : "_alt"),
-                   $left_flank . $allele2 . $right_flank);
+                   $lflank . $allele2 . $rflank);
   }
 }
 
