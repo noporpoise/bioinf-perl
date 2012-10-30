@@ -90,6 +90,11 @@ if($max_flank_size !~ /^\d+$/)
 {
   print_usage("Max flank size must be a positive integer (>=0): $max_flank_size");
 }
+elsif($trim > $max_flank_size)
+{
+  print_usage("--trim cannot be larger than max flank size " .
+              "(trim: $trim; flank: $max_flank_size)");
+}
 
 my $vcf_handle;
 
