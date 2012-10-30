@@ -19,13 +19,16 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./vcf_print_allele_branches.pl <flank_size> <in.vcf> [ref.files ..]
+"Usage: ./vcf_print_fasta.pl [OPTIONS] <flank_size> <in.vcf> [ref.files ..]
   Prints alleles plus flanking sequence from VCF file in FASTA format. If
   <in.vcf> is '-', reads from stdin.  If [ref.files] omitted, uses INFO flank
   tags (left_flank=.. & right_flank=..).
 
   OTPIONS:
-    --trim <t>          trim sequences longer than <t>\n";
+    --ancestral      Use AA tags to print ancestral,derived instead of ref,alt
+                     When AA tags not available, reverts to ref,alt
+    --split          Prints 5' flank, alleles and 3' flank on diff lines
+    --trim <t>       Trim sequences longer than <t>\n";
 
   exit;
 }
@@ -44,12 +47,12 @@ if(@ARGV < 2 || @ARGV > 5)
 }
 
 my $trim;
+my $use_ancestral = 0;
+my $split_fasta = 0;
 
-while(@ARGV > 2 && $ARGV[0] =~ /^--/)
+while(@ARGV > 0)
 {
-  my $arg = shift(@ARGV);
-
-  if($arg =~ /^-?-trim$/i)
+  if($ARGV[0] =~ /^-?-trim$/i)
   {
     $trim = shift(@ARGV);
 
@@ -58,6 +61,20 @@ while(@ARGV > 2 && $ARGV[0] =~ /^--/)
       print_usage("Invalid trim value ('$trim') - " .
                   "must be positive integer (>0)");
     }
+  }
+  elsif($ARGV[0] =~ /^-?-ancestral$/i)
+  {
+    shift;
+    $use_ancestral = 1;
+  }
+  elsif($ARGV[0] =~ /^-?-split$/i)
+  {
+    shift;
+    $split_fasta = 1;
+  }
+  elsif($ARGV[0] =~ /^-/)
+  {
+    print_usage("Unknown argument '$ARGV[0]'");
   }
   else
   {
@@ -69,9 +86,15 @@ my $max_flank_size = shift;
 my $vcf_file = shift;
 my @ref_files = @ARGV;
 
+if($max_flank_size !~ /^\d+$/)
+{
+  print_usage("Max flank size must be a positive integer (>=0): $max_flank_size");
+}
+
 my $vcf_handle;
 
-if($vcf_file ne "-") {
+if(defined($vcf_file) && $vcf_file ne "-")
+{
   open($vcf_handle, $vcf_file) or die("Cannot open VCF file '$vcf_file'\n");
 }
 elsif(-p STDIN) {
@@ -103,9 +126,7 @@ my $vcf_entry;
 
 while(defined($vcf_entry = $vcf->read_entry()))
 {
-  my $ref_allele = $vcf_entry->{'true_REF'};
-  my $alt_allele = $vcf_entry->{'true_ALT'};
-
+  # Get flanks
   my $left_flank = "";
   my $right_flank = "";
 
@@ -138,11 +159,39 @@ while(defined($vcf_entry = $vcf->read_entry()))
     }
   }
 
-  print_to_fasta($vcf_entry->{'ID'}."_ref",
-                 $left_flank . $ref_allele . $right_flank);
+  # Get alleles
+  my $ref_allele = $vcf_entry->{'true_REF'};
+  my $alt_allele = $vcf_entry->{'true_ALT'};
+  my $aa = $vcf_entry->{'INFO'}->{'AA'};
 
-  print_to_fasta($vcf_entry->{'ID'}."_alt",
-                 $left_flank . $alt_allele . $right_flank);
+  my ($allele1, $allele2) = ($ref_allele, $alt_allele);
+
+  my $using_ancestral = 0;
+  if($use_ancestral && defined($aa) && ($aa == 0 || $aa == 1))
+  {
+    $using_ancestral = 1;
+
+    if($aa == 1)
+    {
+      ($allele1, $allele2) = ($alt_allele, $ref_allele);
+    }# else already correct
+  }
+
+  if($split_fasta)
+  {
+    print_to_fasta($vcf_entry->{'ID'}."_flank5", $left_flank);
+    print_to_fasta($vcf_entry->{'ID'}.($using_ancestral ? "_anc" : "_ref"), $allele1);
+    print_to_fasta($vcf_entry->{'ID'}.($using_ancestral ? "_der" : "_alt"), $allele2);
+    print_to_fasta($vcf_entry->{'ID'}."_flank3", $right_flank);
+  }
+  else
+  {
+    print_to_fasta($vcf_entry->{'ID'}.($using_ancestral ? "_anc" : "_ref"),
+                   $left_flank . $allele1 . $right_flank);
+
+    print_to_fasta($vcf_entry->{'ID'}.($using_ancestral ? "_der" : "_alt"),
+                   $left_flank . $allele2 . $right_flank);
+  }
 }
 
 close($vcf_handle);
