@@ -27,7 +27,7 @@ sub print_usage
   OTPIONS:
     --ancestral      Use AA tags to print ancestral,derived instead of ref,alt
                      When AA tags not available, reverts to ref,alt
-    --split          Prints 5' flank, alleles and 3' flank on diff lines
+    --split          Prints 5' flank, alleles and 3' flank on different lines
     --trim <t>       Trim sequences longer than <t>\n";
 
   exit;
