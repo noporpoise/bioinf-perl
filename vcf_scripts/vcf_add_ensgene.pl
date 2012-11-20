@@ -20,7 +20,7 @@ sub print_usage
 "Usage: ./vcf_add_ensgene.pl <ensgene.txt> [file.vcf]\n" .
 "  Label VCF entries if in a gene.  Adds GENE, GENES_STRAND & GENES_POS tags\n" .
 "  to the INFO field.  If no [file.vcf] given (or given '-'), reads STDIN\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering
