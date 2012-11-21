@@ -313,12 +313,19 @@ sub get_chr_substr0
   my $name = $self->guess_chrom_fasta_name($chrom);
   if(!defined($name))
   {
+    carp("Couldn't find chromosome '$chrom'");
     return undef;
   }
 
-  return substr($self->{_chroms}->{$name}, $start, $len)
-    or carp("Chromosome position out of bounds of 0-" .
-            ($self->{_lengths}->{$name}-1));
+  my $substr = substr($self->{_chroms}->{$name}, $start, $len);
+
+  if(!defined($substr) || length($substr) < $len)
+  {
+    carp("Chromosome position $name:$start:$len out of bounds of 0-" .
+         ($self->{_lengths}->{$name} - 1));
+  }
+
+  return $substr;
 }
 
 sub get_chr_length

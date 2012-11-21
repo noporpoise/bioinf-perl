@@ -105,6 +105,11 @@ if(@ref_files == 0)
   push(@ref_files, '-');
 }
 
+if(!defined($vcf_file))
+{
+  print_usage();
+}
+
 if($max_flank_size !~ /^\d+$/)
 {
   print_usage("Max flank size must be a positive integer (>=0): $max_flank_size");
