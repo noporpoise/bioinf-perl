@@ -205,16 +205,16 @@ sub guess_chrom_fasta_name
     return $plain_name;
   }
 
+  if(defined(my $guess = $self->{_guess_names}->{$plain_name}))
+  {
+    return $guess;
+  }
+
   my @ref_chroms = keys(%{$self->{_chroms}});
 
   if(@ref_chroms == 0)
   {
     return undef;
-  }
-
-  if(defined(my $guess = $self->{_guess_names}->{$plain_name}))
-  {
-    return $guess;
   }
 
   my $fasta_name = guess_fasta_name($plain_name, @ref_chroms);
@@ -305,7 +305,6 @@ sub get_chr_substr1
             ($self->{_lengths}->{$name}));
 }
 
-# Call $self->guess_chrom_fasta_name($chrom); before calling this func
 sub get_chr_substr0
 {
   my ($self, $chrom, $start, $len) = @_;
