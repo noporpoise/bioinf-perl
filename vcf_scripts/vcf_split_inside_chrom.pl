@@ -83,6 +83,9 @@ $genome->load_from_files(@ref_files);
 #
 my $vcf = new VCFFile($vcf_handle);
 
+$vcf->print_header($out_valid);
+$vcf->print_header($out_invalid);
+
 # Skip non-PASS variants if -p passed
 if($skip_failed_vars) { $vcf->set_filter_failed(undef); }
 
