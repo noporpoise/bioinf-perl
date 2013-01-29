@@ -46,7 +46,7 @@ for my $file (@files)
 
   foreach my $title (sort keys %reads)
   {
-    $fastn->print_entry($title, $seq, $read_quals{$title}, 80);
+    $fastn->print_entry($title, $reads{$title}, $read_quals{$title}, 80);
   }
 
   close_fastn_file($fastn);
