@@ -80,7 +80,8 @@ sub rev_comp
 my %mapping = ('a' => 't', 'A' => 'T',
                'c' => 'g', 'C' => 'G',
                'g' => 'c', 'G' => 'C',
-               't' => 'a', 'T' => 'A');
+               't' => 'a', 'T' => 'A',
+               'n' => 'n', 'N' => 'N');
 
 sub complement_base
 {
