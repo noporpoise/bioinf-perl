@@ -101,7 +101,7 @@ sub parse_file
   }
   elsif($file_output eq "FASTQ")
   {
-    while((($title, $seq, $qual) = $fastn_file->read_next()) && defined($title))
+    while((($title, $seq, undef, $qual) = $fastn_file->read_next()) && defined($title))
     {
       print_FASTQ($title, $seq, $qual, $line_wrap);
     }

@@ -45,9 +45,9 @@ for my $file (@files)
 {
   my $fastn = open_fastn_file($file);
 
-  my ($title,$seq,$qual);
+  my ($title,$seq);
 
-  while((($title,$seq,$qual) = $fastn->read_next()) && defined($title))
+  while((($title,$seq) = $fastn->read_next()) && defined($title))
   {
     parse_read($seq);
   }

@@ -40,7 +40,7 @@ for my $file (@files)
 
   my ($title, $seq, $quals);
 
-  while((($title, $seq, $quals) = $fastn->read_next()) && defined($title))
+  while((($title, $seq, undef, $quals) = $fastn->read_next()) && defined($title))
   {
     $fastn->print_entry($title, rev_comp($seq), reverse($quals), $linewrap);
   }

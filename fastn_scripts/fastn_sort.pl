@@ -35,7 +35,7 @@ for my $file (@files)
   my %read_quals;
   my ($title, $seq, $quals);
 
-  while((($title, $seq, $quals) = $fastn->read_next()) && defined($title))
+  while((($title, $seq, undef, $quals) = $fastn->read_next()) && defined($title))
   {
     if(defined($reads{$title})) {
       print STDERR "fastn_sort.pl:Warning: duplicate reads with name '$title'\n";
