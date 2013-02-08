@@ -49,7 +49,9 @@ for my $file (@files)
 
   while((($title,$seq) = $fastn->read_next()) && defined($title))
   {
-    parse_read($seq);
+    for my $seq (split(/[^acgt]+/i, $seq)) {
+      parse_read($seq);
+    }
   }
 
   close_fastn_file($fastn);
