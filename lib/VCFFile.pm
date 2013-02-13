@@ -735,12 +735,9 @@ sub _read_entry_from_file
     %entry = ();
     @entry_cols = split(/\t/, $vcf_line);
 
-    for my $col_name (keys %vcf_columns)
+    for my $col_name (grep {$_ ne "INFO"} keys %vcf_columns)
     {
-      if($col_name ne "INFO")
-      {
-        $entry{$col_name} = @entry_cols[$vcf_columns{$col_name}];
-      }
+      $entry{$col_name} = @entry_cols[$vcf_columns{$col_name}];
     }
 
     my $num_of_cols = scalar(@{$self->{_columns_arr}});
@@ -813,6 +810,10 @@ sub _read_entry_from_file
   $entry{'INFO'} = \%info_col;
   $entry{'INFO_flags'} = \%info_flags;
 
+  # Convert REF / ALT to upper case
+  $entry{'REF'} = uc($entry{'REF'});
+  $entry{'ALT'} = uc($entry{'ALT'});
+
   # Correct SVLEN
   $entry{'INFO'}->{'SVLEN'} = length($entry{'ALT'}) - length($entry{'REF'});
 
@@ -839,8 +840,8 @@ sub _read_entry_from_file
   my $padding_bases = 0;
 
   while($padding_bases < $min_length &&
-        uc(substr($entry{'REF'}, $padding_bases, 1)) eq
-        uc(substr($entry{'ALT'}, $padding_bases, 1)))
+        substr($entry{'REF'}, $padding_bases, 1) eq
+          substr($entry{'ALT'}, $padding_bases, 1))
   {
     $padding_bases++;
   }
@@ -934,12 +935,12 @@ sub cmp_variants
     return $order;
   }
 
-  if(($order = uc($a->{'REF'}) cmp uc($b->{'REF'})) != 0)
+  if(($order = $a->{'REF'} cmp $b->{'REF'}) != 0)
   {
     return $order;
   }
 
-  if(($order = uc($a->{'ALT'}) cmp uc($b->{'ALT'})) != 0)
+  if(($order = $a->{'ALT'} cmp $b->{'ALT'}) != 0)
   {
     return $order;
   }
