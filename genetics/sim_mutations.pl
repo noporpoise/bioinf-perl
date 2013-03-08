@@ -7,6 +7,7 @@ use List::Util qw(first);
 use File::Path qw(make_path);
 
 use FASTNFile;
+use GeneticsModule;
 
 # config
 #use constant {NUM_SNPS => 10000, NUM_INDELS => 2000,
@@ -121,7 +122,7 @@ for(my $i = 0; $i < NUM_INV; $i++)
 
     my $g0 = int(rand(2)); # 0 or 1
     my $g1 = 1 - $g0; # 1 or 0
-    substr($genomes[$g0], $pos, $len) = rev_cmp(substr($genomes[$g1], $pos, $len));
+    substr($genomes[$g0], $pos, $len) = rev_comp(substr($genomes[$g1], $pos, $len));
     substr($mask, $pos, $len) = 'N'x$len;
     $num_of_invs++;
   }
@@ -198,11 +199,13 @@ for(my $i = 0; $i < 2; $i++) {
 
   for(my $j = 0; $j < $num_reads; $j++) {
     my $pos = int(rand($genlen));
-    print READS0 ">sample".$i."_$j\n".substr($genomes[$i], $pos, READLEN)."\n";
+
+    my $read = substr($genomes[$i], $pos, READLEN);
+    print READS0 ">sample".$i."_$j\n$read\n";
 
     if(READMP) {
-      print READS1 ">sample".$i."_$j\n" .
-                   substr($genomes[$i], $pos+READLEN+READMPSIZE, READLEN) . "\n";
+      $read = substr($genomes[$i], $pos+READLEN+READMPSIZE, READLEN);
+      print READS1 ">sample".$i."_$j\n" . rev_comp($read) . "\n";
     }
   }
 
