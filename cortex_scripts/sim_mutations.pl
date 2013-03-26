@@ -32,7 +32,7 @@ sub print_usage
   
   print STDERR "Usage: ./sim_mutations.pl [options] <kmer_size> <in.fa> <outdir>\n";
   print STDERR "  options: --readlen <len> --mpsize <insert> --covg <depth>\n";
-  print STDERR "           --snps <num> --indels <num> --inv <num> --invlen <len>\n";
+  print STDERR "           --snps <num> --indels <num> --invs <num> --invlen <len>\n";
   print STDERR "  Creates genomeA.fa, genomeB.fa, ref.fa, mask.fa, truth.vcf\n";
   print STDERR "          readsA.fa, readsB.fa OR if --mpsize given:\n";
   print STDERR "          readsA.0.fa, readsA.1.fa, readsB.0.fa readsB.1.fa\n";
@@ -63,7 +63,7 @@ while(@ARGV > 0)
     shift;
     $NUM_INDELS = shift;
   }
-  if($ARGV[0] =~ /^--inv$/i) {
+  if($ARGV[0] =~ /^--invs$/i) {
     shift;
     $NUM_INV = shift;
   }
@@ -281,3 +281,6 @@ for(my $i = 0; $i < 2; $i++) {
 print " snps: ".num2str($num_of_snps)." / ".num2str($NUM_SNPS)." generated\n";
 print " indels: ".num2str($num_of_indels)." / ".num2str($NUM_INDELS)." generated\n";
 print " inversions: ".num2str($num_of_invs)." / ".num2str($NUM_INV)." generated\n";
+
+print "  ref genome size: ".num2str($reflen)."bp\n";
+print "  mean sample genome size: ".num2str($mean_genome_len)."bp\n";
