@@ -87,12 +87,14 @@ close_fastn_file($fastn);
 my $genome_len = length($ref);
 my $num_reads = $genome_len * $READDEPTH / $READLEN;
 
-my $max_start = $genome_len - ($READMP ? 2*$READLEN+$READMPSIZE : $READLEN);
+my $max_start = $genome_len - ($READMP ? 2*$READLEN+$READMPSIZE : $READLEN) - 1;
 
 if($max_start <= 0) {
   print "Genome too small!\n";
   exit(-1);
 }
+
+print "max start: $max_start\n";
 
 if($READMP) {
   my $f0 = "$out_base.0.fa";
@@ -108,7 +110,7 @@ else {
 }
 
 for(my $i = 0; $i < $num_reads; $i++) {
-  my $pos = int(rand($genome_len));
+  my $pos = int(rand($max_start));
 
   my $read = substr($ref, $pos, $READLEN);
   print READS0 ">sample_$i\n$read\n";
