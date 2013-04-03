@@ -1,0 +1,7 @@
+Scripts for simulating variants and comparing VCF output from cortex to expected
+output
+
+1) sim_mutations to generate mutations
+2) sim_reads: mutations -> reads
+3) sim_vcf: mutations -> vcf
+4) sim_compare: compare two vcfs 

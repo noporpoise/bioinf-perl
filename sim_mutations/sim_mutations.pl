@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use List::Util qw(first);
+use List::Util qw(first sum shuffle);
 use File::Path qw(make_path);
 
 use FASTNFile;
@@ -108,8 +108,9 @@ if($READMP && $reflen < 2*$READLEN+$READMPSIZE) {
   exit(-1);
 }
 if($reflen <= $NUM_SNPS+$NUM_INDELS+$NUM_INV) {
-  print "Warning: genome is smaller than number of snps+indels " .
-        "(".num2str($NUM_SNPS)."+".num2str($NUM_INDELS)."+".num2str($NUM_INV).")\n";
+  print "Warning: genome is smaller than number of snps+indels (" .
+        join(" + ", num2str($NUM_SNPS), num2str($NUM_INDELS), num2str($NUM_INV)).
+        ")\n";
 }
 
 # In the mask: . = ref, N = variant
@@ -121,6 +122,18 @@ my $num_of_snps = 0;
 my $num_of_ins = 0;
 my $num_of_del = 0;
 my $num_of_invs = 0;
+
+# Generate likelihood of N samples having mutations
+my @prob = (0, map {1 / $_} 1..($num_of_samples-1));
+# Normalise
+my $prob_sum = sum(@prob);
+@prob = map {$_ / $prob_sum} @prob;
+# Convert to cdf
+for(my $i = 1; $i < $num_of_samples; $i++) { $prob[$i] += $prob[$i-1]; }
+
+# print "".join(', ', map {$_.":".$prob[$_]} 0..($num_of_samples-1))."\n";
+
+my @sampleids = 0..($num_of_samples-1);
 
 # Variants are non-overlapping
 # Generate SNPs
@@ -135,11 +148,21 @@ for(my $i = 0; $i < $NUM_SNPS; $i++)
     my @bases = grep {$_ ne $ref_base} qw(A C G T);
     my $snp = $bases[int(rand(3))];
 
-    # Pick random individual
-    my $s = int(rand($num_of_samples));
+    # Number of affected individuals (integer {1..N-1} distib 1/N)
+    my $p = rand();
+    my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
 
-    substr($genomes[$s], $pos, 1) = $snp;
-    substr($masks[$s], $pos, 1) = 'S';
+    print "SNP: $N\n";
+
+    my @samples = shuffle(@sampleids);
+    my @snp_samples = @samples[0..($N-1)];
+
+    for my $s (@snp_samples)
+    {
+      substr($genomes[$s], $pos, 1) = $snp;
+      substr($masks[$s], $pos, 1) = 'S';
+    }
+
     substr($mask, $pos, 1) = 'S';
     $num_of_snps++;
   }
@@ -152,33 +175,46 @@ for(my $i = 0; $i < $NUM_INDELS; $i++)
 
   if(substr($mask, $pos, 1) eq '.')
   {
+    # generate length (geometric distribution)
     my $end = $pos;
     while($end+1 < $reflen && rand() < 0.5 && substr($mask, $end+1, 1) eq '.'){$end++;}
     my $len = $end-$pos+1;
 
-    # Pick random individual
-    my $s = int(rand($num_of_samples));
+    # insertion or deletion
+    my $is_ins = rand() < 0.5;
 
-    if(rand(1) < 0.5)
+    # Number of affected individuals (integer {1..N-1} distib 1/N)
+    my $p = rand();
+    my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
+
+    # make N the number of people we're 'deleting' from
+    if($is_ins) { $N = $num_of_samples - $N; }
+
+    # Pick random individuals
+    my @samples = shuffle(@sampleids);
+    my @del_samples = @samples[0..($N-1)];
+    my @ins_samples = @samples[$N..($num_of_samples-1)];
+
+    # delete/insert from selected individuals
+    for my $s (@del_samples)
     {
-      # delete from selected individual (deletion)
       substr($genomes[$s], $pos, $len) = '-'x$len;
-      $num_of_del++;
     }
-    else
-    {
-      # delete from all but selected individual (insertion)
-      for(my $j = 0; $j < $num_of_samples; $j++) {
-        if($j != $s) {
-          substr($genomes[$j], $pos, $len) = '-'x$len;
-          substr($masks[$j], $pos, $len) = '-'x$len;
-        }
+
+    if($is_ins) {
+      for my $s (@ins_samples) {
+        substr($masks[$s], $pos, $len) = 'I'x$len;
       }
       $num_of_ins++;
     }
+    else {
+      for my $s (@del_samples) {
+        substr($masks[$s], $pos, $len) = 'D'x$len;
+      }
+      $num_of_del++;
+    }
 
-    substr($masks[$s], $pos, $len) = 'I'x$len;
-    substr($mask, $pos, $len) = 'I'x$len;
+    substr($mask, $pos, $len) = 'N'x$len;
   }
 }
 
@@ -190,11 +226,20 @@ for(my $i = 0; $i < $NUM_INV; $i++)
 
   if(substr($mask, $pos, $len) =~ /^\.+$/)
   {
-    # Pick random individual
-    my $s = int(rand($num_of_samples));
+    # Number of affected individuals (integer {1..N-1} distib 1/N)
+    my $p = rand();
+    my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
 
-    substr($genomes[$s], $pos, $len) = rev_comp(substr($ref, $pos, $len));
-    substr($masks[$s], $pos, $len) = 'V'x$len;
+    my @samples = shuffle(@sampleids);
+    my @inv_samples = @samples[0..($N-1)];
+
+    my $inv = rev_comp(substr($ref, $pos, $len));
+    for my $s (@inv_samples)
+    {
+      substr($genomes[$s], $pos, $len) = $inv;
+      substr($masks[$s], $pos, $len) = 'V'x$len;
+    }
+
     substr($mask, $pos, $len) = 'V'x$len;
     $num_of_invs++;
   }
@@ -207,12 +252,12 @@ for(my $i = 0; $i < $num_of_samples; $i++)
 {
   $f = "$outdir/genome$i.fa";
   open(GENOM, ">$f") or die("Cannot write to $f");
-  print GENOM ">genome$i\n$genomes[0]\n";
+  print GENOM ">genome$i\n".$genomes[$i]."\n";
   close(GENOM);
 
   $f = "$outdir/mask$i.fa";
   open(MASK, ">$f") or die("Cannot write to $f");
-  print MASK ">mask$i\n$masks[0]\n";
+  print MASK ">mask$i\n".$masks[$i]."\n";
   close(MASK);
 }
 
