@@ -55,9 +55,13 @@ do
     $vars{$vkey} = {'seen'=>0, 'alleles'=>\@alleles};
   }
   else {
-  #   my $arr = $vars{$vkey}->{'alleles'};
     push(@{$vars{$vkey}->{'alleles'}}, @alleles);
   }
+
+  $vars{$vkey}->{'SNP'} += $entry->{'INFO'}->{'SNP'};
+  $vars{$vkey}->{'INS'} += $entry->{'INFO'}->{'INS'};
+  $vars{$vkey}->{'DEL'} += $entry->{'INFO'}->{'DEL'};
+  $vars{$vkey}->{'INV'} += $entry->{'INFO'}->{'INV'};
 }
 while(defined($entry = $vcf->read_entry()));
 
@@ -66,13 +70,9 @@ close($fh);
 #
 # Parse result.vcf
 #
-my $num_true_positives = 0;
-my $num_false_positives = 0;
-my $num_dupes = 0;
-
-my $vars_matching_alleles = 0;
-my $vars_missing_alleles = 0;
-my $vars_false_alleles = 0;
+my ($num_true_positives, $num_false_positives, $num_dupes) = (0,0,0);
+my ($vars_matching_alleles, $vars_missing_alleles, $vars_false_alleles) = (0,0,0);
+my ($num_snp_found, $num_ins_found, $num_del_found, $num_inv_found) = (0,0,0,0);
 
 open($fh, $result_vcf) or die("Cannot open result vcf: $result_vcf");
 $vcf = new VCFFile($fh);
@@ -97,6 +97,13 @@ while(defined($entry = $vcf->read_entry()))
     if($num_matching > 0) { $vars_matching_alleles++; }
     if($num_missing > 0) { $vars_missing_alleles++; }
     if($num_false > 0) { $vars_false_alleles++; }
+  
+    if($num_matching > 0) {
+      $num_snp_found += $vars{$vkey}->{'SNP'};
+      $num_ins_found += $vars{$vkey}->{'INS'};
+      $num_del_found += $vars{$vkey}->{'DEL'};
+      $num_inv_found += $vars{$vkey}->{'INV'};
+    }
   }
 }
 
@@ -109,12 +116,18 @@ print "Discovered: " . pretty_fraction($num_true_positives,
 print "False positives: " . num2str($num_false_positives) . "\n";
 print "Dupes: " . num2str($num_dupes) . "\n";
 
+print "---- breakdown ----\n";
 print "Vars with at least one matching alleles: " .
       pretty_fraction($vars_matching_alleles, $num_true_positives) . "\n";
 print "Vars missing alleles: " .
       pretty_fraction($vars_missing_alleles, $num_true_positives) . "\n";
 print "Vars with extra alleles: " .
       pretty_fraction($vars_false_alleles, $num_true_positives) . "\n";
+
+print "SNPs: " . num2str($num_snp_found) . "\n";
+print "INSs: " . num2str($num_ins_found) . "\n";
+print "DELs: " . num2str($num_del_found) . "\n";
+print "INVs: " . num2str($num_inv_found) . "\n";
 
 sub all { $_ || return 0 for @_; 1 }
 

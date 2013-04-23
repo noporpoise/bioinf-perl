@@ -10,10 +10,7 @@ use FASTNFile;
 use GeneticsModule;
 use UsefulModule;
 
-# config
-# use constant {NUM_SNPS => 100000, NUM_INDELS => 10000, NUM_INV => 1000,
-              # READDEPTH => 10, READLEN => 100, READMP => 1, READMPSIZE => 450};
-
+# config defaults
 my $NUM_SNPS = 100000;
 my $NUM_INDELS = 10000;
 my $NUM_INV = 1000;
@@ -31,7 +28,7 @@ sub print_usage
   }
   
   print STDERR "" .
-"Usage: ./sim_mutations.pl [options] <outdir> <num_samples> <in1.fa>\n" .
+"Usage: ./sim_mutations.pl [options] <outdir> <num_samples> [in.fa|in.fq.gz]\n" .
 "  options: --snps <num> --indels <num> --invs <num> --invlen <len>\n" .
 "  Creates: ref.fa, genome1.fa .. genomeN.fa, mask1.fa .. maskN.fa
     where N is <num_samples>\n";
@@ -60,10 +57,12 @@ while(@ARGV > 0)
   else { last; }
 }
 
-if(@ARGV != 3) { print_usage(); }
+if(@ARGV < 2 || @ARGV > 3) { print_usage(); }
 my $outdir = shift;
 my $num_of_samples = shift;
 my $genome_file = shift;
+
+if(!defined($genome_file)) { $genome_file = "-"; }
 
 if($num_of_samples !~ /^\d+$/ || $num_of_samples == 0) {
   print_usage("<num_samples> must be a +ve int");
@@ -101,7 +100,7 @@ close_fastn_file($fastn);
 
 
 my $reflen = length($ref);
-print "Genome size: $reflen\n";
+print "Genome size: ".num2str($reflen)."\n";
 
 if($READMP && $reflen < 2*$READLEN+$READMPSIZE) {
   print "Error: genome is smaller than `read + mpinsertsize + read`\n";
@@ -161,6 +160,9 @@ for(my $i = 0; $i < $NUM_SNPS; $i++)
       substr($masks[$s], $pos, 1) = 'S';
     }
 
+    # Pick one to make lowercase
+    substr($masks[$snp_samples[0]], $pos, 1) = 's';
+
     substr($mask, $pos, 1) = 'S';
     $num_of_snps++;
   }
@@ -203,12 +205,16 @@ for(my $i = 0; $i < $NUM_INDELS; $i++)
       for my $s (@ins_samples) {
         substr($masks[$s], $pos, $len) = 'I'x$len;
       }
+      # Pick one to be lower case at start
+      substr($masks[$ins_samples[0]], $pos, 1) = 'i';
       $num_of_ins++;
     }
     else {
       for my $s (@del_samples) {
         substr($masks[$s], $pos, $len) = 'D'x$len;
       }
+      # Pick one to be lower case at start
+      substr($masks[$del_samples[0]], $pos, 1) = 'd';
       $num_of_del++;
     }
 
@@ -237,6 +243,8 @@ for(my $i = 0; $i < $NUM_INV; $i++)
       substr($genomes[$s], $pos, $len) = $inv;
       substr($masks[$s], $pos, $len) = 'V'x$len;
     }
+      # Pick one to be lower case at start
+    substr($masks[$inv_samples[0]], $pos, 1) = 'v';
 
     substr($mask, $pos, $len) = 'V'x$len;
     $num_of_invs++;

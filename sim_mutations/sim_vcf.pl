@@ -140,10 +140,19 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
                "RF=".substr($rflank,0,$kmer_size);
 
     # Get annotations from the mask
-    if($mutations =~ /S/) { $info .= ";SNP"; }
-    if($mutations =~ /I/i) { $info .= ";INS"; }
-    if($mutations =~ /D/i) { $info .= ";DEL"; }
-    if($mutations =~ /V/) { $info .= ";INV"; }
+    my @local_masks = map {substr($masks[$_],$start,$var_len)} @sampleids;
+
+    # The start of each variant is lower case in only one individual
+    my ($snp,$ins,$del,$inv) = (0,0,0,0);
+    for my $local_mask (@local_masks)
+    {
+      while($local_mask =~ /s/g) { $snp++; }
+      while($local_mask =~ /i/g) { $ins++; }
+      while($local_mask =~ /d/g) { $del++; }
+      while($local_mask =~ /v/g) { $inv++; }
+    }
+
+    $info .= ";SNP=$snp;INS=$ins;DEL=$del;INV=$inv";
 
     print join("\t", ".", "0", "var$i", "N", join(',', @alleles), ".", "PASS",
                $info, ".") . "\n";
