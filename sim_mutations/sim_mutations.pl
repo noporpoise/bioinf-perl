@@ -152,8 +152,6 @@ for(my $i = 0; $i < $NUM_SNPS; $i++)
     my $p = rand();
     my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
 
-    print "SNP: $N\n";
-
     my @samples = shuffle(@sampleids);
     my @snp_samples = @samples[0..($N-1)];
 

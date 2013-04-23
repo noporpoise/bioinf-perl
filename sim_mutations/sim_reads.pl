@@ -94,8 +94,6 @@ if($max_start <= 0) {
   exit(-1);
 }
 
-print "max start: $max_start\n";
-
 if($READMP) {
   my $f0 = "$out_base.0.fa";
   my $f1 = "$out_base.1.fa";

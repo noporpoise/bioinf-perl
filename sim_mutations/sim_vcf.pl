@@ -3,12 +3,17 @@
 use strict;
 use warnings;
 
-use List::Util qw(first);
+use List::Util qw(first min);
 use File::Path qw(make_path);
+
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
 
 use FASTNFile;
 use GeneticsModule;
 use UsefulModule;
+use SimLib;
 
 sub print_usage
 {
@@ -81,79 +86,71 @@ for(my $i = 0; $i < $num_of_samples; $i++)
 # print ">mask\n$mask\n";
 
 print STDERR "Masks overlaid\n";
+# print STDERR "$mask\n";
 
 #
 # Generate truth VCF
 #
 print "##".join("\t", qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT))."\n";
+my $prev_flank_len = -1;
 
-for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)\.{$kmer_size}/g; $i++)
+for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
 {
   # $-[0] is start pos of allele
   my $start = $-[0];
   my $len = length($1);
+  my $mutations = $1;
 
-  # print "Match '$1' start:$start len:$len\n";
+  my $lflank_len = $prev_flank_len;
+  my $rflank_len = length($2);
+
+  if($lflank_len == -1)
+  {
+    $lflank_len = 0;
+    while($lflank_len < $start && $lflank_len < 1000 &&
+          substr($mask, $start-$lflank_len-1, 1) eq '.') { $lflank_len++; }
+  }
+  $prev_flank_len = $rflank_len;
+
+  # print STDERR "Match '$1' start:$start len:$len mut:$mutations\n";
 
   # Get alleles
   my @alleles = map {substr($genomes[$_], $start, $len)} @sampleids;
-  map {$_ =~ s/\-//g} @alleles;
+  for(my $i = 0; $i < @alleles; $i++) { $alleles[$i] =~ s/-//g; }
 
   # Remove duplicates
   my %ah = ();
   @ah{@alleles} = 1;
   @alleles = keys(%ah);
 
-  if(@alleles > 1 && $start >= $kmer_size)
+  if(@alleles > 1 && $rflank_len >= $kmer_size)
   {
-    # Trim matching bp off ends
-    my ($lend,$rend) = trim_alleles(@alleles);
+    my $lflank = substr($genomes[0], $start-$lflank_len, $lflank_len);
+    my $rflank = substr($genomes[0], $start+$len, $rflank_len);
 
-    if($lend > 0 || $rend > 0) {
-      $start += $lend;
-      $len -= $lend + $rend;
-      @alleles = map {substr($_, $lend, -$rend)} @alleles;
-    }
+    # my $lm = substr($mask, $start-$lflank_len, $lflank_len);
+    # my $rm = substr($mask, $start+$len, $rflank_len);
+    # print STDERR "lf:$lflank rf:$rflank\n";
+    # print STDERR "lm:$lm rm:$rm\n";
 
-    my $lflank = substr($genomes[0], $start-$kmer_size, $kmer_size);
-    my $rflank = substr($genomes[0], $start+$len, $kmer_size);
+    ($lflank, $rflank, @alleles) = normalise_variant($kmer_size, $lflank, $rflank,
+                                                     @alleles);
 
-    if(defined(first {length($_) != 1} @alleles))
-    {
-      # Not a SNP
+    # If not a SNP add a padding base from the left flank
+    if(defined(first {length($_) != 1} @alleles)) {
       map {$alleles[$_] = substr($lflank,-1).$alleles[$_]} 0..$#alleles;
     }
 
-    my $info = "LF=$lflank;RF=$rflank";
+    my $info = "LF=".substr($lflank,-$kmer_size).";" .
+               "RF=".substr($rflank,0,$kmer_size);
 
     # Get annotations from the mask
-    my $m = substr($mask, $start, $len);
-    if($m =~ /S/) { $info .= ";SNP"; }
-    if($m =~ /I/i) { $info .= ";INS"; }
-    if($m =~ /D/i) { $info .= ";DEL"; }
-    if($m =~ /V/) { $info .= ";INV"; }
+    if($mutations =~ /S/) { $info .= ";SNP"; }
+    if($mutations =~ /I/i) { $info .= ";INS"; }
+    if($mutations =~ /D/i) { $info .= ";DEL"; }
+    if($mutations =~ /V/) { $info .= ";INV"; }
 
     print join("\t", ".", "0", "var$i", "N", join(',', @alleles), ".", "PASS",
                $info, ".") . "\n";
   }
-}
-
-# Get number of matching bases on left and right
-sub trim_alleles
-{
-  my @a = @_;
-  my ($l, $r) = (0, 0);
-  # print "Trim:".join(',', @a)."\n";
-
-  for(; $l < length($_[0]); $l++) {
-    my @bp = map {substr($_,$l,1)} @a;
-    if(defined(first {$_ ne $bp[0]} @bp)) { last; }
-  }
-  my $remaining = length($_[0])-$l;
-
-  for(; $r < $remaining; $r++) {
-    my @bp = map {substr($_,-$r-1,1)} @a;
-    if(defined(first {$_ ne $bp[0]} @bp)) { last; }
-  }
-  return ($l,$r);
 }
