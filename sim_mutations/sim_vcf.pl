@@ -98,7 +98,7 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
 {
   # $-[0] is start pos of allele
   my $start = $-[0];
-  my $len = length($1);
+  my $var_len = length($1);
   my $mutations = $1;
 
   my $lflank_len = $prev_flank_len;
@@ -112,10 +112,10 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
   }
   $prev_flank_len = $rflank_len;
 
-  # print STDERR "Match '$1' start:$start len:$len mut:$mutations\n";
+  # print STDERR "Match '$1' start:$start len:$var_len mut:$mutations\n";
 
   # Get alleles
-  my @alleles = map {substr($genomes[$_], $start, $len)} @sampleids;
+  my @alleles = map {substr($genomes[$_], $start, $var_len)} @sampleids;
   for(my $i = 0; $i < @alleles; $i++) { $alleles[$i] =~ s/-//g; }
 
   # Remove duplicates
@@ -123,15 +123,10 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
   @ah{@alleles} = 1;
   @alleles = keys(%ah);
 
-  if(@alleles > 1 && $rflank_len >= $kmer_size)
+  if(@alleles > 1 && $lflank_len >= $kmer_size)
   {
     my $lflank = substr($genomes[0], $start-$lflank_len, $lflank_len);
-    my $rflank = substr($genomes[0], $start+$len, $rflank_len);
-
-    # my $lm = substr($mask, $start-$lflank_len, $lflank_len);
-    # my $rm = substr($mask, $start+$len, $rflank_len);
-    # print STDERR "lf:$lflank rf:$rflank\n";
-    # print STDERR "lm:$lm rm:$rm\n";
+    my $rflank = substr($genomes[0], $start+$var_len, $rflank_len);
 
     ($lflank, $rflank, @alleles) = normalise_variant($kmer_size, $lflank, $rflank,
                                                      @alleles);

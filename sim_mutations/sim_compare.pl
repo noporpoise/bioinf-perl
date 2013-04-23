@@ -46,6 +46,7 @@ my $kmer_size = length($entry->{'INFO'}->{'LF'});
 
 do
 {
+  # print "a: ".$entry->{'ID'}."\n";
   my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
                                      $entry->{'INFO'}->{'RF'},
                                      split(',', $entry->{'ALT'}));
@@ -68,7 +69,7 @@ $vcf = new VCFFile($fh);
 
 while(defined($entry = $vcf->read_entry()))
 {
-  # print "var:".$entry->{'ID'}."\n";
+  # print "b: ".$entry->{'ID'}."\n";
   # if($entry->{'ID'} eq "var931") {last;}
   my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
                                      $entry->{'INFO'}->{'RF'},
@@ -86,9 +87,10 @@ close($fh);
 
 my $max_true_positives = scalar(keys(%vars));
 
-print "Discovered: ".pretty_fraction($num_true_positives, $max_true_positives)."\n";
-print "False positives: ".num2str($num_false_positives)."\n";
-print "Dupes: ".num2str($num_dupes)."\n";
+print "Discovered: " . pretty_fraction($num_true_positives,
+                                       $max_true_positives) . "\n";
+print "False positives: " . num2str($num_false_positives) . "\n";
+print "Dupes: " . num2str($num_dupes) . "\n";
 
 sub all { $_ || return 0 for @_; 1 }
 
