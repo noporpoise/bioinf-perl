@@ -156,6 +156,10 @@ sub allele_covg_prob
   my $power = ((1 - exp(-$lambda * $read_kmer_length)) ** 2) *
               exp(-$lambda * $allele_length_bp * exp(-$lambda * $read_kmer_length));
 
+  # print "((1 - exp(-$lambda * $read_kmer_length)) ^ 2) * " .
+  #       "exp(-$lambda * $allele_length_bp * " .
+  #       "exp(-$lambda * $read_kmer_length)) = $power\n";
+
   #print "$allele_length_bp bp; $freq freq; lambda: $lambda; power: $power\n";
 
   return $power;

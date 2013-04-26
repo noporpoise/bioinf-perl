@@ -13,6 +13,7 @@ sub print_usage
 
   print STDERR "Usage: ./vcf_sort.pl <order> [in.vcf]\n";
   print STDERR "  Order is a comma-separated list of chroms\n";
+  print STDERR "  Prints output to STDOUT, prints stats to STDERR\n";
   exit(-1);
 }
 
@@ -78,17 +79,22 @@ while(defined($line)) {
   $line = <$vcf_handle>;
 }
 
+close($vcf_handle);
+
 # close chr files
 for my $fh (values %order_hsh) { close($fh); }
 
 # sort separate chromosomes
 # merge and print
+my %stats = ();
 print $header;
 for my $chr (@order) {
   my $cmd = "sort -k2 -n $tmpdir/$chr";
+  my $num = 0;
   open(CMD, "-|", "$cmd") or die("sort failed: $cmd");
-  while (<CMD>) { print; }
+  while (<CMD>) { $num++; print; }
   close(CMD);
+  print STDERR "$chr\t$num\n";
 }
 
 # delete tmp directory

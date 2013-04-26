@@ -222,7 +222,7 @@ for(my $i = 0; $i < $NUM_INDELS; $i++)
   }
 }
 
-# Generate inversions with uniform size distribution 5 -> INVLEN bp
+# Generate inversions with uniform size distribution Uniform(5,INVLEN) bp long
 for(my $i = 0; $i < $NUM_INV; $i++)
 {
   my $pos = int(rand($reflen));
@@ -267,7 +267,7 @@ for(my $i = 0; $i < $num_of_samples; $i++)
   close(MASK);
 }
 
-print " snps: ".num2str($num_of_snps)." / ".num2str($NUM_SNPS)." generated\n";
-print " insertions: ".num2str($num_of_ins)." / ".num2str($NUM_INDELS)." generated\n";
-print " deletions: ".num2str($num_of_del)." / ".num2str($NUM_INDELS)." generated\n";
-print " inversions: ".num2str($num_of_invs)." / ".num2str($NUM_INV)." generated\n";
+print " snps: ".pretty_fraction($num_of_snps, $NUM_SNPS)." generated\n";
+print " insertions: ".pretty_fraction($num_of_ins, $NUM_INDELS/2)." generated\n";
+print " deletions: ".pretty_fraction($num_of_del, $NUM_INDELS/2)." generated\n";
+print " inversions: ".pretty_fraction($num_of_invs, $NUM_INV)." generated\n";
