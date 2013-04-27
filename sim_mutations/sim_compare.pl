@@ -67,6 +67,7 @@ if(defined($entry = $vcf->read_entry()))
   }
   while(defined($entry = $vcf->read_entry()));
 }
+else { warn("Emtpy truth VCF"); }
 
 close($fh);
 
@@ -116,8 +117,9 @@ if(defined($entry = $vcf->read_entry()))
         $num_inv_found += $vars{$vkey}->{'INV'};
       }
     }
-  }
+  } while(defined($entry = $vcf->read_entry()))
 }
+else { warn("Empty results VCF"); }
 
 close($fh);
 
