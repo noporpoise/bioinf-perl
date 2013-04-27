@@ -40,30 +40,33 @@ open($fh, $truth_vcf) or die("Cannot open truth vcf: $truth_vcf");
 my $vcf = new VCFFile($fh);
 my $entry;
 my %vars = ();
+my $kmer_size;
 
-if(!defined($entry = $vcf->read_entry())) { die("Empty truth VCF"); }
-my $kmer_size = length($entry->{'INFO'}->{'LF'});
-
-do
+if(defined($entry = $vcf->read_entry()))
 {
-  # print "a: ".$entry->{'ID'}."\n";
-  my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
-                                     $entry->{'INFO'}->{'RF'},
-                                     split(',', $entry->{'ALT'}));
+  $kmer_size = length($entry->{'INFO'}->{'LF'});
 
-  if(!defined($vars{$vkey})) {
-    $vars{$vkey} = {'seen'=>0, 'alleles'=>\@alleles};
-  }
-  else {
-    push(@{$vars{$vkey}->{'alleles'}}, @alleles);
-  }
+  do
+    {
+    # print "a: ".$entry->{'ID'}."\n";
+    my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
+                                       $entry->{'INFO'}->{'RF'},
+                                       split(',', $entry->{'ALT'}));
 
-  $vars{$vkey}->{'SNP'} += $entry->{'INFO'}->{'SNP'};
-  $vars{$vkey}->{'INS'} += $entry->{'INFO'}->{'INS'};
-  $vars{$vkey}->{'DEL'} += $entry->{'INFO'}->{'DEL'};
-  $vars{$vkey}->{'INV'} += $entry->{'INFO'}->{'INV'};
+    if(!defined($vars{$vkey})) {
+      $vars{$vkey} = {'seen'=>0, 'alleles'=>\@alleles};
+    }
+    else {
+      push(@{$vars{$vkey}->{'alleles'}}, @alleles);
+    }
+
+    $vars{$vkey}->{'SNP'} += $entry->{'INFO'}->{'SNP'};
+    $vars{$vkey}->{'INS'} += $entry->{'INFO'}->{'INS'};
+    $vars{$vkey}->{'DEL'} += $entry->{'INFO'}->{'DEL'};
+    $vars{$vkey}->{'INV'} += $entry->{'INFO'}->{'INV'};
+  }
+  while(defined($entry = $vcf->read_entry()));
 }
-while(defined($entry = $vcf->read_entry()));
 
 close($fh);
 
@@ -77,32 +80,41 @@ my ($num_snp_found, $num_ins_found, $num_del_found, $num_inv_found) = (0,0,0,0);
 open($fh, $result_vcf) or die("Cannot open result vcf: $result_vcf");
 $vcf = new VCFFile($fh);
 
-while(defined($entry = $vcf->read_entry()))
+if(defined($entry = $vcf->read_entry()))
 {
-  # print "b: ".$entry->{'ID'}."\n";
-  # if($entry->{'ID'} eq "var931") {last;}
-  my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
-                                     $entry->{'INFO'}->{'RF'},
-                                     split(',', $entry->{'ALT'}));
+  my $kmer_size2 = length($entry->{'INFO'}->{'LF'});
+  if(defined($kmer_size) && $kmer_size != $kmer_size2) {
+    die("kmer sizes don't match [$kmer_size != $kmer_size2]");
+  }
+  $kmer_size = $kmer_size2;
 
-  if(!defined($vars{$vkey})) { $num_false_positives++; }
-  else {
-    if($vars{$vkey}->{'seen'} == 0) { $num_true_positives++; }
-    else { $num_dupes++; }
-    $vars{$vkey}->{'seen'}++;
+  do
+  {
+    # print "b: ".$entry->{'ID'}."\n";
+    # if($entry->{'ID'} eq "var931") {last;}
+    my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
+                                       $entry->{'INFO'}->{'RF'},
+                                       split(',', $entry->{'ALT'}));
 
-    my ($num_matching, $num_missing, $num_false)
-      = compare_alleles($vars{$vkey}->{'alleles'}, \@alleles);
+    if(!defined($vars{$vkey})) { $num_false_positives++; }
+    else {
+      if($vars{$vkey}->{'seen'} == 0) { $num_true_positives++; }
+      else { $num_dupes++; }
+      $vars{$vkey}->{'seen'}++;
 
-    if($num_matching > 0) { $vars_matching_alleles++; }
-    if($num_missing > 0) { $vars_missing_alleles++; }
-    if($num_false > 0) { $vars_false_alleles++; }
-  
-    if($num_matching > 0) {
-      $num_snp_found += $vars{$vkey}->{'SNP'};
-      $num_ins_found += $vars{$vkey}->{'INS'};
-      $num_del_found += $vars{$vkey}->{'DEL'};
-      $num_inv_found += $vars{$vkey}->{'INV'};
+      my ($num_matching, $num_missing, $num_false)
+        = compare_alleles($vars{$vkey}->{'alleles'}, \@alleles);
+
+      if($num_matching > 0) { $vars_matching_alleles++; }
+      if($num_missing > 0) { $vars_missing_alleles++; }
+      if($num_false > 0) { $vars_false_alleles++; }
+    
+      if($num_matching > 0) {
+        $num_snp_found += $vars{$vkey}->{'SNP'};
+        $num_ins_found += $vars{$vkey}->{'INS'};
+        $num_del_found += $vars{$vkey}->{'DEL'};
+        $num_inv_found += $vars{$vkey}->{'INV'};
+      }
     }
   }
 }

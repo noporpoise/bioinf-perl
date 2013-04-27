@@ -94,6 +94,9 @@ print STDERR "Masks overlaid\n";
 print "##".join("\t", qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT))."\n";
 my $prev_flank_len = -1;
 
+# speed up
+if($mask =~ /^\.*$/) { exit; }
+
 for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
 {
   # $-[0] is start pos of allele
