@@ -21,13 +21,17 @@ sub print_usage
     print STDERR "Error: $err\n";
   }
   
-  print STDERR "Usage: ./sim_compare.pl <truth.vcf> <result.vcf>\n";
+  print STDERR "Usage: ./sim_compare.pl <truth.vcf> <result.vcf> " .
+                 "<truth.out.vcf> <label> <failures.vcf>\n";
   exit(-1);
 }
 
-if(@ARGV != 2) { print_usage(); }
+if(@ARGV != 5) { print_usage(); }
 my $truth_vcf = shift;
 my $result_vcf = shift;
+my $out_vcf = shift;
+my $label = shift;
+my $failures_vcf = shift;
 
 # key => array of alleles
 my %variants = ();
@@ -47,18 +51,17 @@ if(defined($entry = $vcf->read_entry()))
   $kmer_size = length($entry->{'INFO'}->{'LF'});
 
   do
-    {
+  {
     # print "a: ".$entry->{'ID'}."\n";
     my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
                                        $entry->{'INFO'}->{'RF'},
                                        split(',', $entry->{'ALT'}));
 
     if(!defined($vars{$vkey})) {
-      $vars{$vkey} = {'seen'=>0, 'alleles'=>\@alleles};
+      $vars{$vkey} = {'seen'=>0, 'alleles'=>[]};
     }
-    else {
-      push(@{$vars{$vkey}->{'alleles'}}, @alleles);
-    }
+
+    push(@{$vars{$vkey}->{'alleles'}}, @alleles);
 
     $vars{$vkey}->{'SNP'} += $entry->{'INFO'}->{'SNP'};
     $vars{$vkey}->{'INS'} += $entry->{'INFO'}->{'INS'};
@@ -81,45 +84,49 @@ my ($num_snp_found, $num_ins_found, $num_del_found, $num_inv_found) = (0,0,0,0);
 open($fh, $result_vcf) or die("Cannot open result vcf: $result_vcf");
 $vcf = new VCFFile($fh);
 
-if(defined($entry = $vcf->read_entry()))
+while(defined($entry = $vcf->read_entry()))
 {
   my $kmer_size2 = length($entry->{'INFO'}->{'LF'});
   if(defined($kmer_size) && $kmer_size != $kmer_size2) {
-    die("kmer sizes don't match [$kmer_size != $kmer_size2]");
+    # die("kmer sizes don't match [$kmer_size != $kmer_size2]");
   }
   $kmer_size = $kmer_size2;
 
-  do
+  # print "b: ".$entry->{'ID'}."\n";
+  # if($entry->{'ID'} eq "var931") {last;}
+  my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
+                                     $entry->{'INFO'}->{'RF'},
+                                     split(',', $entry->{'ALT'}));
+
+  if(defined($vars{$vkey}))
   {
-    # print "b: ".$entry->{'ID'}."\n";
-    # if($entry->{'ID'} eq "var931") {last;}
-    my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
-                                       $entry->{'INFO'}->{'RF'},
-                                       split(',', $entry->{'ALT'}));
+    if($vars{$vkey}->{'seen'} == 0) { $num_true_positives++; }
+    else { $num_dupes++; }
 
-    if(!defined($vars{$vkey})) { $num_false_positives++; }
-    else {
-      if($vars{$vkey}->{'seen'} == 0) { $num_true_positives++; }
-      else { $num_dupes++; }
-      $vars{$vkey}->{'seen'}++;
+    my ($num_matching, $num_missing, $num_false)
+      = compare_alleles($vars{$vkey}->{'alleles'}, \@alleles);
 
-      my ($num_matching, $num_missing, $num_false)
-        = compare_alleles($vars{$vkey}->{'alleles'}, \@alleles);
-
-      if($num_matching > 0) { $vars_matching_alleles++; }
-      if($num_missing > 0) { $vars_missing_alleles++; }
-      if($num_false > 0) { $vars_false_alleles++; }
-    
-      if($num_matching > 0) {
-        $num_snp_found += $vars{$vkey}->{'SNP'};
-        $num_ins_found += $vars{$vkey}->{'INS'};
-        $num_del_found += $vars{$vkey}->{'DEL'};
-        $num_inv_found += $vars{$vkey}->{'INV'};
-      }
+    if($num_matching > 0) { $vars_matching_alleles++; }
+    if($num_missing > 0) {
+      $vars_missing_alleles++;
+      $vars{$vkey}->{'missing_alleles'} = 1;
     }
-  } while(defined($entry = $vcf->read_entry()))
+    if($num_false > 0) {
+      $vars_false_alleles++;
+      $vars{$vkey}->{'false_alleles'} = 1;
+    }
+
+    if($num_matching > 0) {
+      $num_snp_found += $vars{$vkey}->{'SNP'};
+      $num_ins_found += $vars{$vkey}->{'INS'};
+      $num_del_found += $vars{$vkey}->{'DEL'};
+      $num_inv_found += $vars{$vkey}->{'INV'};
+    }
+
+    $vars{$vkey}->{'seen'}++;
+  }
+  else { $num_false_positives++; }
 }
-else { warn("Empty results VCF"); }
 
 close($fh);
 
@@ -142,6 +149,52 @@ print "SNPs: " . num2str($num_snp_found) . "\n";
 print "INSs: " . num2str($num_ins_found) . "\n";
 print "DELs: " . num2str($num_del_found) . "\n";
 print "INVs: " . num2str($num_inv_found) . "\n";
+
+#
+# Print labelled truth vcf
+#
+my $out;
+open($out, ">$out_vcf") or die("Cannot open failures VCF: $out_vcf");
+open($fh, $truth_vcf) or die("Cannot open truth vcf: $truth_vcf");
+$vcf = new VCFFile($fh);
+
+while(defined($entry = $vcf->read_entry()))
+{
+  my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
+                                     $entry->{'INFO'}->{'RF'},
+                                     split(',', $entry->{'ALT'}));
+
+  if($vars{$vkey}->{'seen'} > 0) {
+    $entry->{'INFO_flags'}->{$label} = 1;
+  }
+  $vcf->print_entry($entry, $out);
+}
+
+close($fh);
+close($out);
+
+#
+# Print false positives vcf
+#
+open($out, ">$failures_vcf") or die("Cannot open failures VCF: $failures_vcf");
+open($fh, $result_vcf) or die("Cannot open results output VCF: $result_vcf");
+$vcf = new VCFFile($fh);
+
+while(defined($entry = $vcf->read_entry()))
+{
+  my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
+                                     $entry->{'INFO'}->{'RF'},
+                                     split(',', $entry->{'ALT'}));
+
+  if(!defined($vars{$vkey})) { $vcf->print_entry($entry, $out); }
+}
+
+close($fh);
+close($out);
+
+#
+# Functions
+#
 
 sub all { $_ || return 0 for @_; 1 }
 

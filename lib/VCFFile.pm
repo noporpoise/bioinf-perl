@@ -683,7 +683,7 @@ sub read_entry
   if(defined(my $fail_out = $self->{_failed_vars_out}))
   {
     # Print non-PASS variants to the given file handle
-    while(($entry = $self->_read_entry_from_file()) &&
+    while(defined($entry = $self->_read_entry_from_file()) &&
           defined($entry->{'FILTER'}) && $entry->{'FILTER'} ne "." &&
           uc($entry->{'FILTER'}) ne "PASS")
     {
@@ -693,7 +693,7 @@ sub read_entry
   elsif(exists($self->{_failed_vars_out}))
   {
     # Skip non-PASS variants
-    while(($entry = $self->_read_entry_from_file()) &&
+    while(defined($entry = $self->_read_entry_from_file()) &&
           defined($entry->{'FILTER'}) && $entry->{'FILTER'} ne "." &&
           uc($entry->{'FILTER'}) ne "PASS") {}
   }
@@ -737,7 +737,7 @@ sub _read_entry_from_file
 
     for my $col_name (grep {$_ ne "INFO"} keys %vcf_columns)
     {
-      $entry{$col_name} = @entry_cols[$vcf_columns{$col_name}];
+      $entry{$col_name} = $entry_cols[$vcf_columns{$col_name}];
     }
 
     my $num_of_cols = scalar(@{$self->{_columns_arr}});
@@ -762,12 +762,11 @@ sub _read_entry_from_file
   my $samples_arr = $self->{_sample_names};
   my $format_str = $self->{_columns_hash}->{'FORMAT'};
 
+  my @format_fields = split(":", $entry_cols[$vcf_columns{'FORMAT'}]);
+  $entry{'FORMAT'} = \@format_fields;
+
   if(scalar(@$samples_arr) > 0 && defined($format_str))
   {
-    my @format_fields = split(":", $entry_cols[$vcf_columns{'FORMAT'}]);
-
-    $entry{'FORMAT'} = \@format_fields;
-
     for my $sample (@$samples_arr)
     {
       my @sample_fields = split(":", $entry{$sample});
