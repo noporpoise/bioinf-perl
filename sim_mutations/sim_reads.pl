@@ -59,10 +59,14 @@ my $genome_file = shift;
 my @names = qw(--readlen --mpsize --covg);
 my @checks = ($READLEN, $READMPSIZE, $READDEPTH);
 
-for(my $i = 0; $i < @names; $i++) {
-  if($checks[$i] !~ /^\d+$/) {
-    print_usage("Invalid $names[$i] arg '$checks[$i]'");
-  }
+if($READLEN !~ /^\d+$/) {
+  print_usage("Invalid --readlen argument '$READLEN'");
+}
+if($READMPSIZE !~ /^\d+$/) {
+  print_usage("Invalid --mpsize argument '$READMPSIZE'");
+}
+if($READDEPTH !~ /^\d*\.?\d*$/) {
+  print_usage("Invalid --mpsize argument '$READDEPTH'");
 }
 
 #
