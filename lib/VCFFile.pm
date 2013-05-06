@@ -32,7 +32,8 @@ sub new
 
   if(!defined($next_line))
   {
-    croak("VCF file is empty");
+    # croak("VCF file is empty");
+    $next_line = "#".join('\t', vcf_get_standard_columns())."\n";
   }
 
   #
