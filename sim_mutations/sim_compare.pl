@@ -11,7 +11,9 @@ use FindBin;
 use lib $FindBin::Bin;
 
 use UsefulModule;
+use GeneticsModule;
 use VCFFile;
+use FASTNFile;
 use SimLib;
 
 sub print_usage
@@ -22,16 +24,17 @@ sub print_usage
   }
   
   print STDERR "Usage: ./sim_compare.pl <truth.vcf> <result.vcf> " .
-                 "<truth.out.vcf> <label> <failures.vcf>\n";
+                 "<truth.out.vcf> <label> <false_positives.vcf> [genomes.fa]\n";
   exit(-1);
 }
 
-if(@ARGV != 5) { print_usage(); }
+if(@ARGV < 5) { print_usage(); }
 my $truth_vcf = shift;
 my $result_vcf = shift;
 my $out_vcf = shift;
 my $label = shift;
 my $failures_vcf = shift;
+my @genome_files = @ARGV;
 
 # key => array of alleles
 my %variants = ();
@@ -173,6 +176,19 @@ while(defined($entry = $vcf->read_entry()))
 close($fh);
 close($out);
 
+# Load genomes to check alleles
+my @genomes = ();
+for my $genome_file (@genome_files)
+{
+  my $fastn = open_fastn_file($genome_file);
+  my ($title,$seq);
+  while((($title,$seq) = $fastn->read_next()) && defined($title)) {
+    $seq =~ s/[^ACGT]//gi;
+    push(@genomes,$seq);
+  }
+  close_fastn_file($fastn);
+}
+
 #
 # Print false positives vcf
 #
@@ -180,14 +196,30 @@ open($out, ">$failures_vcf") or die("Cannot open failures VCF: $failures_vcf");
 open($fh, $result_vcf) or die("Cannot open results output VCF: $result_vcf");
 $vcf = new VCFFile($fh);
 
+my $num_of_contigs = 0;
+my $num_of_false_contigs = 0;
+
 while(defined($entry = $vcf->read_entry()))
 {
   my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
                                      $entry->{'INFO'}->{'RF'},
                                      split(',', $entry->{'ALT'}));
 
-  if(!defined($vars{$vkey})) { $vcf->print_entry($entry, $out); }
+  my $lf = $entry->{'INFO'}->{'LF'};
+  my $rf = $entry->{'INFO'}->{'RF'};
+
+  my @contig_status = map {contig_exists($lf.$_.$rf) ? 1 : 0} @alleles;
+  $entry->{'INFO'}->{'CONTIGS'} = join(',', @contig_status);
+
+  $num_of_false_contigs += scalar(grep {$_ == 0} @contig_status);
+  $num_of_contigs += @alleles;
+
+  if(!defined($vars{$vkey})) {
+    $vcf->print_entry($entry, $out);
+  }
 }
+
+print "False contigs: ".pretty_fraction($num_of_false_contigs, $num_of_contigs)."\n";
 
 close($fh);
 close($out);
@@ -196,7 +228,23 @@ close($out);
 # Functions
 #
 
+sub any { $_ && return 1 for @_; 0 }
 sub all { $_ || return 0 for @_; 1 }
+
+sub contig_exists
+{
+  my ($contig) = @_;
+  $contig =~ s/^N+//i;
+  return contig_exists_sub($contig) || contig_exists_sub(rev_comp($contig));
+}
+
+sub contig_exists_sub
+{
+  my ($contig) = @_;
+  my $i = 0;
+  while($i < @genomes && index($genomes[$i], $contig) == -1) {$i++;}
+  return ($i < @genomes);
+}
 
 sub resolve_var
 {
