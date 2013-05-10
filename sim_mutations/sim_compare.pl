@@ -49,6 +49,8 @@ my $entry;
 my %vars = ();
 my $kmer_size;
 
+my ($true_snp, $true_ins, $true_del, $true_inv) = (0,0,0,0);
+
 if(defined($entry = $vcf->read_entry()))
 {
   $kmer_size = length($entry->{'INFO'}->{'LF'});
@@ -70,6 +72,11 @@ if(defined($entry = $vcf->read_entry()))
     $vars{$vkey}->{'INS'} += $entry->{'INFO'}->{'INS'};
     $vars{$vkey}->{'DEL'} += $entry->{'INFO'}->{'DEL'};
     $vars{$vkey}->{'INV'} += $entry->{'INFO'}->{'INV'};
+
+    $true_snp += $vars{$vkey}->{'SNP'};
+    $true_ins += $vars{$vkey}->{'INS'};
+    $true_del += $vars{$vkey}->{'DEL'};
+    $true_inv += $vars{$vkey}->{'INV'};
   }
   while(defined($entry = $vcf->read_entry()));
 }
@@ -148,10 +155,10 @@ print "Vars missing alleles: " .
 print "Vars with extra alleles: " .
       pretty_fraction($vars_false_alleles, $num_true_positives) . "\n";
 
-print "SNPs: " . num2str($num_snp_found) . "\n";
-print "INSs: " . num2str($num_ins_found) . "\n";
-print "DELs: " . num2str($num_del_found) . "\n";
-print "INVs: " . num2str($num_inv_found) . "\n";
+print "SNPs: " . pretty_fraction($num_snp_found, $true_snp) . "\n";
+print "INSs: " . pretty_fraction($num_ins_found, $true_ins) . "\n";
+print "DELs: " . pretty_fraction($num_del_found, $true_del) . "\n";
+print "INVs: " . pretty_fraction($num_inv_found, $true_inv) . "\n";
 
 #
 # Print labelled truth vcf
