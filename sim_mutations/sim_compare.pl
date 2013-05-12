@@ -15,6 +15,7 @@ use GeneticsModule;
 use VCFFile;
 use FASTNFile;
 use SimLib;
+use IndexedString;
 
 sub print_usage
 {
@@ -184,14 +185,15 @@ close($fh);
 close($out);
 
 # Load genomes to check alleles
-my @genomes = ();
+my $search_genomes = new IndexedString($kmer_size);
+
 for my $genome_file (@genome_files)
 {
   my $fastn = open_fastn_file($genome_file);
   my ($title,$seq);
   while((($title,$seq) = $fastn->read_next()) && defined($title)) {
     $seq =~ s/[^ACGT]//gi;
-    push(@genomes,$seq);
+    $search_genomes->add_strings($seq);
   }
   close_fastn_file($fastn);
 }
@@ -248,9 +250,11 @@ sub contig_exists
 sub contig_exists_sub
 {
   my ($contig) = @_;
-  my $i = 0;
-  while($i < @genomes && index($genomes[$i], $contig) == -1) {$i++;}
-  return ($i < @genomes);
+  my ($idx,$pos) = $search_genomes->find_index($contig);
+  return ($idx != -1);
+  # my $i = 0;
+  # while($i < @genomes && index($genomes[$i], $contig) == -1) {$i++;}
+  # return ($i < @genomes);
 }
 
 sub resolve_var
