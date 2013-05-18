@@ -23,14 +23,14 @@ sub usage
     print "Error: $err\n";
   }
   
-  print "Usage: ./cortex_memory.pl [options] <mem_height> <mem_width>\n";
-  print "  Options: --kmer_size -k <k>   K-mer size of De Bruijn graph [default: 31]\n";
-  print "           --colours -c <num>   Number of colours in graph    [default: 1]\n";
-  print "           --paths -p <num>     Number of paths in graph      [default: 0]\n";
+  print "Usage: ./cortex_memory.pl [options] <mem_height> <mem_width>\n".
+"  Options: --kmer_size -k <k>   K-mer size of De Bruijn graph [default: 31]\n".
+"           --colours -c <num>   Number of colours in graph    [default: 1]\n".
+"           --shades -p <num>    Number of shades in graph     [default: 0]\n";
   exit;
 }
 
-if(@ARGV < 2 || @ARGV > 6 || @ARGV % 2 != 0) {
+if(@ARGV < 2 || @ARGV > 8 || @ARGV % 2 != 0) {
   usage();
 }
 
@@ -39,7 +39,7 @@ my $memWidth = $ARGV[@ARGV-1];
 
 my $kmerSize = 31;
 my $numOfColours = 1;
-my $numOfPaths = 0;
+my $numOfShades = 0;
 
 # Loop through options
 for(my $i = 0; $i < @ARGV-2; $i+=2)
@@ -60,19 +60,19 @@ for(my $i = 0; $i < @ARGV-2; $i+=2)
       usage("invalid number of colours");
     }
   }
-  elsif($ARGV[$i] =~ /^-?-p(aths?)?$/i)
+  elsif($ARGV[$i] =~ /^-?-sh?(ades?)?$/i)
   {
-    $numOfPaths = $ARGV[$i+1];
+    $numOfShades = $ARGV[$i+1];
     
-    if($numOfPaths !~ /^[0-9]+$/) {
+    if($numOfShades !~ /^[0-9]+$/) {
       usage("invalid number of colours");
     }
 
-    if($numOfPaths % 8 != 0)
+    if($numOfShades % 8 != 0)
     {
-      print STDERR "Warning: paths is usually a multiple of 8 or 0\n";
+      print STDERR "Warning: shades is usually a multiple of 8 or 0\n";
       # Round up to nearest eight
-      $numOfPaths = ceil($numOfPaths / 8) * 8;
+      $numOfShades = ceil($numOfShades / 8) * 8;
     }
   }
   else
@@ -81,7 +81,7 @@ for(my $i = 0; $i < @ARGV-2; $i+=2)
   }
 }
 
-my $numOfPathBytes = $numOfPaths / 8;
+my $numOfPathBytes = $numOfShades / 8;
 
 if($memHeight !~ /^[0-9]+$/ || $memHeight < 1) {
   usage("invalid memHeight");
