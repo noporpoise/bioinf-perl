@@ -68,12 +68,7 @@ my ($read_name, $sequence, $colours_arrref);
 while((($read_name, $sequence, $colours_arrref) = $covgfile->read_align_entry()) &&
       defined($read_name))
 {
-  print "$read_name ($sequence)\n";
-  
-  for my $col (@$colours_arrref)
-  {
-    print "  ".join(",",@$col)."\n";
-  }
+  print_colour_covg_entry($read_name, $sequence, $colours_arrref);
 }
 
 close($covg_handle);

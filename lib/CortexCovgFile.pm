@@ -27,7 +27,7 @@ use List::Util qw(min max sum);
 
 use base 'Exporter';
 
-our @EXPORT = qw{get_num_of_read_arrivals estimate_contig_count};
+our @EXPORT = qw{get_num_of_read_arrivals estimate_contig_count print_colour_covg_entry};
 
 
 sub new
@@ -287,6 +287,17 @@ sub read_align_entry
 #
 # static methods
 #
+
+sub print_colour_covg_entry
+{
+  my ($read_name, $sequence, $colour_lines_arr) = @_;
+  print ">$read_name\n$sequence\n";
+  for(my $col = 0; $col < @$colour_lines_arr; $col++)
+  {
+    print ">".$read_name."_colour_".$col."_kmer_coverages\n";
+    print join(" ", @{$colour_lines_arr->[0]})."\n";
+  }
+}
 
 # read
 sub estimate_contig_count
