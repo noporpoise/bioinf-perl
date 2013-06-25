@@ -88,14 +88,21 @@ sub get_filter_status
   my ($covgs) = @_;
   my $len = @{$covgs->[0]};
   my $num_filters = @filter_cols;
-  if($num_filters == 0) { return 1; }
+  if($num_filters == 0 || $len <= 2) { return 1; }
 
   for(my $i = 0; $i < $num_filters; $i++) {
     my ($col, $covg) = ($filter_cols[$i], $filter_covgs[$i]);
     if($col >= @$covgs) { die("colour $col > ".(@$covgs-1)."\n"); }
-    for(my $j = 1; $j+1 < $len; $j++) {
-      if($covgs->[$col]->[$j] >= $covg) { return 1; }
-    }
+    my @tmp = sort map {$covgs->[$col]->[$_]} (1..($len-2));
+    if(get_median(\@tmp) >= $covg) { return 1; }
   }
   return 0;
+}
+
+sub get_median
+{
+  my $num = @{$_[0]};
+  if($num == 0) { return 0; }
+  if($num % 2 == 0) { return ($_[0]->[$num/2-1] + $_[0]->[$num/2]) / 2; }
+  else { return $_[0]->[$num/2]; }
 }
