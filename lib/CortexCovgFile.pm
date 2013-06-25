@@ -295,7 +295,7 @@ sub print_colour_covg_entry
   for(my $col = 0; $col < @$colour_lines_arr; $col++)
   {
     print ">".$read_name."_colour_".$col."_kmer_coverages\n";
-    print join(" ", @{$colour_lines_arr->[0]})."\n";
+    print join(" ", @{$colour_lines_arr->[$col]})."\n";
   }
 }
 
