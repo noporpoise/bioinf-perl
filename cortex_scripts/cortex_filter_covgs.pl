@@ -93,16 +93,17 @@ sub get_filter_status
   for(my $i = 0; $i < $num_filters; $i++) {
     my ($col, $covg) = ($filter_cols[$i], $filter_covgs[$i]);
     if($col >= @$covgs) { die("colour $col > ".(@$covgs-1)."\n"); }
-    my @tmp = sort map {$covgs->[$col]->[$_]} (1..($len-2));
-    if(get_median(\@tmp) >= $covg) { return 1; }
+    if(get_covg_median($covgs->[$col]) >= $covg) { return 1; }
   }
   return 0;
 }
 
-sub get_median
+sub get_covg_median
 {
-  my $num = @{$_[0]};
-  if($num == 0) { return 0; }
-  if($num % 2 == 0) { return ($_[0]->[$num/2-1] + $_[0]->[$num/2]) / 2; }
-  else { return $_[0]->[$num/2]; }
+  my ($arr) = @_;
+  my $len = @$arr;
+  my @tmp = sort map {$arr->[$_]} (1..($len-2));
+  if(@tmp == 0) { return 0; }
+  if(@tmp % 2 == 0) { return ($tmp[$#tmp/2] + $tmp[$#tmp/2+1]) / 2; }
+  else { return $tmp[$#tmp/2]; }
 }

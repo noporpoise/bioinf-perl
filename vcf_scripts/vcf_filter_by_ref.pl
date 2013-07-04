@@ -28,7 +28,7 @@ sub print_usage
     --tag <t>       Set the FILTER column of mismatches
     --filter_n <k>  Filter out variants with a non-ACGT base within <k> bp\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering
@@ -155,7 +155,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
     my $ref_allele = uc($vcf_entry->{'REF'});
 
     # $var_start is the 0-based position of the padding base(s)
-    my $var_start = $vcf_entry->{'POS'} - 1;
+    my $var_start = $vcf_entry->{'true_POS'} - 1;
     my $var_length = length($ref_allele);
 
     my $chrom_length = $genome->get_chr_length($chr);
@@ -165,7 +165,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
       $print = 0;
       print STDERR "vcf_filter_by_ref.pl - Warning: variant " .
                    $vcf_entry->{'ID'} . " " .
-                   "[".$chr.":".$vcf_entry->{'POS'}.":".$var_length."] " .
+                   "[".$chr.":".$vcf_entry->{'true_POS'}.":".$var_length."] " .
                    "out of bounds of ref " .
                    "'".$genome->guess_chrom_fasta_name($chr)."' " .
                    "[length:$chrom_length]\n";
