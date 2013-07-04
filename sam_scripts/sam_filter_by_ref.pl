@@ -67,7 +67,7 @@ while(defined($line = <$sam_handle>))
   my ($qname, $flag, $rname, $pos, $mapq, $cigar, $rnext, $pnext,
       $tlen, $seq, $qual, $extra) = split("\t", $line);
 
-  if(defined($extra) || !defined($qual)) { die("Invalid entry: $line"); }
+  if(!defined($qual)) { die("Invalid entry: $line"); }
 
   $total_num_entries++;
 
