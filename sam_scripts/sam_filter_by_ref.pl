@@ -103,7 +103,7 @@ while(defined($line = <$sam_handle>))
   if($ref_seq =~ /^[ACGT]*$/)
   {
     $num_of_printed_entries++;
-    print $line;
+    print "$line\n";
   }
 }
 
