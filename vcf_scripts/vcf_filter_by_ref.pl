@@ -95,8 +95,7 @@ elsif(-p STDIN) {
   # STDIN is connected to a pipe
   open($vcf_handle, "<&=STDIN") or die("Cannot read pipe");
 }
-else
-{
+else {
   print_usage("Must specify or pipe in a VCF file");
 }
 

@@ -100,6 +100,8 @@ while(defined($line = <$sam_handle>))
 
   my $ref_seq = $genome->get_chr_substr0($rname, $start, $length);
 
+  # print "$qname: $rname:$start:$length $ref_seq\n";
+
   if($ref_seq =~ /^[ACGT]*$/)
   {
     $num_of_printed_entries++;

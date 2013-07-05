@@ -71,7 +71,7 @@ sub read_blast_entries
     croak("BLAST entry does not match '$expected_name': '$line'");
   }
   
-  my $blast_txt;
+  my $blast_txt = $line;
 
   my $peek;
   while(defined($peek = $self->peek_line()) && $peek !~ /^Query=/i)
@@ -97,7 +97,8 @@ sub split_blast_entry
   {
     chomp($lines[$i]);
 
-    if($lines[$i] =~ /^>.*\|(.*)$/) {
+    if($lines[$i] =~ /^>.*\|(.*)$/)
+    {
       $curr_chr = $1;
       $i++;
       # Look at next line
