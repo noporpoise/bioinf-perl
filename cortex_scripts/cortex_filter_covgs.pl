@@ -12,10 +12,6 @@ use CortexCovgFile;
 # 25 Jun 2013
 #
 
-## Config
-my $csvsep = ",";
-#
-
 sub print_usage
 {
   for my $err (@_) { print STDERR "Error: $err\n"; }

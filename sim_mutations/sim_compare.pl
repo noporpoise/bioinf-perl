@@ -143,9 +143,10 @@ close($fh);
 
 my $max_true_positives = scalar(keys(%vars));
 
+# 'False positive' is perhaps not the correct term for unexpected bubbles
 print "Discovered: " . pretty_fraction($num_true_positives,
                                        $max_true_positives) . "\n";
-print "False positives: " . num2str($num_false_positives) . "\n";
+print "Unexpected bubbles: " . num2str($num_false_positives) . "\n";
 print "Dupes: " . num2str($num_dupes) . "\n";
 
 print "---- breakdown ----\n";

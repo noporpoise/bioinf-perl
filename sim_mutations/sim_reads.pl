@@ -69,6 +69,8 @@ if($READDEPTH !~ /^\d*\.?\d*$/) {
   print_usage("Invalid --mpsize argument '$READDEPTH'");
 }
 
+print "Genome file: $genome_file\n";
+
 #
 # Load genome
 #
@@ -103,7 +105,7 @@ if($READMP) {
   my $f1 = "$out_base.1.fa";
   open(READS0, ">$f0") or die("Cannot write to $f0");
   open(READS1, ">$f1") or die("Cannot write to $f1");
-  print "Writing to paired reads to $f0 and $f1\n";
+  print "Writing paired-end reads to $f0 and $f1\n";
 }
 else {
   my $f = "$out_base.fa";
