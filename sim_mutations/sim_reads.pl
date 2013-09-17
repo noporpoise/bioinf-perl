@@ -29,7 +29,7 @@ sub print_usage
     --mpsize <insert> [default: no matepairs]
     --covg <depth>    [default: $READDEPTH]
 
-  Produces <out_base>.fa or <out_base>.0.fa and <out_base>.1.fa\n";
+  Produces <out_base>.fa or <out_base>.1.fa and <out_base>.2.fa\n";
 
   exit(-1);
 }
@@ -101,8 +101,8 @@ if($max_start <= 0) {
 }
 
 if($READMP) {
-  my $f0 = "$out_base.0.fa";
-  my $f1 = "$out_base.1.fa";
+  my $f0 = "$out_base.1.fa";
+  my $f1 = "$out_base.2.fa";
   open(READS0, ">$f0") or die("Cannot write to $f0");
   open(READS1, ">$f1") or die("Cannot write to $f1");
   print "Writing paired-end reads to $f0 and $f1\n";
