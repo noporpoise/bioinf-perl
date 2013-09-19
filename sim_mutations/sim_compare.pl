@@ -157,10 +157,14 @@ print "Vars missing alleles: " .
 print "Vars with extra alleles: " .
       pretty_fraction($vars_false_alleles, $num_true_positives) . "\n";
 
-print "SNPs: " . pretty_fraction($num_snp_found, $true_snp) . "\n";
-print "INSs: " . pretty_fraction($num_ins_found, $true_ins) . "\n";
-print "DELs: " . pretty_fraction($num_del_found, $true_del) . "\n";
-print "INVs: " . pretty_fraction($num_inv_found, $true_inv) . "\n";
+my $num_indel_found = $num_ins_found+$num_del_found;
+my $true_indel = $true_ins+$true_del;
+
+print "  SNPs: " . pretty_fraction($num_snp_found, $true_snp) . "\n";
+print "  INSs: " . pretty_fraction($num_ins_found, $true_ins) . "\n";
+print "  DELs: " . pretty_fraction($num_del_found, $true_del) . "\n";
+print "INDELs: " . pretty_fraction($num_indel_found, $true_indel) . "\n";
+print "  INVs: " . pretty_fraction($num_inv_found, $true_inv) . "\n";
 
 #
 # Print labelled truth vcf
