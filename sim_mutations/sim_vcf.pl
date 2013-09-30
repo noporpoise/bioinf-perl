@@ -157,7 +157,7 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
 
     $info .= ";SNP=$snp;INS=$ins;DEL=$del;INV=$inv";
 
-    print join("\t", ".", "0", "var$i", "N", join(',', @alleles), ".", "PASS",
+    print join("\t", ".", "0", "truth$i", "N", join(',', @alleles), ".", "PASS",
                $info, ".") . "\n";
   }
 }
