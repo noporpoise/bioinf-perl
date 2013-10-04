@@ -44,25 +44,25 @@ my $num_of_samples = int(@ARGV / 2);
 my @genomes = ();
 my @masks = ();
 my @sampleids = (0..($num_of_samples-1));
+my $chrname;
 
 for(my $i = 0; $i < $num_of_samples; $i++)
 {
   my $genome_file = shift;
   my $mask_file = shift;
 
-  my $fastn;
-  my ($title,$seq);
+  my ($fastn,$seq);
 
   $fastn = open_fastn_file($genome_file);
-  ($title,$seq) = $fastn->read_next();
+  ($chrname,$seq) = $fastn->read_next();
   close_fastn_file($fastn);
-  if(!defined($title)) { die("Empty file: $genome_file\n"); }
+  if(!defined($chrname)) { die("Empty file: $genome_file\n"); }
   push(@genomes, uc($seq));
 
   $fastn = open_fastn_file($mask_file);
-  ($title,$seq) = $fastn->read_next();
+  ($chrname,$seq) = $fastn->read_next();
   close_fastn_file($fastn);
-  if(!defined($title)) { die("Empty file: $mask_file\n"); }
+  if(!defined($chrname)) { die("Empty file: $mask_file\n"); }
   push(@masks, $seq);
 }
 
@@ -157,7 +157,7 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
 
     $info .= ";SNP=$snp;INS=$ins;DEL=$del;INV=$inv";
 
-    print join("\t", ".", "0", "truth$i", "N", join(',', @alleles), ".", "PASS",
-               $info, ".") . "\n";
+    print join("\t", $chrname, "0", "truth$i", "N", join(',', @alleles), ".",
+               "PASS", $info, ".") . "\n";
   }
 }

@@ -35,13 +35,13 @@ my $ref_file = shift;
 # All masks and chromosomes should be the same length
 
 my @genomes = ();
-my ($title,$seq);
+my ($chrname,$title,$seq);
 my $fastn;
 
 $fastn = open_fastn_file($ref_file);
-($title,$seq) = $fastn->read_next();
+($chrname,$seq) = $fastn->read_next();
 close_fastn_file($fastn);
-if(!defined($title)) { die("Empty file: $ref_file\n"); }
+if(!defined($chrname)) { die("Empty file: $ref_file\n"); }
 push(@genomes, uc($seq));
 
 my $len = length($genomes[0]);
@@ -53,7 +53,9 @@ while(@ARGV > 0)
   ($title,$seq) = $fastn->read_next();
   close_fastn_file($fastn);
   if(!defined($title)) { die("Empty file: $genome_file\n"); }
-  if(length($seq) != $len) { die("Genomes diff lengths"); }
+  if(length($seq) != $len) {
+    die("Genomes diff lengths [file: $genome_file $len vs ".length($seq)."]");
+  }
   push(@genomes, uc($seq));
 }
 
@@ -70,7 +72,7 @@ print "##reference=file://$ref_file\n";
 print "##FILTER=<ID=PASS,Description=\"All filters passed\"\n";
 print "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n";
 print "##contig=<ID=un,length=1000000,assembly=None>\n";
-print "##contig=<ID=ref,length=$len>\n";
+print "##contig=<ID=$chrname,length=$len>\n";
 print "#".join("\t", qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT SAMPLE))."\n";
 
 my ($start, $end, $i) = (0,0);
@@ -101,7 +103,7 @@ for(my $var = 0; ($start = get_var_start($end)) != -1; $var++)
 
   my $ref = shift(@alleles);
   my $alt = join(',', @alleles);
-  print join("\t", "ref", $start+1, "truth$var", $ref, $alt, '.', "PASS",
+  print join("\t", $chrname, $start+1, "truth$var", $ref, $alt, '.', "PASS",
              ".", "GT", "0/1")."\n";
 }
 
