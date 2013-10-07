@@ -16,8 +16,10 @@ use RefGenome;
 sub print_usage
 {
   for my $err (@_) { print STDERR "Error: $err\n"; }
-  print STDERR "Usage: ./vcf_isec.pl <in.vcf> <in2.vcf> ..\n";
-  exit;
+  print STDERR "Usage: ./vcf_isec.pl <in.vcf> <in2.vcf> ..
+  Print sites in <in.vcf> if they match at chr,pos,ref and at least one alt in
+  each of the next <inX.vcf> files\n";
+  exit(-1);
 }
 
 if(@ARGV < 2) { print_usage(); }
@@ -56,6 +58,7 @@ my $nfiles = @vcfs;
 # my @entries = ([] x $nfiles);
 my ($nprinted, $nentries) = (0, 0);
 
+my @alts;
 my @entries;
 for(my $i = 0; $i < $nfiles; $i++) { $entries[$i] = []; }
 
@@ -66,7 +69,8 @@ while(defined(my $vcf_entry = $first_vcf->read_entry()))
   for($i = 0; $i < $nfiles; $i++) {
     read_vcf_entries($vcfs[$i], $entries[$i], $vcf_entry->{'CHROM'}, $vcf_entry->{'POS'});
   }
-  for($i = 0; $i < $nfiles && entry_in_list($vcf_entry, $entries[$i]); $i++) {}
+  @alts = split(',', $vcf_entry->{'ALT'});
+  for($i = 0; $i < $nfiles && entry_in_list($vcf_entry, $entries[$i], @alts); $i++) {}
   if($i == $nfiles) { $nprinted++; $first_vcf->print_entry($vcf_entry); }
 }
 
@@ -77,12 +81,18 @@ for my $vcf (@vcfs) { close($vcf->{'_handle'}); }
 
 sub entry_in_list
 {
-  my ($entry,$arr) = @_;
-  for(my $i = 0; $i < @$arr; $i++) {
-    if($arr->[$i]->{'CHROM'} eq $entry->{'CHROM'} &&
-       $arr->[$i]->{'POS'} eq $entry->{'POS'} &&
-       $arr->[$i]->{'true_REF'} eq $entry->{'true_REF'}) {
-      return 1;
+  my ($entry,$arr,@alts) = @_;
+  for my $entry2 (@$arr) {
+    if($entry2->{'CHROM'} eq $entry->{'CHROM'} &&
+       $entry2->{'POS'} eq $entry->{'POS'} &&
+       $entry2->{'REF'} eq $entry->{'REF'})
+    {
+      my @alts2 = split(',', $entry2->{'ALT'});
+      for my $alt (@alts) {
+        for my $alt2 (@alts2) {
+          if($alt eq $alt2) { return 1; }
+        }
+      }
     }
   }
   return 0;
