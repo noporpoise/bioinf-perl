@@ -70,7 +70,7 @@ while(defined(my $vcf_entry = $first_vcf->read_entry()))
   if($i == $nfiles) { $nprinted++; $first_vcf->print_entry($vcf_entry); }
 }
 
-print "".pretty_fraction($nprinted, $nentries)." entries printed\n";
+print STDERR "".pretty_fraction($nprinted, $nentries)." entries printed\n";
 
 close($first_vcf->{'_handle'});
 for my $vcf (@vcfs) { close($vcf->{'_handle'}); }
