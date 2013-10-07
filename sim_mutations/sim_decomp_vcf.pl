@@ -81,6 +81,7 @@ my %hsh;
 for(my $var = 0; ($start = get_var_start($end)) != -1; $var++)
 {
   $end = get_var_end($start);
+  if($start == 0) { next; }
 
   # Get alleles, remove deletions ('-')
   @alleles = map {substr($_, $start, $end-$start)} @genomes;
