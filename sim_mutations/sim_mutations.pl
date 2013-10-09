@@ -138,7 +138,7 @@ my @sampleids = 0..($num_of_samples-1);
 # Generate SNPs
 for(my $i = 0; $i < $NUM_SNPS; $i++)
 {
-  my $pos = int(rand($reflen));
+  my $pos = int(rand($reflen-1)+1);
 
   if(substr($mask, $pos, 1) eq ".")
   {
@@ -171,7 +171,7 @@ for(my $i = 0; $i < $NUM_SNPS; $i++)
 # Generate indels with geometric size distribution
 for(my $i = 0; $i < $NUM_INDELS; $i++)
 {
-  my $pos = int(rand($reflen));
+  my $pos = int(rand($reflen-1)+1);
 
   if(substr($mask, $pos, 1) eq '.')
   {
@@ -225,7 +225,7 @@ for(my $i = 0; $i < $NUM_INDELS; $i++)
 # Generate inversions with uniform size distribution Uniform(5,INVLEN) bp long
 for(my $i = 0; $i < $NUM_INV; $i++)
 {
-  my $pos = int(rand($reflen));
+  my $pos = int(rand($reflen-1)+1);
   my $len = int(rand($INVLEN-5))+5;
 
   if(substr($mask, $pos, $len) =~ /^\.+$/)
