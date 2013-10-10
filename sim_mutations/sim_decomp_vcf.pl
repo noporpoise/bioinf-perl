@@ -21,13 +21,15 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./sim_decomp_vcf.pl <ref.fa> [<sample1.fa> <sample2.fa> ..]\n";
+"Usage: ./sim_decomp_vcf.pl <ref.fa> [<sample1.fa> <sample1.mask> ..]\n";
 
   exit(-1);
 }
 
-if(@ARGV < 2) { print_usage(); }
+if(@ARGV < 3) { print_usage(); }
 my $ref_file = shift;
+
+if(@ARGV % 2 == 0) { print_usage("Expected odd number of args"); }
 
 #
 # Load and merge mask files
@@ -35,31 +37,36 @@ my $ref_file = shift;
 # All masks and chromosomes should be the same length
 
 my @genomes = ();
-my ($chrname,$title,$seq);
+my @masks = ();
+my ($chrname,$ref);
+my ($title,$seq);
 my $fastn;
 
 $fastn = open_fastn_file($ref_file);
-($chrname,$seq) = $fastn->read_next();
+($chrname,$ref) = $fastn->read_next();
 close_fastn_file($fastn);
 if(!defined($chrname)) { die("Empty file: $ref_file\n"); }
-push(@genomes, uc($seq));
+$ref = uc($ref);
 
-my $len = length($genomes[0]);
+my $len = length($ref);
 
 while(@ARGV > 0)
 {
   my $genome_file = shift;
-  $fastn = open_fastn_file($genome_file);
-  ($title,$seq) = $fastn->read_next();
-  close_fastn_file($fastn);
-  if(!defined($title)) { die("Empty file: $genome_file\n"); }
-  if(length($seq) != $len) {
-    die("Genomes diff lengths [file: $genome_file $len vs ".length($seq)."]");
+  my $mask_file = shift;
+  for my $file ($genome_file, $mask_file) {
+    $fastn = open_fastn_file($file);
+    ($title,$seq) = $fastn->read_next();
+    close_fastn_file($fastn);
+    if(!defined($title)) { die("Empty file: $file\n"); }
+    if(length($seq) != $len)
+    { die("Genomes diff lengths [file: $file $len vs ".length($seq)."]"); }
+    if($file eq $genome_file) { push(@genomes, uc($seq)); }
+    else { push(@masks, $seq); }
   }
-  push(@genomes, uc($seq));
 }
 
-print STDERR "".@genomes." Genomes loaded\n";
+print STDERR "".@genomes." Genome and mask pairs loaded\n";
 
 # map {print "$_: ".$genomes[$_]."\n"; } 0..$#genomes;
 

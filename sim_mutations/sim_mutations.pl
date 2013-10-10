@@ -123,12 +123,16 @@ my $num_of_del = 0;
 my $num_of_invs = 0;
 
 # Generate likelihood of N samples having mutations
-my @prob = (0, map {1 / $_} 1..($num_of_samples-1));
-# Normalise
-my $prob_sum = sum(@prob);
-@prob = map {$_ / $prob_sum} @prob;
-# Convert to cdf
-for(my $i = 1; $i < $num_of_samples; $i++) { $prob[$i] += $prob[$i-1]; }
+my @prob;
+if($num_of_samples == 1) { $prob[0] = 1; }
+else {
+  @prob = (0, map {1 / $_} 1..($num_of_samples-1));
+  # Normalise
+  my $prob_sum = sum(@prob);
+  @prob = map {$_ / $prob_sum} @prob;
+  # Convert to cdf
+  for(my $i = 1; $i < $num_of_samples; $i++) { $prob[$i] += $prob[$i-1]; }
+}
 
 # print "".join(', ', map {$_.":".$prob[$_]} 0..($num_of_samples-1))."\n";
 
@@ -147,12 +151,14 @@ for(my $i = 0; $i < $NUM_SNPS; $i++)
     my @bases = grep {$_ ne $ref_base} qw(A C G T);
     my $snp = $bases[int(rand(3))];
 
-    # Number of affected individuals (integer {1..N-1} distib 1/N)
-    my $p = rand();
-    my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
-
-    my @samples = shuffle(@sampleids);
-    my @snp_samples = @samples[0..($N-1)];
+    my @snp_samples = (0);
+    if($num_of_samples > 1) {
+      # Number of affected individuals (integer {1..N-1} distib 1/N)
+      my $p = rand();
+      my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
+      my @samples = shuffle(@sampleids);
+      @snp_samples = @samples[0..($N-1)];
+    }
 
     for my $s (@snp_samples)
     {
@@ -180,24 +186,30 @@ for(my $i = 0; $i < $NUM_INDELS; $i++)
     while($end+1 < $reflen && rand() < 0.5 && substr($mask, $end+1, 1) eq '.'){$end++;}
     my $len = $end-$pos+1;
 
-    # insertion or deletion
-    my $is_ins = rand() < 0.5;
 
-    # Number of affected individuals (integer {1..N-1} distib 1/N)
-    my $p = rand();
-    my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
+    my $is_ins = 0;
+    my @del_samples = (0);
+    my @ins_samples = ();
 
-    # make N the number of people we're 'deleting' from
-    if($is_ins) { $N = $num_of_samples - $N; }
+    if($num_of_samples > 1) {
+      # insertion or deletion
+      $is_ins = rand() < 0.5;
 
-    # Pick random individuals
-    my @samples = shuffle(@sampleids);
-    my @del_samples = @samples[0..($N-1)];
-    my @ins_samples = @samples[$N..($num_of_samples-1)];
+      # Number of affected individuals (integer {1..N-1} distib 1/N)
+      my $p = rand();
+      my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
+
+      # make N the number of people we're 'deleting' from
+      if($is_ins) { $N = $num_of_samples - $N; }
+
+      # Pick random individuals
+      my @samples = shuffle(@sampleids);
+      @del_samples = @samples[0..($N-1)];
+      @ins_samples = @samples[$N..($num_of_samples-1)];
+    }
 
     # delete/insert from selected individuals
-    for my $s (@del_samples)
-    {
+    for my $s (@del_samples) {
       substr($genomes[$s], $pos, $len) = '-'x$len;
     }
 
@@ -230,12 +242,17 @@ for(my $i = 0; $i < $NUM_INV; $i++)
 
   if(substr($mask, $pos, $len) =~ /^\.+$/)
   {
-    # Number of affected individuals (integer {1..N-1} distib 1/N)
-    my $p = rand();
-    my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
+    my @inv_samples = (0);
 
-    my @samples = shuffle(@sampleids);
-    my @inv_samples = @samples[0..($N-1)];
+    if($num_of_samples > 0)
+    {
+      # Number of affected individuals (integer {1..N-1} distib 1/N)
+      my $p = rand();
+      my $N = first {$p < $prob[$_]} 1..($num_of_samples-1);
+
+      my @samples = shuffle(@sampleids);
+      @inv_samples = @samples[0..($N-1)];
+    }
 
     my $inv = rev_comp(substr($ref, $pos, $len));
     for my $s (@inv_samples)
@@ -243,7 +260,8 @@ for(my $i = 0; $i < $NUM_INV; $i++)
       substr($genomes[$s], $pos, $len) = $inv;
       substr($masks[$s], $pos, $len) = 'V'x$len;
     }
-      # Pick one to be lower case at start
+
+    # Pick one to be lower case at start
     substr($masks[$inv_samples[0]], $pos, 1) = 'v';
 
     substr($mask, $pos, $len) = 'V'x$len;
