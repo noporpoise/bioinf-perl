@@ -22,14 +22,15 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./sim_vcf.pl <kmer_size> [<sample.fa> <sample.mask> ..]\n";
+"Usage: ./sim_bubble_vcf.pl <kmer_size> <ref.fa> [<sample.fa> <sample.mask> ..]\n";
 
   exit(-1);
 }
 
-if(@ARGV < 3) { print_usage(); }
+if(@ARGV < 4) { print_usage(); }
 
 my $kmer_size = shift;
+my $ref_path = shift;
 
 if($kmer_size !~ /^\d+$/) { print_usage(); }
 if(scalar(@ARGV) % 2 != 0) { print_usage(); }
@@ -44,25 +45,29 @@ my $num_of_samples = int(@ARGV / 2);
 my @genomes = ();
 my @masks = ();
 my @sampleids = (0..($num_of_samples-1));
-my $chrname;
+my ($fastn,$chrname,$ref,$seq);
+
+$fastn = open_fastn_file($ref_path);
+($chrname,$ref) = $fastn->read_next();
+close_fastn_file($fastn);
+if(!defined($chrname)) { die("Empty file: $ref_path\n"); }
+$ref = uc($ref);
 
 for(my $i = 0; $i < $num_of_samples; $i++)
 {
   my $genome_file = shift;
   my $mask_file = shift;
 
-  my ($fastn,$seq);
-
   $fastn = open_fastn_file($genome_file);
-  ($chrname,$seq) = $fastn->read_next();
+  (undef,$seq) = $fastn->read_next();
   close_fastn_file($fastn);
-  if(!defined($chrname)) { die("Empty file: $genome_file\n"); }
+  if(!defined($seq)) { die("Empty file: $genome_file\n"); }
   push(@genomes, uc($seq));
 
   $fastn = open_fastn_file($mask_file);
-  ($chrname,$seq) = $fastn->read_next();
+  (undef,$seq) = $fastn->read_next();
   close_fastn_file($fastn);
-  if(!defined($chrname)) { die("Empty file: $mask_file\n"); }
+  if(!defined($seq)) { die("Empty file: $mask_file\n"); }
   push(@masks, $seq);
 }
 
@@ -95,7 +100,7 @@ print "#".join("\t", qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT))."\n";
 my $prev_flank_len = -1;
 
 # speed up
-if($mask =~ /^\.*$/) { exit; }
+if($mask =~ /^\.*$/) { print STDERR "No variants\n"; exit; }
 
 for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
 {
@@ -120,6 +125,7 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
   # Get alleles
   my @alleles = map {substr($genomes[$_], $start, $var_len)} @sampleids;
   for(my $i = 0; $i < @alleles; $i++) { $alleles[$i] =~ s/-//g; }
+  push(@alleles, substr($ref, $start, $var_len));
 
   # Remove duplicates
   my %ah = ();

@@ -27,9 +27,9 @@ sub print_usage
 }
 
 if(@ARGV < 3) { print_usage(); }
-my $ref_file = shift;
+my $ref_path = shift;
 
-if(@ARGV % 2 == 0) { print_usage("Expected odd number of args"); }
+if(@ARGV % 2 != 0) { print_usage("Expected odd number of args"); }
 
 #
 # Load and merge mask files
@@ -42,10 +42,10 @@ my ($chrname,$ref);
 my ($title,$seq);
 my $fastn;
 
-$fastn = open_fastn_file($ref_file);
+$fastn = open_fastn_file($ref_path);
 ($chrname,$ref) = $fastn->read_next();
 close_fastn_file($fastn);
-if(!defined($chrname)) { die("Empty file: $ref_file\n"); }
+if(!defined($chrname)) { die("Empty file: $ref_path\n"); }
 $ref = uc($ref);
 
 my $len = length($ref);
@@ -75,71 +75,61 @@ print STDERR "".@genomes." Genome and mask pairs loaded\n";
 #
 print "##fileformat=VCFv4.1\n";
 print "##fileDate=20130930\n";
-print "##reference=file://$ref_file\n";
+print "##reference=file://$ref_path\n";
 print "##FILTER=<ID=PASS,Description=\"All filters passed\"\n";
 print "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n";
 print "##contig=<ID=un,length=1000000,assembly=None>\n";
 print "##contig=<ID=$chrname,length=$len>\n";
 print "#".join("\t", qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT SAMPLE))."\n";
 
-my ($start, $end, $i) = (0,0);
+my ($start, $end, $sample, $i) = (0,0,-1);
 my @alleles;
 my %hsh;
-for(my $var = 0; ($start = get_var_start($end)) != -1; $var++)
+for(my $var = 0; ; $var++)
 {
-  $end = get_var_end($start);
+  ($start,$end,$sample) = get_var($start, $sample+1);
+  if(!defined($start)) { last; }
   if($start == 0) { next; }
 
   # Get alleles, remove deletions ('-')
   @alleles = map {substr($_, $start, $end-$start)} @genomes;
   map {$alleles[$_] =~ s/\-//g} 0..$#alleles;
 
-  # Remove duplicates, keep reference allele at the front
-  my $r = $alleles[0];
+  my $r = substr($ref, $start, $end-$start);
+
+  # Remove duplicates
   %hsh = ();
   @hsh{@alleles} = 1;
-  delete($hsh{$r});
+  delete($hsh{$r}); # remove ref allele from alts
   @alleles = keys(%hsh);
-  unshift(@alleles, $r);
 
   # Add padding base
   if(defined(first {length($_) != 1} @alleles)) {
     $start--;
     my $c = substr($genomes[0], $start, 1);
-    @alleles = map {$c.$_} @alleles;
+    ($r, @alleles) = map {$c.$_} ($r, @alleles);
   }
 
-  my $ref = shift(@alleles);
   my $alt = join(',', @alleles);
-  print join("\t", $chrname, $start+1, "truth$var", $ref, $alt, '.', "PASS",
+  print join("\t", $chrname, $start+1, "truth$var", $r, $alt, '.', "PASS",
              ".", "GT", "0/1")."\n";
 }
 
-sub get_var_start
+sub get_var
 {
-  my ($pos) = @_;
-  my ($i,$c);
-  for(; $pos < $len; $pos++)
-  {
-    $c = substr($genomes[0],$pos,1);
-    if($c eq '-') { return $pos; }
-    for($i = 1; $i < @genomes && substr($genomes[$i],$pos,1) eq $c; $i++) {}
-    if($i < @genomes) { return $pos; }
-  }
-  return -1;
-}
-
-sub get_var_end
-{
-  my ($pos) = @_;
-  my ($i,$c);
-  for($pos++; $pos < $len; $pos++)
-  {
-    if(($c = substr($genomes[0],$pos,1)) ne '-')
-    {
-      for($i = 1; $i < @genomes && substr($genomes[$i],$pos,1) eq $c; $i++) {}
-      if($i == @genomes) { return $pos; }
+  my ($pos,$sample) = @_;
+  my ($i,$c,$end);
+  if($sample == @masks) { $sample = 0; $pos++; }
+  for(; $pos < $len; $pos++) {
+    for($i = $sample; $i < @masks; $i++) {
+      $c = substr($masks[$i],$pos,1);
+      if($c ne '.') {
+        $c = uc($c);
+        for($end = $pos+1; $end < $len && substr($masks[$sample],$end,1) eq $c; $end++) {}
+        return ($pos,$end,$sample);
+      }
     }
+    $sample = 0;
   }
-  return $len;
+  return ();
 }
