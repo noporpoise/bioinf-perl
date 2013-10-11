@@ -117,13 +117,16 @@ for(my $var = 0; ; $var++)
 
 sub get_var
 {
+  # In mask files, variants start with lower case letters
+  # s = SNPs; i = insert; d = deletion; v = inversion
+  # see sim_mutation.pl
   my ($pos,$sample) = @_;
   my ($i,$c,$end);
   if($sample == @masks) { $sample = 0; $pos++; }
   for(; $pos < $len; $pos++) {
     for($i = $sample; $i < @masks; $i++) {
       $c = substr($masks[$i],$pos,1);
-      if($c ne '.') {
+      if($c ne '.' && $c eq lc($c)) {
         $c = uc($c);
         for($end = $pos+1; $end < $len && substr($masks[$sample],$end,1) eq $c; $end++) {}
         return ($pos,$end,$sample);
