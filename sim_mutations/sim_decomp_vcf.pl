@@ -48,6 +48,9 @@ close_fastn_file($fastn);
 if(!defined($chrname)) { die("Empty file: $ref_path\n"); }
 $ref = uc($ref);
 
+# Remove fasta/fastq 'comments' (only take chars upto first whitespace)
+$chrname =~ s/\s.*$//g;
+
 my $len = length($ref);
 
 while(@ARGV > 0)
@@ -104,14 +107,15 @@ for(my $var = 0; ; $var++)
   @alleles = keys(%hsh);
 
   # Add padding base
+  my $pos = $start;
   if(defined(first {length($_) != 1} @alleles)) {
-    $start--;
-    my $c = substr($genomes[0], $start, 1);
+    $pos--;
+    my $c = substr($ref, $pos, 1);
     ($r, @alleles) = map {$c.$_} ($r, @alleles);
   }
 
   my $alt = join(',', @alleles);
-  print join("\t", $chrname, $start+1, "truth$var", $r, $alt, '.', "PASS",
+  print join("\t", $chrname, $pos+1, "truth$var", $r, $alt, '.', "PASS",
              ".", "GT", "0/1")."\n";
 }
 
