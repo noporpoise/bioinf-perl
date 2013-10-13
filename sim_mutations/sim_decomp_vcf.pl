@@ -21,53 +21,22 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./sim_decomp_vcf.pl <ref.fa> [<sample1.fa> <sample1.mask> ..]\n";
+"Usage: ./sim_decomp_vcf.pl [<sample1.fa> <sample1.mask> ..]\n";
 
   exit(-1);
 }
 
-if(@ARGV < 3) { print_usage(); }
-my $ref_path = shift;
-
+if(@ARGV == 0) { print_usage(); }
 if(@ARGV % 2 != 0) { print_usage("Expected odd number of args"); }
+
+my $ref_path = $ARGV[0];
 
 #
 # Load and merge mask files
 #
-# All masks and chromosomes should be the same length
-
-my @genomes = ();
-my @masks = ();
-my ($chrname,$ref);
-my ($title,$seq);
-my $fastn;
-
-$fastn = open_fastn_file($ref_path);
-($chrname,$ref) = $fastn->read_next();
-close_fastn_file($fastn);
-if(!defined($chrname)) { die("Empty file: $ref_path\n"); }
-$ref = uc($ref);
-
-# Remove fasta/fastq 'comments' (only take chars upto first whitespace)
-$chrname =~ s/\s.*$//g;
-
-my $len = length($ref);
-
-while(@ARGV > 0)
-{
-  my $genome_file = shift;
-  my $mask_file = shift;
-  for my $file ($genome_file, $mask_file) {
-    $fastn = open_fastn_file($file);
-    ($title,$seq) = $fastn->read_next();
-    close_fastn_file($fastn);
-    if(!defined($title)) { die("Empty file: $file\n"); }
-    if(length($seq) != $len)
-    { die("Genomes diff lengths [file: $file $len vs ".length($seq)."]"); }
-    if($file eq $genome_file) { push(@genomes, uc($seq)); }
-    else { push(@masks, $seq); }
-  }
-}
+my ($chrname,$len,$genarr,$mskarr) = load_genome_mask_files(@ARGV);
+my @genomes = @$genarr;
+my @masks = @$mskarr;
 
 print STDERR "".@genomes." Genome and mask pairs loaded\n";
 
@@ -85,12 +54,13 @@ print "##contig=<ID=un,length=1000000,assembly=None>\n";
 print "##contig=<ID=$chrname,length=$len>\n";
 print "#".join("\t", qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT SAMPLE))."\n";
 
-my ($start, $end, $sample, $i) = (0,0,-1);
+my ($start, $end, $refpos) = (0,0,0);
+my $c;
 my @alleles;
 my %hsh;
 for(my $var = 0; ; $var++)
 {
-  ($start,$end,$sample) = get_var($start, $sample+1);
+  ($start,$end,$refpos) = get_var($end, $refpos);
   if(!defined($start)) { last; }
   if($start == 0) { next; }
 
@@ -98,7 +68,7 @@ for(my $var = 0; ; $var++)
   @alleles = map {substr($_, $start, $end-$start)} @genomes;
   map {$alleles[$_] =~ s/\-//g} 0..$#alleles;
 
-  my $r = substr($ref, $start, $end-$start);
+  my $r = $alleles[0];
 
   # Remove duplicates
   %hsh = ();
@@ -106,37 +76,45 @@ for(my $var = 0; ; $var++)
   delete($hsh{$r}); # remove ref allele from alts
   @alleles = keys(%hsh);
 
+  if(@alleles == 0) { next; }
+
   # Add padding base
-  my $pos = $start;
+  my $varpos = $refpos;
   if(defined(first {length($_) != 1} @alleles)) {
-    $pos--;
-    my $c = substr($ref, $pos, 1);
+    $varpos--;
+    my $pos = $start-1;
+    while($pos >= 0 && ($c = substr($genomes[0], $pos, 1)) eq '-') { $pos--; }
+    if($pos < 0) { $c = 'N'; }
     ($r, @alleles) = map {$c.$_} ($r, @alleles);
   }
 
   my $alt = join(',', @alleles);
-  print join("\t", $chrname, $pos+1, "truth$var", $r, $alt, '.', "PASS",
+  print join("\t", $chrname, $varpos+1, "truth$var", $r, $alt, '.', "PASS",
              ".", "GT", "0/1")."\n";
+
+  # Move refpos forward
+  for(; $start < $end; $start++) {
+    if(substr($genomes[0],$start,1) ne '-') { $refpos++; }
+  }
 }
 
 sub get_var
 {
   # In mask files, variants start with lower case letters
   # s = SNPs; i = insert; d = deletion; v = inversion
-  # see sim_mutation.pl
-  my ($pos,$sample) = @_;
-  my ($i,$c,$end);
-  if($sample == @masks) { $sample = 0; $pos++; }
+  # Assume no overlapping variants; see sim_mutation.pl
+  my ($pos,$refpos) = @_;
+  my ($s,$c,$end);
   for(; $pos < $len; $pos++) {
-    for($i = $sample; $i < @masks; $i++) {
-      $c = substr($masks[$i],$pos,1);
+    for($s = 0; $s < @masks; $s++) {
+      $c = substr($masks[$s],$pos,1);
       if($c ne '.' && $c eq lc($c)) {
         $c = uc($c);
-        for($end = $pos+1; $end < $len && substr($masks[$sample],$end,1) eq $c; $end++) {}
-        return ($pos,$end,$sample);
+        for($end = $pos+1; $end < $len && substr($masks[$s],$end,1) eq $c; $end++) {}
+        return ($pos,$end,$refpos);
       }
     }
-    $sample = 0;
+    if(substr($genomes[0],$pos,1) ne '-') { $refpos++; }
   }
   return ();
 }

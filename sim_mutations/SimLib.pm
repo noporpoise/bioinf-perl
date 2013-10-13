@@ -8,11 +8,13 @@ use POSIX;
 use Carp;
 
 use GeneticsModule;
+use FASTNFile;
 
 # All methods are object methods except these:
 use base 'Exporter';
 our @EXPORT = qw(normalise_variant print_variant
-                 trim_alleles get_flank_shifts get_var_kmers get_key);
+                 trim_alleles get_flank_shifts get_var_kmers get_key
+                 load_genome_mask_files);
 
 sub print_variant
 {
@@ -160,6 +162,38 @@ sub get_key
   my ($kmer) = @_;
   my $rev_comp = rev_comp($kmer);
   return ($rev_comp lt $kmer ? $rev_comp : $kmer);
+}
+
+# All masks and chromosomes should be the same length
+sub load_genome_mask_files
+{
+  my @files = @_;
+  my @genomes = ();
+  my @masks = ();
+  my ($chrname,$len,$title,$seq);
+  my $fastn;
+
+  while(@files > 0)
+  {
+    my $genome_file = shift(@files);
+    my $mask_file = shift(@files);
+    for my $file ($genome_file, $mask_file) {
+      $fastn = open_fastn_file($file);
+      ($title,$seq) = $fastn->read_next();
+      close_fastn_file($fastn);
+      if(!defined($title)) { die("Empty file: $file\n"); }
+      if(!defined($chrname)) { $chrname = $title; $len = length($seq); }
+      elsif(length($seq) != $len) {
+        die("Genomes diff lengths [file: $file $len vs ".length($seq)."]");
+      }
+      if($file eq $genome_file) { push(@genomes, uc($seq)); }
+      else { push(@masks, $seq); }
+    }
+  }
+
+  # Remove fasta/fastq 'comments' (only take chars upto first whitespace)
+  $chrname =~ s/\s.*$//g;
+  return ($chrname, $len, \@genomes, \@masks);
 }
 
 1;

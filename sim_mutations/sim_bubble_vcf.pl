@@ -22,13 +22,10 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./sim_bubble_vcf.pl [--ref <ref.fa>] <kmer_size> [<sample.fa> <sample.mask> ..]\n";
+"Usage: ./sim_bubble_vcf.pl <kmer_size> [<sample.fa> <sample.mask> ..]\n";
 
   exit(-1);
 }
-
-my $ref_path;
-if($ARGV[0] eq "--ref") { shift; $ref_path = shift; }
 
 if(@ARGV < 3) { print_usage(); }
 
@@ -40,50 +37,18 @@ if(scalar(@ARGV) % 2 != 0) { print_usage(); }
 #
 # Load and merge mask files
 #
-my $num_of_samples = int(@ARGV / 2);
+my ($chrname,$len,$genarr,$mskarr) = load_genome_mask_files(@ARGV);
+my @genomes = @$genarr;
+my @masks = @$mskarr;
 
-# All masks and chromosomes should be the same length
-
-my @genomes = ();
-my @masks = ();
-my @sampleids = (0..($num_of_samples-1));
-my ($fastn,$chrname,$ref,$seq);
-
-if(defined($ref_path))
-{
-  $fastn = open_fastn_file($ref_path);
-  ($chrname,$ref) = $fastn->read_next();
-  close_fastn_file($fastn);
-  if(!defined($chrname)) { die("Empty file: $ref_path\n"); }
-  $ref = uc($ref);
-}
-
-for(my $i = 0; $i < $num_of_samples; $i++)
-{
-  my $genome_file = shift;
-  my $mask_file = shift;
-
-  $fastn = open_fastn_file($genome_file);
-  (undef,$seq) = $fastn->read_next();
-  close_fastn_file($fastn);
-  if(!defined($seq)) { die("Empty file: $genome_file\n"); }
-  push(@genomes, uc($seq));
-
-  $fastn = open_fastn_file($mask_file);
-  (undef,$seq) = $fastn->read_next();
-  close_fastn_file($fastn);
-  if(!defined($seq)) { die("Empty file: $mask_file\n"); }
-  push(@masks, $seq);
-}
-
-print STDERR "Genomes and masks loaded\n";
+print STDERR "".@genomes." Genome and mask pairs loaded\n";
 
 #
 # Merge masks
 #
 my $mask = "." x length($masks[0]);
 
-for(my $i = 0; $i < $num_of_samples; $i++)
+for(my $i = 0; $i < @genomes; $i++)
 {
   while($masks[$i] =~ /([^\.]+)/g)
   {
@@ -128,10 +93,8 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
   # print STDERR "Match '$1' start:$start len:$var_len mut:$mutations\n";
 
   # Get alleles
-  my @alleles = map {substr($genomes[$_], $start, $var_len)} @sampleids;
+  my @alleles = map {substr($genomes[$_], $start, $var_len)} 0..$#genomes;
   for(my $i = 0; $i < @alleles; $i++) { $alleles[$i] =~ s/-//g; }
-
-  if(defined($ref)) { push(@alleles, substr($ref, $start, $var_len)); }
 
   # Remove duplicates
   my %ah = ();
@@ -155,7 +118,7 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
                "RF=".substr($rflank,0,$kmer_size);
 
     # Get annotations from the mask
-    my @local_masks = map {substr($masks[$_],$start,$var_len)} @sampleids;
+    my @local_masks = map {substr($masks[$_],$start,$var_len)} 0..$#genomes;
 
     # The start of each variant is lower case in only one individual
     my ($snp,$ins,$del,$inv) = (0,0,0,0);
