@@ -33,7 +33,7 @@ sub print_usage
   --keep_phased   Keep phasing when switching ref/alt (e.g. 1|1 -> 0|0) [default]
   --remove_phased Variants lose phasing if switched (e.g. 1|1 -> 0/0)\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

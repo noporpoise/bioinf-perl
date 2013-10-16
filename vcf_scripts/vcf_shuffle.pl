@@ -14,7 +14,7 @@ sub print_usage
 
   print STDERR "Usage: ./vcf_shuffle.pl <in.vcf>\n";
 
-  exit;
+  exit(-1);
 }
 
 if(@ARGV != 1)

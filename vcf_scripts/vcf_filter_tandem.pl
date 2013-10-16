@@ -27,7 +27,7 @@ sub print_usage
   --non_flag <tag>     INFO flag non-tandem ('slippage' < SVLEN)
   --tandem_flag <tag>  INFO flag tandem ('slippage' >= SVLEN)
   --dist_tag <tag>     INFO tag with amount of 'slippage' (bp shared with flank)\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

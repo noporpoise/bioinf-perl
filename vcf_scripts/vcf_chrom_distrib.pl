@@ -23,7 +23,7 @@ sub print_usage
   print STDERR "  <chrom_sizes.csv> is a csv file of chromosome lengths\n";
   print STDERR "  <bin_size> is the number of kbp in each bin\n";
   print STDERR "  (reads from STDIN if [vcf] is omitted or is '-').\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

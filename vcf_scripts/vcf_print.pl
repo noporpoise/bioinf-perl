@@ -17,7 +17,7 @@ sub print_usage
 
   print STDERR "Usage: ./vcf_print.pl [file.vcf]\n";
   print STDERR "  Read and print a VCF file\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

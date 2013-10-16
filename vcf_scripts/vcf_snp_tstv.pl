@@ -29,7 +29,7 @@ sub print_usage
   [1] Collins DW, Jukes TH (April 1994). 'Rates of transition and
   transversion in coding sequences since the human-rodent divergence'\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

@@ -42,7 +42,7 @@ OPTIONS:
   --with_vcf   Print vcf view AND show alignment
   --as_vcf     Print in VCF format\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

@@ -20,7 +20,7 @@ sub print_usage
   print STDERR "  Filter out homopolymer runs LONGER than <max_run> (min = 1)\n";
   print STDERR "  Variant is homopolymer run if one allele is explained by a\n";
   print STDERR "  run of > max_run bases.  \n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

@@ -20,7 +20,7 @@ sub print_usage
   Sample from a VCF file, taking each variant with a probability of <prob>.  
   must be: 0 <= Prob <= 1\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

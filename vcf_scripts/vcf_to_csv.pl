@@ -22,7 +22,7 @@ sub print_usage
   
   print STDERR "Usage: ./vcf_to_csv.pl [vcf]\n";
   print STDERR "  Converts VCF to CSV\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

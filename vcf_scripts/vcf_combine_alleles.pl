@@ -29,7 +29,7 @@ sub print_usage
   Combines variants (and their alleles) that have matching ref sites.
   Prints to stdout.  If no in.vcf given, or '-', reads from STDIN\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

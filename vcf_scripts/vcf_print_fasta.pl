@@ -31,7 +31,7 @@ sub print_usage
     --pad <k>        Pad alleles with k bases of surrounding sequence
     --trim <t>       Trim sequences longer than <t>\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

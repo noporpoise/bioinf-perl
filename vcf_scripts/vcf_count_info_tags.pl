@@ -24,7 +24,7 @@ sub print_usage
   Prints comma separated histogram of info tag value counts
   If <file.vcf> is '-' reads from STDIN\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

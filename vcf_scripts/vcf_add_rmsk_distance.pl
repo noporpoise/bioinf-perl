@@ -26,7 +26,7 @@ sub print_usage
   - rmsk_CLASS_left, rmsk_CLASS_right
     (distances (bp) to the left/right to nearest element\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

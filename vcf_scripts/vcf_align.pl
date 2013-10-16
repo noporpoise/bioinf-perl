@@ -30,7 +30,7 @@ sub print_usage
   --tag <tag_name>       INFO tag to label variation in position
   --remove_ref_mismatch  Remove variants that do not match the reference\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

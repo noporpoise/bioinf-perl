@@ -23,7 +23,7 @@ sub print_usage
   Print variants within chroms to out.a.vcf.
   Print variants outside chom to out.b.vcf\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

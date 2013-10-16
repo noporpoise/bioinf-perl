@@ -30,7 +30,7 @@ sub print_usage
   - <ref_name> is used in the VCF header
   - If <in.vcf> is '-', reads from stdin\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

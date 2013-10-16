@@ -29,7 +29,7 @@ sub print_usage
 
   --show_stats        Show stats for filter types\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

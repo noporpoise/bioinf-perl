@@ -30,7 +30,7 @@ sub print_usage
    NP           SVLEN == 0
    COMPLEX      !snp && (length(allele1) > 0) & (length(allele2) > 0)\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

@@ -22,7 +22,7 @@ sub print_usage
    * INDEL=INS|DEL (for clean insertions / deletions)
    * AALEN=(derived-ancestral allele length)\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

@@ -31,7 +31,7 @@ sub print_usage
    -size     Deletions of a given size
    abs_size  Indels of a given size\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

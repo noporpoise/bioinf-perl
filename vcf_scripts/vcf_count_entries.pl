@@ -18,7 +18,7 @@ sub print_usage
   print STDERR "" .
 "Usage: ./vcf_count_entries.pl [file.vcf]
   Count the number of entries in a VCF file\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

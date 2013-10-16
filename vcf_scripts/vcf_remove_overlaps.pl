@@ -31,7 +31,7 @@ sub print_usage
   Example:
     vcf-sort in.vcf | vcf_remove_dupes.pl | vcf_remove_overlaps.pl > out.vcf\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

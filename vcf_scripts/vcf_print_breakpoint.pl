@@ -17,7 +17,7 @@ sub print_usage
 
   print STDERR "Usage: ./vcf_print_breakpoint.pl <flank_size> [in.vcf]\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

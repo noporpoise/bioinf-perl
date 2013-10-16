@@ -34,7 +34,7 @@ sub print_usage
   For indels, uses mapping of 5'+allele+3' flank to outgroup genome.
   * AA = [. -> unknown, 0 -> ref, 1 -> alt allele]
   * AALEN = (derived length - ancestral length)\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

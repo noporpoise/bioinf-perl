@@ -29,7 +29,7 @@ sub print_usage
   Saves: <out>.upstream.csv, <out>.downstream.csv,
          <out>.intron.csv, <out>.exon.csv,
          <out>.preexon.csv & <out>.postexon.csv>\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

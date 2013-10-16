@@ -24,7 +24,7 @@ sub print_usage
   print STDERR "  Add repeat annoations to variants, using INFO tags:\n";
   print STDERR "  - rmsk_CLASS_left, rmsk_CLASS_right\n";
   print STDERR "    (distances (bp) to the left/right to nearest element\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

@@ -36,7 +36,7 @@ sub print_usage
   \$ ./vcf_regions.pl --file --invert regions.txt data.vcf
   \$ cat data.vcf | ./vcf_regions.pl chr1:* chr2:500-1000\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

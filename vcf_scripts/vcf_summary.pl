@@ -28,7 +28,7 @@ sub print_usage
   Print summary stats.  Does not do any filtering.  
   To only use 'PASS' variants, filter first with vcf_filter_column.pl\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

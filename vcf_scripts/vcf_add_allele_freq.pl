@@ -18,7 +18,7 @@ sub print_usage
   print STDERR "Usage: ./vcf_add_allele_freq.pl [file.vcf]\n";
   print STDERR "  Add (or correct) allele frequency INFO tag in a VCF file\n";
   print STDERR "  Adds AF (Alt allele Frequency) INFO tag: 0..1\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

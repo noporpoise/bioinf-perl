@@ -42,7 +42,7 @@ sub print_usage
 
   --filter_txt <txt>   Add to / set the filter column instead of removing\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

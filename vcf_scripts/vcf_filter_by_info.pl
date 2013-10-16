@@ -23,7 +23,7 @@ sub print_usage
   <OP> must be one of: =~ =~i !~ !~i == != > >= < <= eq eqi ne gt ge lt le
        =~i, !~i & eqi are case-insensitive comparisons
        =~ peforms a regex and !~ is the same as using --invert with =~\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering

@@ -22,7 +22,7 @@ sub print_usage
   print STDERR "Usage: ./vcf_print_info_tags.pl <file.vcf> <infotag1 ..>\n";
   print STDERR "  Prints comma separated info tag values from VCF entries\n";
   print STDERR "  If <file.vcf> is '-' reads from STDIN\n";
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering
