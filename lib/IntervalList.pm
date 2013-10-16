@@ -25,7 +25,7 @@ InternalTree - Quickly find intersecting / overlapping intervals
   # Different search methods
   my @hits = $intervals->fetch($position);
   my @hits = $intervals->fetch($start, $end);
-  my ($hits_arr, $hits_left_arr, $hits_right_arr) = $intervals->fetch($start, $end);
+  my ($hits_arr, $hits_left_arr, $hits_right_arr) = $intervals->fetch_nearest($start, $end);
 
   # Find regions contained within the search region
   my @hits = $intervals->fetch_contained($start, $end);
@@ -60,14 +60,14 @@ For sparse interval sets using IntervalList is probably faster / uses lower memo
   
   print "Hits ($search_start <= x <= $search_end):\n";
   for my $hit (@hits) {
-    print " $hit\n";
+    print "[$hit->[0],$hit->[1]]: $hit->[2]\n";
   }
 
   # == Output ==
-  # Hits ($search_start <= x <= $search_end):
-  #  First
-  #  Second
-  
+  # Hits (5 <= x <= 25):
+  #  [10,20]: First
+  #  [15,45]: Second
+
   my ($hits_arr, $hits_left_arr, $hits_right_arr)
     = $interval_tree->fetch($search_start, $search_end);
 
@@ -86,12 +86,12 @@ For sparse interval sets using IntervalList is probably faster / uses lower memo
 
   # == Output ==
   # Hits (5 <= x <= 25):
-  #  First
-  #  Second
+  #  [10,20]: First
+  #  [15,45]: Second
   # Closest Left (x < 5):
-  #  Zeroth
+  #  [-12,3]: Zeroth
   # Closest Right (x > 25):
-  #  Third
+  #  [60,100]: Third
 
 =head1 AUTHOR
 
@@ -182,9 +182,8 @@ sub fetch
 
   # Don't find nearest
   # Don't find contained
-  my ($results_ref) = $self->_find($start, $end, 0, 0);
-
-  return @$results_ref;
+  my ($arr) = $self->_find($start, $end, 0, 0);
+  return @$arr;
 }
 
 sub fetch_nearest
@@ -206,9 +205,8 @@ sub fetch_contained
 
   # Don't find nearest
   # Find contained
-  my ($results_ref) = $self->_find($start, $end, 0, 1);
-
-  return @$results_ref;
+  my ($arr) = $self->_find($start, $end, 0, 1);
+  return @$arr;
 }
 
 
@@ -290,7 +288,7 @@ sub _find
     # Return those on the right (intervals in the first element)
     my @intervals_in_element = @{$elements->[0]};
 
-    my @hits = map {$self->{_intervals}->[$_]->[2]}
+    my @hits = map {$self->{_intervals}->[$_]}
                (sort {$a <=> $b} @intervals_in_element[1..$#intervals_in_element]);
 
     return ([],[],\@hits);
@@ -302,7 +300,7 @@ sub _find
     # need to use the second last element
     my @intervals_in_element = @{$elements->[@$elements - 2]};
 
-    my @hits = map {$self->{_intervals}->[$_]->[2]}
+    my @hits = map {$self->{_intervals}->[$_]}
                (sort {$a <=> $b} @intervals_in_element[1..$#intervals_in_element]);
 
     return ([],\@hits,[]);
@@ -380,7 +378,7 @@ sub _find
                      $self->{_intervals}->[$_]->[1] <= $end} @indices;
   }
 
-  my @hits = map {$self->{_intervals}->[$_]->[2]} (sort {$a <=> $b} @indices);
+  my @hits = map {$self->{_intervals}->[$_]} (sort {$a <=> $b} @indices);
 
   my @left_hits = ();
   my @right_hits = ();
@@ -411,7 +409,7 @@ sub _find
         }
       }
       
-      @left_hits = map {$self->{_intervals}->[$_]->[2]}
+      @left_hits = map {$self->{_intervals}->[$_]}
                    (sort {$a <=> $b} keys %interval_indices);
     }
     
@@ -440,7 +438,7 @@ sub _find
         }
       }
       
-      @right_hits = map {$self->{_intervals}->[$_]->[2]}
+      @right_hits = map {$self->{_intervals}->[$_]}
                    (sort {$a <=> $b} keys %interval_indices);
     }
   }

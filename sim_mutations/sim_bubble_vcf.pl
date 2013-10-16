@@ -27,7 +27,7 @@ sub print_usage
   exit(-1);
 }
 
-if(@ARGV < 3) { print_usage(); }
+if(@ARGV < 5) { print_usage(); }
 
 my $kmer_size = shift;
 
@@ -47,6 +47,7 @@ print STDERR "".@genomes." Genome and mask pairs loaded\n";
 # Merge masks
 #
 my $mask = "." x length($masks[0]);
+my $ref = $mask;
 
 for(my $i = 0; $i < @genomes; $i++)
 {
@@ -58,9 +59,30 @@ for(my $i = 0; $i < @genomes; $i++)
   }
 }
 
-# print ">mask\n$mask\n";
+my ($i, $j, $g) = (0,0,0);
+for($i = 0; $i < $len; $i++) {
+  for($g = 0; $g < @genomes && substr($genomes[$g], $i, 1) eq '-'; $g++) {}
+  if($g < @genomes) {
+    # This one will be taken if insertion
+    substr($ref, $j, 1) = substr($genomes[$g], $i, 1); # may be overwritten
+    for($g = 0; $g < @genomes; $g++) {
+      my $c = substr($genomes[$g], $i, 1);
+      substr($genomes[$g], $j, 1) = $c;
+      if(substr($masks[$g], $i, 1) eq '.' && $c ne '-') {substr($ref, $j, 1) = $c;}
+    }
+    substr($mask, $j, 1) = substr($mask, $i, 1);
+    $j++;
+  }
+}
 
-print STDERR "Masks overlaid\n";
+for($g = 0; $g < @genomes; $g++) { substr($genomes[$g], $j) = ''; }
+substr($mask, $j) = '';
+substr($ref, $j) = '';
+
+# print STDERR ">mask\n$mask\n";
+# print STDERR ">ref\n$ref\n";
+
+print STDERR "Masks overlaid; length: $j\n";
 # print STDERR "$mask\n";
 
 #
@@ -103,8 +125,8 @@ for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
 
   if(@alleles > 1 && $lflank_len >= $kmer_size)
   {
-    my $lflank = substr($genomes[0], $start-$lflank_len, $lflank_len);
-    my $rflank = substr($genomes[0], $start+$var_len, $rflank_len);
+    my $lflank = substr($ref, $start-$lflank_len, $lflank_len);
+    my $rflank = substr($ref, $start+$var_len, $rflank_len);
 
     ($lflank, $rflank, @alleles) = normalise_variant($kmer_size, $lflank, $rflank,
                                                      @alleles);

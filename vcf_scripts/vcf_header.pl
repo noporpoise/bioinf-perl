@@ -36,7 +36,7 @@ sub print_usage
   --entries  Print VCF entries as well as header
   --noheader Don't print the header\n";
 
-  exit;
+  exit(-1);
 }
 
 ## Test for filtering
@@ -120,14 +120,14 @@ for my $extra_header (@extra_headers)
   {
     if($add_header)
     {
-      my @parts = split("=", $header_txt);
-      
-      if(@parts != 2)
+      my ($meta_key, $meta_value) = split("=", $header_txt, 2);
+
+      if(!defined($meta_value))
       {
         print_usage("Invalid add metainfo tag '$extra_header'");
       }
 
-      $vcf->add_header_metainfo($parts[0], $parts[1]);
+      $vcf->add_header_metainfo($meta_key, $meta_value);
     }
     else
     {

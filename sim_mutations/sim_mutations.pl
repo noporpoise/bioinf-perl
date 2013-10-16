@@ -240,6 +240,8 @@ for(my $i = 0; $i < $NUM_INV; $i++)
   my $pos = int(rand($reflen-1)+1);
   my $len = int(rand($INVLEN-5))+5;
 
+  if($pos + $len > $reflen) { $len = $reflen - $pos; }
+
   if(substr($mask, $pos, $len) =~ /^\.+$/)
   {
     my @inv_samples = (0);

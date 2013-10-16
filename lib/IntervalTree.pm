@@ -19,10 +19,13 @@ InternalTree - Quickly find intersecting / overlapping intervals
 
   my $interval_tree = new IntervalTree(@intervals);
 
-  my @hits = $intervals->fetch($search_position);
-  my @hits = $intervals->fetch($search_start, $search_end);
-  my ($hits_arr, $hits_left_arr, $hits_right_arr)
-    = $intervals->fetch($search_start ,$search_end);
+  # Different search methods
+  my @hits = $intervals->fetch($position);
+  my @hits = $intervals->fetch($start, $end);
+  my ($hits_arr, $hits_left_arr, $hits_right_arr) = $intervals->fetch_nearest($start, $end);
+
+  # Find regions contained within the search region
+  my @hits = $intervals->fetch_contained($start, $end);
 
 =head1 DESCRIPTION
 
@@ -53,23 +56,37 @@ For sparse interval sets using IntervalList is probably faster / uses lower memo
   
   print "Hits ($search_start <= x < $search_end):\n";
   for my $hit (@hits) {
-    print "$hit\n";
+    print "[$hit->[0],$hit->[1]]: $hit->[2]\n";
   }
+
+  # == Output ==
+  # Hits (5 <= x <= 25):
+  #  [10,20]: First
+  #  [15,45]: Second
   
-  my ($hits_arr, $hits_left_arr, $hits_right_arr) = $interval_tree->fetch(5,25);
+  my ($hits_arr, $hits_left_arr, $hits_right_arr) = $interval_tree->fetch_nearest(5,25);
 
   print "Hits ($search_start <= x < $search_end):\n";
   for my $hit (@$hits_arr) {
-    print "$hit\n";
+    print "[$hit->[0],$hit->[1]]: $hit->[2]\n";
   }
   print "Closest Left (x < $search_start):\n";
   for my $hit (@$hits_left_arr) {
-    print "$hit\n";
+    print "[$hit->[0],$hit->[1]]: $hit->[2]\n";
   }
   print "Closest Right (x >= $search_end):\n";
   for my $hit (@$hits_right_arr) {
-    print "$hit\n";
+    print "[$hit->[0],$hit->[1]]: $hit->[2]\n";
   }
+
+  # == Output ==
+  # Hits (5 <= x <= 25):
+  #  [10,20]: First
+  #  [15,45]: Second
+  # Closest Left (x < 5):
+  #  [-12,3]: Zeroth
+  # Closest Right (x > 25):
+  #  [60,100]: Third
 
 =head1 AUTHOR
 
@@ -180,9 +197,8 @@ sub fetch
 
   # Don't find nearest
   # Don't find contained
-  my ($results_ref) = $self->_find($start, $end, 0, 0);
-
-  return @$results_ref;
+  my ($arr) = $self->_find($start, $end, 0, 0);
+  return @$arr;
 }
 
 sub fetch_nearest
@@ -204,9 +220,8 @@ sub fetch_contained
 
   # Don't find nearest
   # Find contained
-  my ($results_ref) = $self->_find($start, $end, 0, 1);
-
-  return @$results_ref;
+  my ($arr)  =$self->_find($start, $end, 0, 1);
+  return @$arr;
 }
 
 
@@ -518,17 +533,17 @@ sub _find
                        $intervals_arr->[$_]->[1] <= $end} @indices;
     }
     
-    @hits = map {$intervals_arr->[$_]->[2]} (sort {$a <=> $b} @indices);
+    @hits = map {$intervals_arr->[$_]} (sort {$a <=> $b} @indices);
 
     if($find_nearest)
     {
       my @hits_indices = ();    
       _find_nearest($tree, $start, 1, \%intervals_in_region, \@hits_indices);
-      @hits_left =  map {$intervals_arr->[$_]->[2]} (sort {$a <=> $b} @hits_indices);
+      @hits_left = map {$intervals_arr->[$_]} (sort {$a <=> $b} @hits_indices);
 
       @hits_indices = (); 
       _find_nearest($tree, $end, 0, \%intervals_in_region, \@hits_indices);
-      @hits_right =  map {$intervals_arr->[$_]->[2]} (sort {$a <=> $b} @hits_indices);
+      @hits_right = map {$intervals_arr->[$_]} (sort {$a <=> $b} @hits_indices);
     }
   }
 

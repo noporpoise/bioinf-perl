@@ -29,6 +29,7 @@ sub new
   my $class = shift;
   my $handle = shift;
   my $next_line = <$handle>;
+  chomp($next_line);
 
   if(!defined($next_line))
   {
@@ -51,24 +52,21 @@ sub new
 
   while(defined($next_line))
   {
-    if($next_line =~ /^##(\w+)=<(.*)>/)
+    my $tag;
+    if($next_line =~ /^##(.*?)=(.*)/ && defined($tag = _parse_header_tag($1,$2)))
     {
-      my $tag;
       # Prints error and returns undef if not valid line
-      if(defined($tag = _parse_header_tag($1,$2)))
+      if(defined($header_tags{$tag->{'ID'}}))
       {
-        if(defined($header_tags{$tag->{'ID'}}))
-        {
-          carp("Multiple header tags use the ID '$tag->{'ID'}' " .
-               "(only the last will be accepted)");
-        }
-        elsif(defined($header_metainfo{$tag->{'ID'}}))
-        {
-          carp("Tag header shares ID with metainfo header '$tag->{'ID'}'");
-        }
-
-        $header_tags{$tag->{'ID'}} = $tag;
+        carp("Multiple header tags use the ID '$tag->{'ID'}' " .
+             "(only the last will be accepted)");
       }
+      elsif(defined($header_metainfo{$tag->{'ID'}}))
+      {
+        carp("Tag header shares ID with metainfo header '$tag->{'ID'}'");
+      }
+
+      $header_tags{$tag->{'ID'}} = $tag;
     }
     elsif($next_line =~ /^##(.*)=(.*)/)
     {
@@ -90,7 +88,6 @@ sub new
     }
     elsif($next_line =~ /^##/)
     {
-      chomp($next_line);
       push(@header_extra_lines, $next_line);
       #carp("VCF header line unrecognised '$next_line'");
     }
@@ -98,7 +95,6 @@ sub new
     {
       # column header line (e.g. '#CHROM..')
       my $header_line = substr($next_line, 1);
-      chomp($header_line);
 
       @columns_arr = split(/\t+/, $header_line);
 
@@ -118,6 +114,7 @@ sub new
     }
 
     $next_line = <$handle>;
+    chomp($next_line);
   }
 
   if(@columns_arr == 0 && defined($next_line))
@@ -231,8 +228,13 @@ sub _parse_header_tag
 {
   # $column=<$str>
   my ($tag_col, $str) = @_;
+  $tag_col = uc($tag_col);
+
+  if(!grep(/^$tag_col$/, @header_tag_columns) ||
+     substr($str,0,1) ne '<' || substr($str,-1) ne '>') { return undef; }
 
   my %tag = ('column' => $tag_col);
+  $str = substr($str, 1, -1);
 
   while($str =~ /\s*(\w+)\s*=\s*(\"(?:(?:\\\\)*\\\"|[^\"]*)*\"|\'(?:(?:\\\\)*\\\'|[^\']*)*\'|[^,]*?)(?:,|$)/gi)
   {
