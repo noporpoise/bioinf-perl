@@ -107,7 +107,7 @@ if($READMP && $reflen < 2*$READLEN+$READMPSIZE) {
   exit(-1);
 }
 if($reflen <= $NUM_SNPS+$NUM_INDELS+$NUM_INV) {
-  print "Warning: genome is smaller than number of snps+indels (" .
+  print "Warning: genome is smaller than number of snps+indels+invs (" .
         join(" + ", num2str($NUM_SNPS), num2str($NUM_INDELS), num2str($NUM_INV)).
         ")\n";
 }

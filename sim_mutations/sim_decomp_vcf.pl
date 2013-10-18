@@ -68,6 +68,8 @@ for(my $var = 0; ; $var++)
   @alleles = map {substr($_, $start, $end-$start)} @genomes;
   map {$alleles[$_] =~ s/\-//g} 0..$#alleles;
 
+  my @m = map {substr($masks[$_], $start, $end-$start)} 0..$#masks;
+
   my $r = $alleles[0];
 
   # Remove duplicates
@@ -80,7 +82,7 @@ for(my $var = 0; ; $var++)
 
   # Add padding base
   my $varpos = $refpos;
-  if(defined(first {length($_) != 1} @alleles)) {
+  if(defined(first {length($_) != 1} ($r,@alleles))) {
     $varpos--;
     my $pos = $start-1;
     while($pos >= 0 && ($c = substr($genomes[0], $pos, 1)) eq '-') { $pos--; }
@@ -89,8 +91,9 @@ for(my $var = 0; ; $var++)
   }
 
   my $alt = join(',', @alleles);
+  my $info = "."; # "L=$start:$end;D=".join(',', @m);
   print join("\t", $chrname, $varpos+1, "truth$var", $r, $alt, '.', "PASS",
-             ".", "GT", "0/1")."\n";
+             $info, "GT", "0/1")."\n";
 
   # Move refpos forward
   for(; $start < $end; $start++) {
@@ -104,13 +107,13 @@ sub get_var
   # s = SNPs; i = insert; d = deletion; v = inversion
   # Assume no overlapping variants; see sim_mutation.pl
   my ($pos,$refpos) = @_;
-  my ($s,$c,$end);
+  my ($m,$c,$end);
   for(; $pos < $len; $pos++) {
-    for($s = 0; $s < @masks; $s++) {
-      $c = substr($masks[$s],$pos,1);
+    for($m = 0; $m < @masks; $m++) {
+      $c = substr($masks[$m],$pos,1);
       if($c ne '.' && $c eq lc($c)) {
         $c = uc($c);
-        for($end = $pos+1; $end < $len && substr($masks[$s],$end,1) eq $c; $end++) {}
+        for($end = $pos+1; $end < $len && substr($masks[$m],$end,1) eq $c; $end++) {}
         return ($pos,$end,$refpos);
       }
     }

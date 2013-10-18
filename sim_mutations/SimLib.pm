@@ -83,11 +83,13 @@ sub trim_alleles
   my ($lend,$rend) = get_trim_dist(@a);
   if($lend > 0) {
     @a = map {substr($_, $lend)} @a;
-    $lf = substr($lf, $lend, $kmer_size-$lend).substr($a[0],0,$lend);
+    $lf .= substr($a[0],0,$lend);
+    $lf = substr($lf, -$kmer_size);
   }
   if($rend > 0) {
     @a = map {substr($_, 0, -$rend)} @a;
-    $rf = substr($a[0],-$rend).substr($rf, 0, $kmer_size-$rend);
+    $rf = substr($a[0],-$rend).$rf;
+    $rf = substr($lf,0,$kmer_size);
   }
   return ($lf,$rf,@a);
 }
