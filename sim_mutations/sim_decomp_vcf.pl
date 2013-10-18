@@ -60,6 +60,11 @@ my @alleles;
 my %hsh;
 for(my $var = 0; ; $var++)
 {
+  # Move refpos forward
+  for(; $start < $end; $start++) {
+    if(substr($genomes[0],$start,1) ne '-') { $refpos++; }
+  }
+
   ($start,$end,$refpos) = get_var($end, $refpos);
   if(!defined($start)) { last; }
   if($start == 0) { next; }
@@ -91,14 +96,10 @@ for(my $var = 0; ; $var++)
   }
 
   my $alt = join(',', @alleles);
-  my $info = "."; # "L=$start:$end;D=".join(',', @m);
+  # my $info = ".";
+  my $info = "L=$start:$end;D=".join(',', @m);
   print join("\t", $chrname, $varpos+1, "truth$var", $r, $alt, '.', "PASS",
              $info, "GT", "0/1")."\n";
-
-  # Move refpos forward
-  for(; $start < $end; $start++) {
-    if(substr($genomes[0],$start,1) ne '-') { $refpos++; }
-  }
 }
 
 sub get_var
@@ -108,6 +109,7 @@ sub get_var
   # Assume no overlapping variants; see sim_mutation.pl
   my ($pos,$refpos) = @_;
   my ($m,$c,$end);
+  # print "pos: $pos\n";
   for(; $pos < $len; $pos++) {
     for($m = 0; $m < @masks; $m++) {
       $c = substr($masks[$m],$pos,1);
