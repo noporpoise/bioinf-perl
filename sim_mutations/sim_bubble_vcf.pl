@@ -22,12 +22,13 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./sim_bubble_vcf.pl <kmer_size> [<sample.fa> <sample.mask> ..]\n";
+"Usage: ./sim_bubble_vcf.pl <kmer_size> <in1.fa> <in1.mask> <in2.fa> <in2.mask>
+  Print bubble vcf\n";
 
   exit(-1);
 }
 
-if(@ARGV < 5) { print_usage(); }
+if(@ARGV != 5) { print_usage(); }
 
 my $kmer_size = shift;
 
@@ -38,123 +39,118 @@ if(scalar(@ARGV) % 2 != 0) { print_usage(); }
 # Load and merge mask files
 #
 my ($chrname,$len,$genarr,$mskarr) = load_genome_mask_files(@ARGV);
-my @genomes = @$genarr;
+my @seq = @$genarr;
 my @masks = @$mskarr;
 
-print STDERR "".@genomes." Genome and mask pairs loaded\n";
-
-#
-# Merge masks
-#
-my $mask = "." x length($masks[0]);
-my $ref = $mask;
-
-for(my $i = 0; $i < @genomes; $i++)
-{
-  while($masks[$i] =~ /([^\.]+)/g)
-  {
-    my $start = $-[0];
-    my $end = $+[0];
-    substr($mask, $start, $end-$start) = $1;
-  }
-}
-
-my ($i, $j, $g) = (0,0,0);
-for($i = 0; $i < $len; $i++) {
-  for($g = 0; $g < @genomes && substr($genomes[$g], $i, 1) eq '-'; $g++) {}
-  if($g < @genomes) {
-    # This one will be taken if insertion
-    substr($ref, $j, 1) = substr($genomes[$g], $i, 1); # may be overwritten
-    for($g = 0; $g < @genomes; $g++) {
-      my $c = substr($genomes[$g], $i, 1);
-      substr($genomes[$g], $j, 1) = $c;
-      if(substr($masks[$g], $i, 1) eq '.' && $c ne '-') {substr($ref, $j, 1) = $c;}
-    }
-    substr($mask, $j, 1) = substr($mask, $i, 1);
-    $j++;
-  }
-}
-
-for($g = 0; $g < @genomes; $g++) { substr($genomes[$g], $j) = ''; }
-substr($mask, $j) = '';
-substr($ref, $j) = '';
-
-# print STDERR ">mask\n$mask\n";
-# print STDERR ">ref\n$ref\n";
-
-print STDERR "Masks overlaid; length: $j\n";
-# print STDERR "$mask\n";
+print STDERR "".@seq." Genome and mask pairs loaded\n";
 
 #
 # Generate truth VCF
 #
 print "#".join("\t", qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT))."\n";
-my $prev_flank_len = -1;
 
-# speed up
-if($mask =~ /^\.*$/) { print STDERR "No variants\n"; exit; }
+# Find position of first mismatch
+my $clamp_start = next_clamp(0);
 
-for(my $i = 0; $mask =~ /([^\.]+(?:\.+[^\.]+)*?)(\.{$kmer_size,1000})/g; $i++)
+if($clamp_start == -1) {
+  print STDERR "Not a single stretch of identity of length >=$kmer_size\n";
+  exit;
+}
+
+my ($ls,$le,$rs,$re);
+
+for(my $n = 0; (($le,$rs) = next_bubble($clamp_start)) && defined($le); $n++)
 {
-  # $-[0] is start pos of allele
-  my $start = $-[0];
-  my $var_len = length($1);
-  my $mutations = $1;
+  my ($ls, $re) = (extend_left_clamp($le), extend_right_clamp($rs));
+  my $lf = substr($seq[0],$ls,$le-$ls+1);
+  my $rf = substr($seq[0],$rs,$re-$rs+1);
+  $lf =~ s/-//g; $rf =~ s/-//g;
 
-  my $lflank_len = $prev_flank_len;
-  my $rflank_len = length($2);
+  my @branches = map{'N'.substr($seq[$_], $le+1, $rs-$le-1)} (0,1);
+  map {$branches[$_] =~ s/-//g} (0,1);
 
-  if($lflank_len == -1)
-  {
-    $lflank_len = 0;
-    while($lflank_len < $start && $lflank_len < 1000 &&
-          substr($mask, $start-$lflank_len-1, 1) eq '.') { $lflank_len++; }
+  my @m = map{substr($masks[$_], $le+1, $rs-$le-1)} (0,1);
+  my ($snp,$ins,$del,$inv) = mutant_breakdown(@m);
+
+  my $info = "LF=$lf;RF=$rf;SNP=$snp;INS=$ins;DEL=$del;INV=$inv";
+
+  print join("\t", $chrname, "0", "truth$n", "N", join(',', @branches), ".",
+             "PASS", $info, ".") . "\n";
+
+  $clamp_start = $rs;
+}
+
+# pass two mask strings
+# returns (snps,ins,del,inv) counts
+sub mutant_breakdown
+{
+  my @m = @_;
+  my ($i, $mlen) = (0, length($m[0]));
+  my %vars = ('S' => 0, 'I' => 0, 'D' => 0, 'V' => 0);
+  while($i < $mlen) {
+    my @v = map{uc(substr($m[$_],$i,1))} (0,1);
+    if($v[0] ne $v[1]) {
+      my $j = $v[0] eq '.' ? 1 : 0;
+      my $var = $v[$j];
+      $vars{$var}++;
+      do { $i++; } while($i < $mlen && substr($m[$j],$i,1) eq $var);
+    } else { $i++; }
   }
-  $prev_flank_len = $rflank_len;
+  return @vars{qw(S I D V)};
+}
 
-  # print STDERR "Match '$1' start:$start len:$var_len mut:$mutations\n";
+# returns position of matching base before and base after variants
+sub next_bubble
+{
+  my ($clend, $clstart) = (0, @_);
 
-  # Get alleles
-  my @alleles = map {substr($genomes[$_], $start, $var_len)} 0..$#genomes;
-  for(my $i = 0; $i < @alleles; $i++) { $alleles[$i] =~ s/-//g; }
+  # Extend left-hand match until first mismatch
+  for($clend = $clstart+$kmer_size;
+      $clend < $len && substr($seq[0],$clend,1) eq substr($seq[1],$clend,1);
+      $clend++) {}
 
-  # Remove duplicates
-  my %ah = ();
-  @ah{@alleles} = 1;
-  @alleles = keys(%ah);
+  if($clend == $len) { return undef; }
 
-  if(@alleles > 1 && $lflank_len >= $kmer_size)
+  # Find next matching run of $kmer_size bp
+  my $pos = next_clamp($clend+1);
+
+  return ($pos == -1) ? undef : ($clend-1, $pos);
+}
+
+# A clamp is just a run of $kmer_size bases of matching sequence
+sub next_clamp
+{
+  my ($c, $match, $run, $pos) = (0, 0, 0, @_);
+  while($match < $kmer_size && $pos < $len)
   {
-    my $lflank = substr($ref, $start-$lflank_len, $lflank_len);
-    my $rflank = substr($ref, $start+$var_len, $rflank_len);
-
-    ($lflank, $rflank, @alleles) = normalise_variant($kmer_size, $lflank, $rflank,
-                                                     @alleles);
-
-    # If not a SNP add a padding base from the left flank
-    if(defined(first {length($_) != 1} @alleles)) {
-      map {$alleles[$_] = substr($lflank,-1).$alleles[$_]} 0..$#alleles;
+    $c = substr($seq[0],$pos,1);
+    if($c eq substr($seq[1],$pos,1)) {
+      if($c ne '-') { $match++; }
+      $run++;
     }
-
-    my $info = "LF=".substr($lflank,-$kmer_size).";" .
-               "RF=".substr($rflank,0,$kmer_size);
-
-    # Get annotations from the mask
-    my @local_masks = map {substr($masks[$_],$start,$var_len)} 0..$#genomes;
-
-    # The start of each variant is lower case in only one individual
-    my ($snp,$ins,$del,$inv) = (0,0,0,0);
-    for my $local_mask (@local_masks)
-    {
-      while($local_mask =~ /s/g) { $snp++; }
-      while($local_mask =~ /i/g) { $ins++; }
-      while($local_mask =~ /d/g) { $del++; }
-      while($local_mask =~ /v/g) { $inv++; }
-    }
-
-    $info .= ";SNP=$snp;INS=$ins;DEL=$del;INV=$inv";
-
-    print join("\t", $chrname, "0", "truth$i", "N", join(',', @alleles), ".",
-               "PASS", $info, ".") . "\n";
+    else { $match = $run = 0; }
+    $pos++;
+    # print "$c: pos: $pos match: $match run: $run\n";
   }
+  return ($match < $kmer_size ? -1 : $pos-$run);
+}
+
+sub extend_right_clamp
+{
+  my ($match, $p) = (1, @_);
+  while($match < $kmer_size) {
+    if(substr($seq[0],$p,1) ne '-') { $match++; }
+    $p++;
+  }
+  return $p;
+}
+
+sub extend_left_clamp
+{
+  my ($match, $p) = (1, @_);
+  while($match < $kmer_size) {
+    if(substr($seq[0],$p-1,1) ne '-') { $match++; }
+    $p--;
+  }
+  return $p;
 }

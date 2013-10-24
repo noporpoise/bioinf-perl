@@ -65,7 +65,7 @@ for(my $var = 0; ; $var++)
     if(substr($genomes[0],$start,1) ne '-') { $refpos++; }
   }
 
-  ($start,$end,$refpos) = get_var($end, $refpos);
+  ($start,$end,$refpos) = next_var($end, $refpos);
   if(!defined($start)) { last; }
   if($start == 0) { next; }
 
@@ -102,18 +102,23 @@ for(my $var = 0; ; $var++)
              $info, "GT", "0/1")."\n";
 }
 
-sub get_var
+sub next_var
 {
   # In mask files, variants start with lower case letters
   # s = SNPs; i = insert; d = deletion; v = inversion
   # Assume no overlapping variants; see sim_mutation.pl
   my ($pos,$refpos) = @_;
-  my ($m,$c,$end);
-  # print "pos: $pos\n";
-  for(; $pos < $len; $pos++) {
-    for($m = 0; $m < @masks; $m++) {
+  my ($m,$n,$c,$end);
+
+  for(; $pos < $len; $pos++)
+  {
+    for($m = 0; $m < @masks; $m++)
+    {
       $c = substr($masks[$m],$pos,1);
-      if($c ne '.' && $c eq lc($c)) {
+
+      if($c ne '.' && $c eq lc($c) &&
+         defined(first {substr($masks[$_],$pos,1) ne $c} 0..$#masks))
+      {
         $c = uc($c);
         for($end = $pos+1; $end < $len && substr($masks[$m],$end,1) eq $c; $end++) {}
         return ($pos,$end,$refpos);
