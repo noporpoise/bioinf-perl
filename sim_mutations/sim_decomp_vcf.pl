@@ -96,8 +96,9 @@ for(my $var = 0; ; $var++)
   }
 
   my $alt = join(',', @alleles);
-  # my $info = ".";
-  my $info = "L=$start:$end;D=".join(',', @m);
+  my $info = ".";
+  # my $info = "L=$start:$end;D=".join(',', @m);
+
   print join("\t", $chrname, $varpos+1, "truth$var", $r, $alt, '.', "PASS",
              $info, "GT", "0/1")."\n";
 }

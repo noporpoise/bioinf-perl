@@ -163,11 +163,8 @@ for(my $i = 0; $i < $NUM_SNPS; $i++)
     for my $s (@snp_samples)
     {
       substr($genomes[$s], $pos, 1) = $snp;
-      substr($masks[$s], $pos, 1) = 'S';
+      substr($masks[$s], $pos, 1) = 's';
     }
-
-    # Pick one to make lowercase
-    substr($masks[$snp_samples[0]], $pos, 1) = 's';
 
     substr($mask, $pos, 1) = 'S';
     $num_of_snps++;
@@ -214,19 +211,15 @@ for(my $i = 0; $i < $NUM_INDELS; $i++)
     }
 
     if($is_ins) {
-      for my $s (@ins_samples) {
-        substr($masks[$s], $pos, $len) = 'I'x$len;
-      }
-      # Pick one to be lower case at start
-      substr($masks[$ins_samples[0]], $pos, 1) = 'i';
+      # lower case at first base
+      my $mut = 'i'.('I'x($len-1));
+      for my $s (@ins_samples) { substr($masks[$s], $pos, $len) = $mut; }
       $num_of_ins++;
     }
     else {
-      for my $s (@del_samples) {
-        substr($masks[$s], $pos, $len) = 'D'x$len;
-      }
-      # Pick one to be lower case at start
-      substr($masks[$del_samples[0]], $pos, 1) = 'd';
+      # lower case at first base
+      my $mut = 'd'.('D'x($len-1));
+      for my $s (@del_samples) { substr($masks[$s], $pos, $len) = $mut; }
       $num_of_del++;
     }
 
@@ -257,14 +250,12 @@ for(my $i = 0; $i < $NUM_INV; $i++)
     }
 
     my $inv = rev_comp(substr($ref, $pos, $len));
+    my $mut = 'v'.('V'x($len-1));
     for my $s (@inv_samples)
     {
       substr($genomes[$s], $pos, $len) = $inv;
-      substr($masks[$s], $pos, $len) = 'V'x$len;
+      substr($masks[$s], $pos, $len) = $mut; # vVVVV..
     }
-
-    # Pick one to be lower case at start
-    substr($masks[$inv_samples[0]], $pos, 1) = 'v';
 
     substr($mask, $pos, $len) = 'V'x$len;
     $num_of_invs++;
