@@ -257,9 +257,6 @@ sub contig_exists_sub
   my ($contig) = @_;
   my ($idx,$pos) = $search_genomes->find_index($contig);
   return ($idx != -1);
-  # my $i = 0;
-  # while($i < @genomes && index($genomes[$i], $contig) == -1) {$i++;}
-  # return ($i < @genomes);
 }
 
 sub resolve_var
