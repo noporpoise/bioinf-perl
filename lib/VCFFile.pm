@@ -3,12 +3,12 @@ package VCFFile;
 use strict;
 use warnings;
 
-use List::Util qw(min max);
+use List::Util qw(first min max);
 use Carp;
 
 # All methods are object methods except these:
 use base 'Exporter';
-our @EXPORT = qw(vcf_get_standard_columns
+our @EXPORT = qw(vcf_open vcf_get_standard_columns
                  vcf_sort_variants
                  vcf_add_filter_txt
                  vcf_is_snp vcf_get_clean_indel
@@ -40,8 +40,8 @@ sub new
   #
   # Load header
   #
-  my %header_metainfo = ();
-  my %header_tags = ();
+  # my @header_metainfo = ();
+  # my %header_tags = ();
   my @header_extra_lines = (); # Unrecognised header lines
   my @columns_arr = ();
 
@@ -52,60 +52,28 @@ sub new
 
   while(defined($next_line))
   {
-    my $tag;
-    if($next_line =~ /^##(.*?)=(.*)/ && defined($tag = _parse_header_tag($1,$2)))
+    if($next_line =~ /^##/)
     {
-      # Prints error and returns undef if not valid line
-      if(defined($header_tags{$tag->{'ID'}}))
-      {
-        carp("Multiple header tags use the ID '$tag->{'ID'}' " .
-             "(only the last will be accepted)");
+      my $tag = substr($next_line, 2);
+      if($next_line =~ /^##(ALT|FILTER|INFO|FORMAT)=/i) {
+        _check_valid_header_tag($tag);
       }
-      elsif(defined($header_metainfo{$tag->{'ID'}}))
-      {
-        carp("Tag header shares ID with metainfo header '$tag->{'ID'}'");
-      }
-
-      $header_tags{$tag->{'ID'}} = $tag;
-    }
-    elsif($next_line =~ /^##(.*)=(.*)/)
-    {
-      # header meta info line
-      my ($key,$value) = ($1,$2);
-      chomp($value);
-
-      if(defined($header_metainfo{$key}))
-      {
-        carp("Multiple metainfo tags with ID '$key' " .
-             "(only last will be accepted)");
-      }
-      elsif(defined($header_tags{$key}))
-      {
-        carp("Metainfo header shares ID with tag '$key'");
-      }
-
-      $header_metainfo{$key} = $value;
-    }
-    elsif($next_line =~ /^##/)
-    {
-      push(@header_extra_lines, $next_line);
-      #carp("VCF header line unrecognised '$next_line'");
+      push(@header_extra_lines, $tag);
     }
     elsif($next_line =~ /^#[^#]/)
     {
       # column header line (e.g. '#CHROM..')
       my $header_line = substr($next_line, 1);
-
       @columns_arr = split(/\t+/, $header_line);
-
-      if(@columns_arr == 0)
-      {
-        carp("VCF columns missing");
-      }
 
       # Peek at first entry
       $next_line = <$handle>;
-      last;
+
+      if(@columns_arr == 0 || $columns_arr[0] ne "CHROM")
+      {
+        carp("VCF columns missing");
+      }
+      else { last; }
     }
     elsif($next_line !~ /^\s*$/)
     {
@@ -161,9 +129,6 @@ sub new
 
   my @sample_names = grep {!defined($usual_fields{uc($_)})} @columns_arr;
 
-  #print "Meta tags: " . join(",", sort keys %header_metainfo) . "\n";
-  #print "header tags:" . join(",", sort keys %header_tags) . "\n";
-
   # Set _failed_vars_out to undef to skip non-PASS variants
   # Set _failed_vars_out to filehandle print non-PASS variants elsewhere
   # Do not set / delete() failed_vars_out to get all variants
@@ -171,9 +136,7 @@ sub new
   my $self = {
       _handle => $handle,
       _next_line => $next_line,
-      _header_metainfo => \%header_metainfo,
-      _header_tags => \%header_tags,
-      _header_extra_line => \@header_extra_lines,
+      _header_lines => \@header_extra_lines,
       _columns_hash => \%columns_hash,
       _columns_arr => \@columns_arr,
       _sample_names => \@sample_names,
@@ -184,7 +147,32 @@ sub new
   return $self;
 }
 
-sub close_vcf
+#
+# Open VCF Handle
+# If vcf_path is not defined, open stdin
+#
+sub vcf_open
+{
+  my ($vcf_path) = @_;
+  my $vcffh;
+
+  if(defined($vcf_path) && $vcf_path ne "-") {
+    open($vcffh, $vcf_path) or croak("Cannot open VCF file '$vcf_path'\n");
+  }
+  elsif(-p STDIN) {
+    # STDIN is connected to a pipe
+    open($vcffh, "<&=STDIN") or croak("Cannot read pipe");
+  }
+  else
+  {
+    croak("Must specify or pipe in a VCF file");
+  }
+
+  my $vcf = new VCFFile($vcffh);
+  return $vcf;
+}
+
+sub vcf_close
 {
   my ($self) = @_;
   close($self->{_handle}) or carp("Cannot close VCF file handle");
@@ -231,7 +219,11 @@ sub _parse_header_tag
   $tag_col = uc($tag_col);
 
   if(!grep(/^$tag_col$/, @header_tag_columns) ||
-     substr($str,0,1) ne '<' || substr($str,-1) ne '>') { return undef; }
+     substr($str,0,1) ne '<' || substr($str,-1) ne '>')
+  {
+    carp("VCF header expected ##$tag_col=<...> but missing <>");
+    return undef;
+  }
 
   my %tag = ('column' => $tag_col);
   $str = substr($str, 1, -1);
@@ -279,42 +271,37 @@ sub _parse_header_tag
     }
     else
     {
-      #carp("VCF header tag has unknown key=value pair '$str'");
+      carp("VCF header tag has unknown key=value pair '$str'");
       return undef;
     }
   }
 
-  # Check values - print error if needed
-  return _check_valid_header_tag(\%tag) ? \%tag : undef;
+  return \%tag;
 }
 
 # Returns 0 if invalid, 1 if valid
 sub _check_valid_header_tag
 {
-  my ($tag) = @_;
+  my ($txt) = @_;
+
+  my $tag;
+  if($txt =~ /^(ALT|FILTER|INFO|FORMAT)=(.*)/i) {
+    $tag = _parse_header_tag($1,$2);
+  }
+
+  if(!defined($tag)) { carp("Invalid header tag: $txt"); return 0; }
 
   # Check all the things!
-
-  # column
-  if(!defined($tag->{'column'}))
-  {
-    die("VCF header tag 'column' not set");
-  }
-  elsif(!grep(/^$tag->{'column'}$/, @header_tag_columns))
-  {
-    #carp("VCF header tag column not one of ".join(",", @header_tag_types)."\n");
-    return 0;
-  }
 
   # ID
   if(!defined($tag->{'ID'}))
   {
-    #carp("VCF header tag id missing");
+    carp("VCF header tag id missing");
     return 0;
   }
   elsif($tag->{'ID'} =~ /\s/)
   {
-    #carp("VCF header tag id contains whitespace characters '$tag->{'ID'}'\n");
+    carp("VCF header tag id contains whitespace characters '$tag->{'ID'}'\n");
     return 0;
   }
 
@@ -323,32 +310,32 @@ sub _check_valid_header_tag
     # Number
     if(!defined($tag->{'Number'}))
     {
-      #carp("VCF header tag 'Number' attribute is missing ('.' or an int plz)");
+      carp("VCF header tag 'Number' attribute is missing ('.' or an int plz)");
       return 0;
     }
     elsif($tag->{'Number'} !~ /^(?:\d+|\.)$/)
     {
-      #carp("VCF header tag number of arguments is not an +ve int " .
-      #     "'$tag->{'Number'}'\n");
+      carp("VCF header tag number of arguments is not an +ve int " .
+          "'$tag->{'Number'}'\n");
       return 0;
     }
 
     # Type
     if(!defined($tag->{'Type'}))
     {
-      #carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types)");
+      carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types)");
       return 0;
     }
     elsif($tag->{'column'} eq "INFO" &&
           !grep(/^$tag->{'Type'}$/, qw(Integer Float Flag Character String)))
     {
-      #carp("VCF header tag Type not one of Integer,Float,Flag,Character,String\n");
+      carp("VCF header tag Type not one of Integer,Float,Flag,Character,String\n");
       return 0;
     }
     elsif($tag->{'column'} eq "FORMAT" &&
           !grep(/^$tag->{'Type'}$/, qw(Integer Float Character String)))
     {
-      #carp("VCF header tag Type not one of Integer,Float,Character,String\n");
+      carp("VCF header tag Type not one of Integer,Float,Character,String\n");
       return 0;
     }
   }
@@ -366,7 +353,7 @@ sub _check_valid_header_tag
 
   if(!defined($tag->{'Description'}))
   {
-    #carp("VCF header tag missing Description (ID: $tag->{'ID'})\n");
+    carp("VCF header tag missing Description (ID: $tag->{'ID'})\n");
     return 0;
   }
 
@@ -374,110 +361,46 @@ sub _check_valid_header_tag
   if(defined($tag->{'Type'}) && $tag->{'Type'} eq "Flag" &&
      $tag->{'Number'} ne "0")
   {
-    #carp("VCF header type 'Flag' cannot have 'Number' other than 0");
+    carp("VCF header type 'Flag' cannot have 'Number' other than 0");
     return 0;
   }
 
   return 1;
 }
 
-sub _cmp_header_tags
-{
-  for my $tag_field (qw(column ID Description))
-  {
-    if(!defined($a->{$tag_field}))
-    {
-      "Error: " . join(";", map {"$_ => $a->{$_}"} keys %$a)."\n";
-    }
-
-    if(!defined($b->{$tag_field}))
-    {
-      "Error: " . join(";", map {"$_ => $b->{$_}"} keys %$b)."\n";
-    }
-
-    my $cmp = $a->{$tag_field} cmp $b->{$tag_field};
-
-    if($cmp != 0)
-    {
-      return $cmp;
-    }
-  }
-
-  return 0;
-}
 
 sub print_header
 {
   my ($self, $out) = @_;
 
   # Open out handle to stdout, if not already defined
-  if(!defined($out))
-  {
-    open($out, ">-");
+  if(!defined($out)) { open($out, ">-"); }
+
+  my $hdrs = $self->{_header_lines};
+  my ($h1, $h2) = (-1,-1);
+
+  if(defined($h1 = first {$hdrs->[$_] =~ /^fileformat=/i} 0..(@$hdrs-1))) {
+    print "##".$hdrs->[$h1]."\n";
   }
+  else { print "##fileformat=VCFv4.0\n"; $h1 = -1; }
 
-  # Print metainfo lines
-  my $header_metainfo = $self->{_header_metainfo};
-
-  if(!defined($header_metainfo->{'fileformat'}))
-  {
-    $header_metainfo->{'fileformat'} = "VCFv4.0";
+  if(defined($h2 = first {$hdrs->[$_] =~ /^fileDate=/i} 0..(@$hdrs-1))) {
+    print "##".$hdrs->[$h2]."\n";
   }
-
-  if(!defined($header_metainfo->{'fileDate'}))
-  {
+  else {
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-    $header_metainfo->{'fileDate'} = sprintf("%02d/%02d/%02d", $mday, $mon+1, $year % 100);
+    print "##fileDate=".sprintf("%02d/%02d/%02d", $mday, $mon+1, $year % 100)."\n";
+    $h2 = -1;
   }
 
-  print $out "##fileformat=".$header_metainfo->{'fileformat'}."\n";
-  print $out "##fileDate=".$header_metainfo->{'fileDate'}."\n";
-
-  for my $key (sort keys %$header_metainfo)
-  {
-    if($key ne "fileformat" && $key ne "fileDate")
-    {
-      print $out "##$key=$header_metainfo->{$key}\n";
-    }
-  }
-
-  # Print unknowns
-  if(@{$self->{_header_extra_line}} > 0)
-  {
-    print join("\n",@{$self->{_header_extra_line}})."\n";
-  }
-
-  # Print tags
-  for my $tag (sort _cmp_header_tags values %{$self->{_header_tags}})
-  {
-    my $desc = $tag->{'Description'};
-
-    $desc =~ s/\\/\\\\/g;
-    $desc =~ s/\"/\\\"/g;
-
-    print "";
-
-    if($tag->{'column'} =~ /^(ALT|FILTER)$/i)
-    {
-      print $out "##" . $tag->{'column'} . "=<" .
-                 "ID=" . $tag->{'ID'} . "," .
-                 "Description=\"" . $desc . "\">\n";
-    }
-    else
-    {
-      print $out "##" . $tag->{'column'} . "=<" .
-                 "ID=" . $tag->{'ID'} . "," .
-                 "Number=" . $tag->{'Number'} . "," .
-                 "Type=" . $tag->{'Type'} . "," .
-                 "Description=\"" . $desc . "\">\n";
-    }
+  # Print header lines
+  for(my $i = 0; $i < @$hdrs; $i++) {
+    if($i != $h1 && $i != $h2) { print "##".$hdrs->[$i]."\n"; }
   }
 
   # Print columns
   my @columns_arr = @{$self->{_columns_arr}};
-
-  if(@columns_arr > 0)
-  {
+  if(@columns_arr > 0) {
     print $out "#" . join("\t", @columns_arr) . "\n";
   }
 }
@@ -506,77 +429,64 @@ sub add_header_metainfo
 {
   my ($self, $key, $value) = @_;
 
-  $self->{_header_metainfo}->{$key} = $value;
+  push(@{$self->{_header_lines}}, "$key=$value");
 }
 
 sub remove_header_metainfo
 {
   my ($self, $key) = @_;
 
-  delete($self->{_header_metainfo}->{$key});
-}
-
-sub get_header_metainfo
-{
-  my ($self) = @_;
-
-  return %{$self->{_header_metainfo}};
+  my @newhdrs = grep {$_ !~ /^$key=/} @{$self->{_header_lines}};
+  $self->{_header_lines} = \@newhdrs;
 }
 
 # Tags e.g.
 ##INFO=<ID=AS,Number=1,Type=Float,Description="Woot">
 
-sub add_header_tag
+sub _prepare_header_tag
 {
-  my ($self, $tag_col, $tag_id, $tag_number, $tag_type, $tag_description)
-    = @_;
+  my ($column, $tag_id, $tag_num, $tag_type, $description) = @_;
 
   # INFO, FILTER, FORMAT.. column is in upper case
-  $tag_col = uc($tag_col);
+  $column = uc($column);
 
-  my $tag = {'column' => $tag_col,
-             'ID' => $tag_id,
-             'Description' => $tag_description};
-
-  if(defined($tag_number))
-  {
-    $tag->{'Number'} = $tag_number;
-  }
-
-  if(defined($tag_type))
-  {
+  if(defined($tag_type)) {
     # Integer, String.. lowercase with uppercase first letter
     $tag_type = lc($tag_type);
     substr($tag_type,0,1) = uc(substr($tag_type,0,1));
-
-    $tag->{'Type'} = $tag_type;
   }
 
-  #print "Adding tag: column => $tag_col; ID => $tag_id; " .
-  #      "Description => $tag_description;\n";
+  $description =~ s/\\/\\\\/g;
+  $description =~ s/\"/\\\"/g;
 
-  if(_check_valid_header_tag($tag))
+  if($column =~ /^(ALT|FILTER)$/i)
   {
-    $self->{_header_tags}->{$tag_id} = $tag;
+    return "$column=<ID=$tag_id,Description=\"$description\">\n";
   }
   else
   {
-    print STDERR "VCFFile::add_header_tag(): " .
-                 "Not a valid header tag: '$tag_id'\n";
+    return "$column=<ID=$tag_id,Number=$tag_num,Type=$tag_type," .
+           "Description=\"$description\">";
   }
+}
+
+sub add_header_tag
+{
+  my ($self, $tag_col, $tag_id, $tag_num, $tag_type, $tag_descr) = @_;
+
+  my $tag = _prepare_header_tag($tag_col, $tag_id, $tag_num, $tag_type, $tag_descr);
+
+  _check_valid_header_tag($tag);
+  push(@{$self->{_header_lines}}, $tag);
 }
 
 sub remove_header_tag
 {
-  my ($self,$tag_id) = @_;
+  my ($self,$tagid) = @_;
 
-  delete($self->{_header_tags}->{$tag_id});
-}
-
-sub get_header_tags
-{
-  my ($self) = @_;
-  return %{$self->{_header_tags}};
+  my $hdrs = $self->{_header_lines};
+  my @newhdrs = grep {$_ !~ /^\w+=<(.*,)[\s]*ID=$tagid/} @$hdrs;
+  $self->{_header_lines} = \@newhdrs;
 }
 
 

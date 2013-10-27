@@ -131,11 +131,6 @@ for my $extra_header (@extra_headers)
     }
     else
     {
-      if(!defined(get_header_metainfo($header_txt)))
-      {
-        warn("Metainfo tag '$header_txt' in VCF file - cannot remove\n");
-      }
-    
       $vcf->remove_metainfo($header_txt);
     }
   }

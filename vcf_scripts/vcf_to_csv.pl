@@ -75,13 +75,17 @@ my @vcf_cols = grep {defined($vcf_file_cols{$_})} @vcf_standard_cols;
 push(@vcf_cols, ('true_REF','true_ALT','true_POS'));
 
 # Get info fields from the header
-my %header_tags = $vcf->get_header_tags();
+my $hdrs = $vcf->{__header_lines};
+my @header_tags = ();
 
-my @info_tags_from_header =
-  map {$_->{'ID'}} grep {$_->{'column'} eq "INFO"} values %header_tags;
+for my $hdr (@$hdrs) {
+  if($hdr =~ /^INFO=<(.*,)\s*ID=([^,\s]+)>/) {
+    push(@header_tags, $2);
+  }
+}
 
 my %info_fields_hash = ();
-@info_fields_hash{@info_tags_from_header} = 1;
+@info_fields_hash{@header_tags} = 1;
 
 # Read the first VCF entry
 my $vcf_entry = $vcf->read_entry();
