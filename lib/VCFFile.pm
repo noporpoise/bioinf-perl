@@ -20,9 +20,9 @@ our @EXPORT = qw(vcf_open vcf_get_standard_columns
                  vcf_get_ref_alt_genome_lengths
                  vcf_get_slippage);
 
-my @header_tag_columns = qw(ALT FILTER FORMAT INFO);
-my @header_tag_types = qw(Integer Float Character String Flag);
-my @header_tag_hashkeys = qw(column ID Number Type Description);
+my @hdr_tag_columns = qw(ALT FILTER FORMAT INFO);
+my @hdr_info_types = qw(Integer Float Flag Character String);
+my @hdr_format_types = qw(Integer Float Character String);
 
 sub new
 {
@@ -40,9 +40,9 @@ sub new
   #
   # Load header
   #
-  # my @header_metainfo = ();
+  # my @hdr_metainfo = ();
   # my %header_tags = ();
-  my @header_extra_lines = (); # Unrecognised header lines
+  my @hdr_extra_lines = (); # Unrecognised header lines
   my @columns_arr = ();
 
   # Example header lines:
@@ -58,7 +58,7 @@ sub new
       if($next_line =~ /^##(ALT|FILTER|INFO|FORMAT)=/i) {
         _check_valid_header_tag($tag);
       }
-      push(@header_extra_lines, $tag);
+      push(@hdr_extra_lines, $tag);
     }
     elsif($next_line =~ /^#[^#]/)
     {
@@ -136,7 +136,7 @@ sub new
   my $self = {
       _handle => $handle,
       _next_line => $next_line,
-      _header_lines => \@header_extra_lines,
+      _header_lines => \@hdr_extra_lines,
       _columns_hash => \%columns_hash,
       _columns_arr => \@columns_arr,
       _sample_names => \@sample_names,
@@ -218,7 +218,7 @@ sub _parse_header_tag
   my ($tag_col, $str) = @_;
   $tag_col = uc($tag_col);
 
-  if(!grep(/^$tag_col$/, @header_tag_columns) ||
+  if(!grep(/^$tag_col$/, @hdr_tag_columns) ||
      substr($str,0,1) ne '<' || substr($str,-1) ne '>')
   {
     carp("VCF header expected ##$tag_col=<...> but missing <>");
@@ -301,7 +301,7 @@ sub _check_valid_header_tag
   }
   elsif($tag->{'ID'} =~ /\s/)
   {
-    carp("VCF header tag id contains whitespace characters: '$txt'\n");
+    carp("VCF header tag id contains whitespace characters: '$txt'");
     return 0;
   }
 
@@ -322,19 +322,17 @@ sub _check_valid_header_tag
     # Type
     if(!defined($tag->{'Type'}))
     {
-      carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types): '$txt'");
+      carp("VCF header tag 'Type' attribute is missing (e.g. @hdr_info_types): '$txt'");
       return 0;
     }
-    elsif($tag->{'column'} eq "INFO" &&
-          !grep(/^$tag->{'Type'}$/, qw(Number Flag Character String)))
+    elsif($tag->{'column'} eq "INFO" && !grep(/^$tag->{'Type'}$/, @hdr_info_types))
     {
-      carp("VCF header tag Type not one of Number,Flag,Character,String: '$txt'");
+      carp("VCF header tag Type not one of @hdr_info_types: '$txt'");
       return 0;
     }
-    elsif($tag->{'column'} eq "FORMAT" &&
-          !grep(/^$tag->{'Type'}$/, qw(Integer Float Character String)))
+    elsif($tag->{'column'} eq "FORMAT" && !grep(/^$tag->{'Type'}$/, @hdr_format_types))
     {
-      carp("VCF header tag Type not one of Integer,Float,Character,String: '$txt'");
+      carp("VCF header tag Type not one of @hdr_format_types: '$txt'");
       return 0;
     }
   }
@@ -343,7 +341,7 @@ sub _check_valid_header_tag
     carp("VCF header ALT/FILTER tags cannot have Number attributes: '$txt'");
     return 0;
   }
-  elsif(defined($tag->{'Type'}) && $tag->{'Type'} !~ /^FLAG$/i)
+  elsif(defined($tag->{'Type'}) && $tag->{'Type'} ne "FLAG")
   {
     carp("VCF header ALT/FILTER tags cannot have Type attributes " .
          "('$tag->{'Type'}'): '$txt'");
