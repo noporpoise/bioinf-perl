@@ -296,12 +296,12 @@ sub _check_valid_header_tag
   # ID
   if(!defined($tag->{'ID'}))
   {
-    carp("VCF header tag id missing");
+    carp("VCF header tag id missing: '$txt'");
     return 0;
   }
   elsif($tag->{'ID'} =~ /\s/)
   {
-    carp("VCF header tag id contains whitespace characters '$tag->{'ID'}'\n");
+    carp("VCF header tag id contains whitespace characters: '$txt'\n");
     return 0;
   }
 
@@ -310,50 +310,49 @@ sub _check_valid_header_tag
     # Number
     if(!defined($tag->{'Number'}))
     {
-      carp("VCF header tag 'Number' attribute is missing ('.' or an int plz)");
+      carp("VCF header tag 'Number' attribute is missing ('.' or an int plz): '$txt'");
       return 0;
     }
     elsif($tag->{'Number'} !~ /^(?:\d+|\.)$/)
     {
-      carp("VCF header tag number of arguments is not an +ve int " .
-          "'$tag->{'Number'}'\n");
+      carp("VCF header tag Number= of arguments is not an integer or '.': '$txt'");
       return 0;
     }
 
     # Type
     if(!defined($tag->{'Type'}))
     {
-      carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types)");
+      carp("VCF header tag 'Type' attribute is missing (e.g. @header_tag_types): '$txt'");
       return 0;
     }
     elsif($tag->{'column'} eq "INFO" &&
-          !grep(/^$tag->{'Type'}$/, qw(Integer Float Flag Character String)))
+          !grep(/^$tag->{'Type'}$/, qw(Number Flag Character String)))
     {
-      carp("VCF header tag Type not one of Integer,Float,Flag,Character,String\n");
+      carp("VCF header tag Type not one of Number,Flag,Character,String: '$txt'");
       return 0;
     }
     elsif($tag->{'column'} eq "FORMAT" &&
           !grep(/^$tag->{'Type'}$/, qw(Integer Float Character String)))
     {
-      carp("VCF header tag Type not one of Integer,Float,Character,String\n");
+      carp("VCF header tag Type not one of Integer,Float,Character,String: '$txt'");
       return 0;
     }
   }
   elsif(defined($tag->{'Number'}) && $tag->{'Number'} != 0)
   {
-    carp("VCF header ALT/FILTER tags cannot have Number attributes\n");
+    carp("VCF header ALT/FILTER tags cannot have Number attributes: '$txt'");
     return 0;
   }
   elsif(defined($tag->{'Type'}) && $tag->{'Type'} !~ /^FLAG$/i)
   {
     carp("VCF header ALT/FILTER tags cannot have Type attributes " .
-         "('$tag->{'Type'}')\n");
+         "('$tag->{'Type'}'): '$txt'");
     return 0;
   }
 
   if(!defined($tag->{'Description'}))
   {
-    carp("VCF header tag missing Description (ID: $tag->{'ID'})\n");
+    carp("VCF header tag missing Description (ID: $tag->{'ID'}): '$txt'");
     return 0;
   }
 
@@ -361,7 +360,7 @@ sub _check_valid_header_tag
   if(defined($tag->{'Type'}) && $tag->{'Type'} eq "Flag" &&
      $tag->{'Number'} ne "0")
   {
-    carp("VCF header type 'Flag' cannot have 'Number' other than 0");
+    carp("VCF header type 'Flag' cannot have 'Number' other than 0: '$txt'");
     return 0;
   }
 
@@ -375,8 +374,9 @@ sub print_header
 
   # Open out handle to stdout, if not already defined
   if(!defined($out)) { open($out, ">-"); }
-
+ 
   my $hdrs = $self->{_header_lines};
+
   my ($h1, $h2) = (-1,-1);
 
   if(defined($h1 = first {$hdrs->[$_] =~ /^fileformat=/i} 0..(@$hdrs-1))) {
@@ -393,10 +393,24 @@ sub print_header
     $h2 = -1;
   }
 
-  # Print header lines
-  for(my $i = 0; $i < @$hdrs; $i++) {
-    if($i != $h1 && $i != $h2) { print "##".$hdrs->[$i]."\n"; }
+  # Print in order of key e.g. contig=, ALT=, FORMAT=, INFO=, ...
+  my %tags = ();
+  for(my $i=0; $i<@$hdrs; $i++) {
+    my ($tag) = ($hdrs->[$i] =~ /^[^=]*/);
+    if(!defined($tags{$tag})) { $tags{$tag} = [$i]; }
+    else { push(@{$tags{$tag}}, $i); }
   }
+
+  for my $tag (sort {$a cmp $b} keys %tags) {
+    for my $i (@{$tags{$tag}}) {
+      if($i != $h1 && $i != $h2) { print "##".$hdrs->[$i]."\n"; }
+    }
+  }
+
+  # Print header lines
+  # for(my $i = 0; $i < @$hdrs; $i++) {
+  #   if($i != $h1 && $i != $h2) { print "##".$hdrs->[$i]."\n"; }
+  # }
 
   # Print columns
   my @columns_arr = @{$self->{_columns_arr}};
