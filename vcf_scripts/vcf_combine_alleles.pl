@@ -43,29 +43,9 @@ if(scalar(@ARGV) != scalar(@ARGV = grep {$_ !~ /^-?-p(ass(es)?)?$/i} @ARGV))
 my $vcf_file = shift;
 
 #
-# Open VCF Handle
+# Open VCF File
 #
-my $vcf_handle;
-
-if(defined($vcf_file) && $vcf_file ne "-")
-{
-  open($vcf_handle, $vcf_file)
-    or print_usage("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN)
-{
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or print_usage("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
-
-#
-# Read VCF
-#
-my $vcf = new VCFFile($vcf_handle);
+my $vcf = vcf_open($vcf_file);
 
 # Print non-PASS variants straight to stdout if -p passed
 if(defined($failed_vars_out)) { $vcf->set_filter_failed($failed_vars_out);}
@@ -136,7 +116,7 @@ print STDERR "vcf_combine_alleles.pl: " .
              pretty_fraction($num_of_merges, $num_of_printed) .
              " printed variants are merges\n";
 
-close($vcf_handle);
+$vcf->vcf_close();
 
 
 

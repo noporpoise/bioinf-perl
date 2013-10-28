@@ -26,7 +26,7 @@ if(@ARGV < 2) { print_usage(); }
 my @files = @ARGV;
 
 #
-# Open VCF Handles
+# Open VCF Files
 #
 my @handles = ();
 my @vcfs = ();

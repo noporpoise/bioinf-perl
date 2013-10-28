@@ -53,20 +53,10 @@ if(!defined($invalid_file))
   print_usage();
 }
 
-my $vcf_handle;
-
-if(defined($vcf_file) && $vcf_file ne "-")
-{
-  open($vcf_handle, $vcf_file) or die("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN) {
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or die("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
+#
+# Read VCF
+#
+my $vcf = vcf_open($vcf_file);
 
 my ($out_valid, $out_invalid);
 open($out_valid, ">$valid_file") or die("Cannot open '$valid_file'");
@@ -77,11 +67,6 @@ open($out_invalid, ">$invalid_file") or die("Cannot open '$invalid_file'");
 #
 my $genome = new RefGenome();
 $genome->load_from_files(@ref_files);
-
-#
-# Read VCF
-#
-my $vcf = new VCFFile($vcf_handle);
 
 $vcf->print_header($out_valid);
 $vcf->print_header($out_invalid);
@@ -105,6 +90,6 @@ while(defined($vcf_entry = $vcf->read_entry()))
   }
 }
 
-close($vcf_handle);
+$vcf->vcf_close();
 close($out_valid);
 close($out_invalid);

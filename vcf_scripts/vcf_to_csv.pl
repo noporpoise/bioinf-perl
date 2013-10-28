@@ -40,27 +40,11 @@ if(@ARGV > 1)
 
 my $vcf_file = shift;
 
-#
-# Open VCF Handle
-#
-my $vcf_handle;
-
-if(defined($vcf_file) && $vcf_file ne "-") {
-  open($vcf_handle, $vcf_file) or die("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN) {
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or die("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
 
 #
-# Open VCF
+# Open VCF File
 #
-my $vcf = new VCFFile($vcf_handle);
+my $vcf = vcf_open($vcf_file);
 
 # Skip non-PASS variants if -p passed
 if($skip_failed_vars) { $vcf->set_filter_failed(undef);}
@@ -166,4 +150,4 @@ while(defined($vcf_entry))
   $vcf_entry = $vcf->read_entry();
 }
 
-close($vcf_handle);
+$vcf->vcf_close();

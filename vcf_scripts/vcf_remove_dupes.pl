@@ -138,29 +138,9 @@ if(!defined($select_dupe))
 }
 
 #
-# Open VCF Handle
+# Open VCF File
 #
-my $vcf_handle;
-
-if(defined($vcf_file) && $vcf_file ne "-")
-{
-  open($vcf_handle, $vcf_file)
-    or print_usage("Cannot open VCF file '$vcf_file'");
-}
-elsif(-p STDIN)
-{
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or print_usage("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
-
-#
-# Read VCF
-#
-my $vcf = new VCFFile($vcf_handle);
+my $vcf = vcf_open($vcf_file);
 
 my $num_of_duplicate_sets = 0;
 my $num_of_duplicate_vars = 0;
@@ -249,7 +229,7 @@ print STDERR "vcf_remove_dupes.pl: " .
 print STDERR "vcf_remove_dupes.pl: " .
       pretty_fraction($num_of_printed, $num_of_entries) . " variants printed\n";
 
-close($vcf_handle);
+$vcf->vcf_close();
 
 
 

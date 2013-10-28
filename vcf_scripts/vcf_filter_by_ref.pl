@@ -84,31 +84,15 @@ if(@ref_files == 0)
 
 
 #
-# Open VCF Handle
+# Open VCF File
 #
-my $vcf_handle;
-
-if($vcf_file ne "-") {
-  open($vcf_handle, $vcf_file) or die("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN) {
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or die("Cannot read pipe");
-}
-else {
-  print_usage("Must specify or pipe in a VCF file");
-}
+my $vcf = vcf_open($vcf_file);
 
 #
 # Load reference files
 #
 my $genome = new RefGenome(uppercase => 1);
 $genome->load_from_files(@ref_files);
-
-#
-# Read VCF
-#
-my $vcf = new VCFFile($vcf_handle);
 
 # Print non-PASS variants straight to stdout if -p passed
 if(defined($failed_vars_out)) { $vcf->set_filter_failed($failed_vars_out);}
@@ -234,4 +218,4 @@ print STDERR "vcf_filter_by_ref.pl: " .
              pretty_fraction($num_of_printed_entries, $total_num_entries) .
              " variants printed\n";
 
-close($vcf_handle);
+$vcf->vcf_close();

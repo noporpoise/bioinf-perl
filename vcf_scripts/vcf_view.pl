@@ -162,24 +162,11 @@ if(!defined($flank_size))
   $flank_size = @ref_files > 0 ? 30 : 0;
 }
 
-#
-# Open VCF Handle
-#
-my $vcf_handle;
 
-if(defined($vcf_file) && $vcf_file ne "-")
-{
-  open($vcf_handle, $vcf_file)
-    or print_usage("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN) {
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or print_usage("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
+#
+# Open VCF File
+#
+my $vcf = vcf_open($vcf_file);
 
 #
 # Load reference
@@ -190,7 +177,6 @@ $genome->load_from_files(@ref_files);
 #
 # Read VCF
 #
-my $vcf = new VCFFile($vcf_handle);
 
 # Print non-PASS variants straight to stdout if -p passed
 if($skip_failed_vars) { $vcf->set_filter_failed(undef);}
@@ -365,4 +351,4 @@ while(defined($vcf_entry = $vcf->read_entry()))
   }
 }
 
-close($vcf_handle);
+$vcf->vcf_close();

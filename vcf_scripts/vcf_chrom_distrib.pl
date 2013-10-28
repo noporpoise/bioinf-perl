@@ -78,23 +78,9 @@ while(defined($chrom_line))
 close(CHROMS);
 
 #
-# Open VCF Handle
+# Open VCF File
 #
-my $vcf_handle;
-
-if(defined($vcf_file) && $vcf_file ne "-") {
-  open($vcf_handle, $vcf_file) or die("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN) {
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or die("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
-
-my $vcf = new VCFFile($vcf_handle);
+my $vcf = vcf_open($vcf_file);
 
 # Skip non-PASS variants if -p passed
 if($skip_failed_vars) { $vcf->set_filter_failed(undef); }
@@ -119,7 +105,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
   $bins_by_chr{$chr}->[$bin_index]++;
 }
 
-close($vcf_handle);
+$vcf->vcf_close();
 
 print "chr,bin_index,bin_start,count\n";
 

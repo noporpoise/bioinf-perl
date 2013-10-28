@@ -118,21 +118,9 @@ my $bin_size = $bin_size_kbp * 1000;
 print "Bin size ".num2str($bin_size)." bp\n";
 
 #
-# Open VCF Handle
+# Open VCF File
 #
-my $vcf_handle;
-
-if(defined($vcf_file) && $vcf_file ne "-") {
-  open($vcf_handle, $vcf_file) or die("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN) {
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or die("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
+my $vcf = vcf_open($vcf_file);
 
 #
 # Open output files
@@ -218,8 +206,6 @@ close($genes_handle);
 #
 print "Reading VCF...\n";
 
-my $vcf = new VCFFile($vcf_handle);
-
 # Skip non-PASS variants if -p passed
 if($skip_failed_vars) { $vcf->set_filter_failed(undef); }
 
@@ -264,7 +250,7 @@ if(defined($chr_genes{$curr_chrom}))
   add_to_gene_bins($curr_chrom);
 }
 
-close($vcf_handle);
+$vcf->vcf_close();
 
 #
 # SAVE!

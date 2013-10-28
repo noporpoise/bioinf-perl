@@ -40,23 +40,9 @@ my $ensgene_file = shift;
 my $vcf_file = shift;
 
 #
-# Open VCF Handle
+# Open VCF file
 #
-my $vcf_handle;
-
-if(defined($vcf_file) && $vcf_file ne "-")
-{
-  open($vcf_handle, $vcf_file)
-    or print_usage("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN) {
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or print_usage("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
+my $vcf = vcf_open($vcf_file);
 
 #
 # Open ensgene file
@@ -110,7 +96,6 @@ while(my ($chr, $genes) = each(%genes_by_chr))
 #
 # Read VCF
 #
-my $vcf = new VCFFile($vcf_handle);
 
 # Print non-PASS variants straight to stdout if -p passed
 if(defined($failed_vars_out)) { $vcf->set_filter_failed($failed_vars_out);}
@@ -142,7 +127,7 @@ while(defined($vcf_entry = $vcf->read_entry()))
   $vcf->print_entry($vcf_entry);
 }
 
-close($vcf_handle);
+$vcf->vcf_close();
 
 sub get_gene_pos
 {

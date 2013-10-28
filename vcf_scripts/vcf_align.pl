@@ -82,23 +82,9 @@ if($justify ne "left" && $justify ne "right")
 }
 
 #
-# Open VCF Handle
+# Open VCF File
 #
-my $vcf_handle;
-
-if(defined($vcf_file) && $vcf_file ne "-")
-{
-  open($vcf_handle, $vcf_file)
-    or print_usage("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN) {
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or print_usage("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
+my $vcf = vcf_open($vcf_file);
 
 #
 # Load reference
@@ -109,7 +95,6 @@ $genome->load_from_files(@ref_files);
 #
 # Read VCF
 #
-my $vcf = new VCFFile($vcf_handle);
 
 # Print non-PASS variants straight to stdout if -p passed
 if(defined($failed_vars_out)) { $vcf->set_filter_failed($failed_vars_out);}
@@ -288,7 +273,7 @@ if($num_of_clean_indels_matching_ref > 0)
 print STDERR "vcf_align.pl: maximum variant ambiguity: " .
              $max_position_diff . " bp\n";
 
-close($vcf_handle);
+$vcf->vcf_close();
 
 # $pos is 0-based
 sub get_left_aligned_position

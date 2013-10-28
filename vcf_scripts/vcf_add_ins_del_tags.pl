@@ -41,7 +41,7 @@ if(@ARGV > 1)
 my $vcf_file = shift;
 
 #
-# Open VCF Handle
+# Open VCF File
 #
 my $vcf_handle;
 
@@ -111,4 +111,4 @@ while(defined($vcf_entry = $vcf->read_entry()))
   $vcf->print_entry($vcf_entry);
 }
 
-close($vcf_handle);
+$vcf->vcf_close();

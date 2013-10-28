@@ -75,26 +75,9 @@ elsif(!grep {$_ eq $filter} @filters)
 my $vcf_file = shift;
 
 #
-# Open VCF Handle
+# Open VCF File
 #
-my $vcf_handle;
-
-if(defined($vcf_file) && $vcf_file ne "-") {
-  open($vcf_handle, $vcf_file) or die("Cannot open VCF file '$vcf_file'\n");
-}
-elsif(-p STDIN) {
-  # STDIN is connected to a pipe
-  open($vcf_handle, "<&=STDIN") or die("Cannot read pipe");
-}
-else
-{
-  print_usage("Must specify or pipe in a VCF file");
-}
-
-#
-# Read VCF
-#
-my $vcf = new VCFFile($vcf_handle);
+my $vcf = vcf_open($vcf_file);
 
 # Print non-PASS variants straight to stdout if -p passed
 if(defined($failed_vars_out)) { $vcf->set_filter_failed($failed_vars_out);}
@@ -157,4 +140,4 @@ print STDERR "vcf_filter_variants.pl: " .
              pretty_fraction($num_of_printed, $num_of_variants) . " " .
              "variants printed\n";
 
-close($vcf_handle);
+$vcf->vcf_close();
