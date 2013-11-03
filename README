@@ -1,5 +1,5 @@
 Bioinformatics perl scripts
-27 April 2012
+1 Nov 2013
 Isaac Turner
 turner.isaac@gmail.com
 
@@ -10,7 +10,7 @@ turner.isaac@gmail.com
 1) Add the lib directory to perl's @INC path by adding the following lines to
    your ~/.profile
 
-PERL5LIB=${PERL5LIB}:${HOME}/perl/lib/
+PERL5LIB=${PERL5LIB}:${HOME}/bioinf-perl/lib/
 export PERL5LIB
 
 2) That's it!  Now run some scripts.  
