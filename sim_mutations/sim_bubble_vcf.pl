@@ -69,13 +69,16 @@ for(my $n = 0; (($le,$rs) = next_bubble($clamp_start)) && defined($le); $n++)
   my @branches = map{'N'.substr($seq[$_], $le+1, $rs-$le-1)} (0,1);
   map {$branches[$_] =~ s/-//g} (0,1);
 
-  my @m = map{substr($masks[$_], $le+1, $rs-$le-1)} (0,1);
-  my ($snp,$ins,$del,$inv) = mutant_breakdown(@m);
+  if($branches[0] ne $branches[1])
+  {
+    my @m = map{substr($masks[$_], $le+1, $rs-$le-1)} (0,1);
+    my ($snp,$ins,$del,$inv) = mutant_breakdown(@m);
 
-  my $info = "LF=$lf;RF=$rf;SNP=$snp;INS=$ins;DEL=$del;INV=$inv";
+    my $info = "LF=$lf;RF=$rf;SNP=$snp;INS=$ins;DEL=$del;INV=$inv";
 
-  print join("\t", $chrname, "0", "truth$n", "N", join(',', @branches), ".",
-             "PASS", $info, ".") . "\n";
+    print join("\t", $chrname, "0", "truth$n", "N", join(',', @branches), ".",
+               "PASS", $info, ".") . "\n";
+  }
 
   $clamp_start = $rs;
 }
