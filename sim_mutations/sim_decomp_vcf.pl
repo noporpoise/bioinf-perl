@@ -48,7 +48,7 @@ print STDERR "".@genomes." Genome and mask pairs loaded\n";
 print "##fileformat=VCFv4.1\n";
 print "##fileDate=20130930\n";
 print "##reference=file://$ref_path\n";
-print "##FILTER=<ID=PASS,Description=\"All filters passed\"\n";
+print "##FILTER=<ID=PASS,Description=\"All filters passed\">\n";
 print "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n";
 print "##contig=<ID=un,length=1000000,assembly=None>\n";
 print "##contig=<ID=$chrname,length=$len>\n";
