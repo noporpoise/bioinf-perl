@@ -58,10 +58,9 @@ if(defined($entry = $vcf->read_entry()))
 
   do
   {
-    # print "a: ".$entry->{'ID'}."\n";
-    my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
-                                       $entry->{'INFO'}->{'RF'},
-                                       split(',', $entry->{'ALT'}));
+  my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
+                                     $entry->{'INFO'}->{'RF'},
+                                     split(',', $entry->{'ALT'}));
 
     if(!defined($vars{$vkey})) {
       $vars{$vkey} = {'seen'=>0, 'alleles'=>[]};
@@ -99,12 +98,10 @@ while(defined($entry = $vcf->read_entry()))
 {
   my $kmer_size2 = length($entry->{'INFO'}->{'LF'});
   if(defined($kmer_size) && $kmer_size != $kmer_size2) {
-    # die("kmer sizes don't match [$kmer_size != $kmer_size2]");
+    die("kmer sizes don't match [$kmer_size != $kmer_size2]");
   }
   $kmer_size = $kmer_size2;
 
-  # print "b: ".$entry->{'ID'}."\n";
-  # if($entry->{'ID'} eq "var931") {last;}
   my ($vkey, @alleles) = resolve_var($entry->{'INFO'}->{'LF'},
                                      $entry->{'INFO'}->{'RF'},
                                      split(',', $entry->{'ALT'}));
@@ -197,7 +194,8 @@ for my $genome_file (@genome_files)
   my $fastn = open_fastn_file($genome_file);
   my ($title,$seq);
   while((($title,$seq) = $fastn->read_next()) && defined($title)) {
-    $seq =~ s/[^ACGT]//gi;
+    $seq = uc($seq);
+    $seq =~ s/[^ACGT]//g;
     $search_genomes->add_strings($seq);
   }
   close_fastn_file($fastn);
@@ -261,7 +259,7 @@ sub contig_exists_sub
 
 sub resolve_var
 {
-  my ($lflank,$rflank,@alleles) = @_;
+  my ($lflank,$rflank,@alleles) = map {uc($_)} @_;
 
   # Remove padding base
   my $base = substr($alleles[0],0,1);
