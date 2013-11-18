@@ -313,9 +313,9 @@ sub _check_valid_header_tag
       carp("VCF header tag 'Number' attribute is missing ('.' or an int plz): '$txt'");
       return 0;
     }
-    elsif($tag->{'Number'} !~ /^(?:\d+|\.)$/)
+    elsif($tag->{'Number'} !~ /^(?:\d+|\.|A)$/)
     {
-      carp("VCF header tag Number= of arguments is not an integer or '.': '$txt'");
+      carp("VCF header tag Number= of arguments is not an integer, 'A' or '.': '$txt'");
       return 0;
     }
 
