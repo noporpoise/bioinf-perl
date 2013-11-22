@@ -36,6 +36,8 @@ sub print_usage
   exit(-1);
 }
 
+# Leave 1bp either side of ins/del
+
 while(@ARGV > 0)
 {
   if($ARGV[0] =~ /^--snps$/i) {
@@ -174,15 +176,15 @@ for(my $i = 0; $i < $NUM_SNPS; $i++)
 # Generate indels with geometric size distribution
 for(my $i = 0; $i < $NUM_INDELS; $i++)
 {
-  my $pos = int(rand($reflen-1)+1);
+  # leave a base either side of ins/del untouched
+  my $pos = int(rand($reflen-2)+1);
 
-  if(substr($mask, $pos, 1) eq '.')
+  if(substr($mask, $pos-1, 3) eq '...')
   {
     # generate length (geometric distribution)
     my $end = $pos;
-    while($end+1 < $reflen && rand() < 0.5 && substr($mask, $end+1, 1) eq '.'){$end++;}
+    while($end+2 < $reflen && rand()<0.5 && substr($mask, $end+1, 2) eq '..'){$end++;}
     my $len = $end-$pos+1;
-
 
     my $is_ins = 0;
     my @del_samples = (0);
