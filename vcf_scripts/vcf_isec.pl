@@ -16,12 +16,18 @@ use RefGenome;
 sub print_usage
 {
   for my $err (@_) { print STDERR "Error: $err\n"; }
-  print STDERR "Usage: ./vcf_isec.pl <in.vcf> <in2.vcf> ..
+  print STDERR "Usage: ./vcf_isec.pl [--tag <INFOTAG>] <in.vcf> <in2.vcf> ..
   Print sites in <in.vcf> if they match at chr,pos,ref and at least one alt in
   each of the next <inX.vcf> files\n";
   exit(-1);
 }
 
+my $tag;
+
+if(@ARGV == 4 && $ARGV[0] =~ /--tag/i) {
+  shift(@ARGV);
+  $tag = shift(@ARGV);
+}
 if(@ARGV < 2) { print_usage(); }
 my @files = @ARGV;
 
@@ -71,7 +77,11 @@ while(defined(my $vcf_entry = $first_vcf->read_entry()))
   }
   @alts = split(',', $vcf_entry->{'ALT'});
   for($i = 0; $i < $nfiles && entry_in_list($vcf_entry, $entries[$i], @alts); $i++) {}
-  if($i == $nfiles) { $nprinted++; $first_vcf->print_entry($vcf_entry); }
+  if(defined($tag)) {
+    if($i == $nfiles) { $nprinted++; $vcf_entry->{'INFO_flags'}->{$tag} = 1; }
+    $first_vcf->print_entry($vcf_entry);
+  }
+  elsif($i == $nfiles) { $nprinted++; $first_vcf->print_entry($vcf_entry); }
 }
 
 print STDERR "".pretty_fraction($nprinted, $nentries)." entries printed\n";
