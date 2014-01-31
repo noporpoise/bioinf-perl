@@ -18,13 +18,12 @@ sub new
 {
   my ($class, $handle, $descriptor) = @_;
   my $next_line = <$handle>;
-  my $is_fastq = -1;
-  
   my $tmp_line = $next_line;
-  chomp($tmp_line);
-  
+  my $is_fastq = -1;
+
   if(defined($tmp_line) && length($tmp_line) > 0)
   {
+    chomp($tmp_line);
     if($tmp_line =~ /^@/) {
       $is_fastq = 1;
     }
@@ -261,8 +260,9 @@ sub close_fastn_file
 {
   my ($self) = @_;
 
-  close($self->{_handle})
-      or print STDERR "Cannot close file '$self->{_descriptor}'\n";
+  if($self->{_descriptor} ne "-") {
+    close($self->{_handle}) or carp("Cannot close file '$self->{_descriptor}'\n");
+  }
 }
 
 #

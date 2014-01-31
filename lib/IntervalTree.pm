@@ -74,7 +74,7 @@ For sparse interval sets using IntervalList is probably faster / uses lower memo
   for my $hit (@$hits_left_arr) {
     print "[$hit->[0],$hit->[1]]: $hit->[2]\n";
   }
-  print "Closest Right (x >= $search_end):\n";
+  print "Closest Right (x > $search_end):\n";
   for my $hit (@$hits_right_arr) {
     print "[$hit->[0],$hit->[1]]: $hit->[2]\n";
   }
