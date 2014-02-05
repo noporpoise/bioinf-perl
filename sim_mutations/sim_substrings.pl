@@ -18,14 +18,29 @@ sub print_usage
 {
   for my $err (@_) { print STDERR "Error: $err\n"; }
 
-  print STDERR "Usage: ./sim_substrings.pl <kmer> <approx> <check.fa> <ref1.fa> [ref2.fa] ...
+  print STDERR "" .
+"Usage: ./sim_substrings.pl [options] <kmer> <approx> <check.fa> <ref1.fa> [ref2.fa] ...
   Count how many of <check.fa> contigs exist in references.
     <kmer> is the seed length used for finding hits
-    <approx> is a number >= 0.0 : how much of a length diff is 'approx'\n";
+    <approx> is a number >= 0.0 : how much of a length diff is 'approx'
+    --printapprox   Print contigs that have only an approximate match
+    --printnomatch  Print contigs that have no match\n";
   exit(-1);
 }
 
 if(@ARGV < 4) { print_usage(); }
+
+my ($print_approx, $print_nomatch) = (0,0);
+
+while(@ARGV > 4) {
+  if(lc($ARGV[0]) eq "--printapprox") {
+    $print_approx = 1;
+  }
+  elsif(lc($ARGV[0]) eq "--printnomatch") {
+    $print_nomatch = 1;
+  }
+  else { print_usage("Unknown option: $ARGV[0]"); }
+}
 
 my $kmer_size = shift;
 my $approx = shift;
@@ -53,24 +68,33 @@ for my $ref_path (@ref_paths)
 my ($num_reads, $num_pass, $num_approx) = (0, 0, 0);
 my $fastn = open_fastn_file($check_path);
 my ($title,$seq);
+
 while((($title,$seq) = $fastn->read_next()) && defined($title)) {
+  $num_reads++;
   $seq =~ s/[^ACGT]//gi;
   $seq = uc($seq);
+
+  my ($match, $approx) = (0,0);
   my ($idx,$pos) = $search_genomes->find_index($seq);
   if($idx == -1) { ($idx,$pos) = $search_genomes->find_index(rev_comp($seq)); }
-  $num_reads++;
-  $num_pass += ($idx != -1);
+  $match = ($idx != -1);
 
-  # Get approx matches
-  my $len = length($seq);
-  if($idx == -1 && $len > $kmer_size)
-  {
-    my ($k0, $k1) = (substr($seq, 0, $kmer_size), substr($seq, -$kmer_size));
-    if(find_min_dist_diff($k0,$k1,$len) < $len * $approx ||
-       find_min_dist_diff(rev_comp($k1),rev_comp($k0),$len) < $len * $approx) {
-      $num_approx++;
+  if(!$match) {
+    # Get approx matches
+    my $len = length($seq);
+    if($len > $kmer_size)
+    {
+      my ($k0, $k1) = (substr($seq, 0, $kmer_size), substr($seq, -$kmer_size));
+      if(find_min_dist_diff($k0,$k1,$len) < $len * $approx ||
+         find_min_dist_diff(rev_comp($k1),rev_comp($k0),$len) < $len * $approx) {
+        $approx = 1;
+      }
     }
   }
+
+  if($match) { $num_pass++; }
+  elsif($approx) { $num_approx++; if($print_approx){ print ">$title approx\n$seq\n"; } }
+  else { if($print_nomatch){ print ">$title nomatch\n$seq\n"; } }
 }
 close_fastn_file($fastn);
 
