@@ -32,7 +32,7 @@ if(@ARGV < 4) { print_usage(); }
 
 my ($print_approx, $print_nomatch) = (0,0);
 
-while(@ARGV > 4) {
+while(@ARGV > 4 && $ARGV[0] =~ /^-/) {
   if(lc($ARGV[0]) eq "--printapprox") {
     $print_approx = 1;
   }
