@@ -687,9 +687,11 @@ sub _read_entry_from_file
   my $samples_arr = $self->{_sample_names};
   my $format_str = $self->{_columns_hash}->{'FORMAT'};
 
+  my @format_fields = ();
+
   if(!defined($vcf_columns{'FORMAT'})) { $entry{'FORMAT'} = []; }
   else {
-    my @format_fields = split(":", $entry_cols[$vcf_columns{'FORMAT'}]);
+    @format_fields = split(":", $entry_cols[$vcf_columns{'FORMAT'}]);
     $entry{'FORMAT'} = \@format_fields;
   }
 
