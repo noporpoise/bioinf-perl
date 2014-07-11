@@ -39,11 +39,21 @@ while(defined($line = <$fh>))
 {
   my @cols = map {$_ >= $dim ? $dim-1 : $_-1} split(/[\s,]/, $line);
   # Matrices have backwards indices so we gotta do backwards indices
-  my $idx = $cols[2]*$dim2 + $cols[0]*$dim + $cols[1];
+  my $idx = $cols[1]*$dim2 + $cols[0]*$dim + $cols[2]; # for R matrix
+  # my $idx = $cols[2]*$dim2 + $cols[0]*$dim + $cols[1];
   $arr[$idx]++;
 }
 
 close($fh);
+
+# Input is: [num_kmers] [num_juncs] [score]
+
+# Output is 3-dim matrix:
+# block/depth is [num_juncs]
+# row is [num_kmers]
+# column is [score]
+
+# column, row and blocks start at 1
 
 $idx = 0;
 for(my $i = 0; $i < $dim; $i++) {
@@ -52,3 +62,15 @@ for(my $i = 0; $i < $dim; $i++) {
     $idx += $dim;
   }
 }
+
+# Load into R with
+#   x=read.csv(file='mat.txt',header=F)
+#   m=as.matrix(x)
+#   dim(m)=c(3,3,3)
+#
+# Address with:
+#    m[num_kmers,num_juncs,score] = count
+#
+
+# Scratch space
+# z=abind(x[1:3,1:3],x[4:6,1:3],x[7:9,1:3],along=3)
