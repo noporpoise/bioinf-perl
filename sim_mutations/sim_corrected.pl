@@ -97,7 +97,8 @@ print "  total: ".pretty_fraction($lc_count,$base_count)."\n";
 print "  match: ".pretty_fraction($lc_match,$lc_count)."\n";
 print "All:\n";
 print "  N bases: ".pretty_fraction($num_Ns,$base_count)."\n";
-print "  coverage: ".sprintf("%.1fX",$base_count / $genome_size)." ($base_count/$genome_size)\n";
+print_covgerage('ACGTN coverage', $base_count,         $genome_size);
+print_covgerage('ACGT  coverage', $base_count-$num_Ns, $genome_size);
 print "  match: ".pretty_fraction($uc_match,$uc_count)."\n";
 print "  reads: ".num2str($num_reads)."\n";
 
@@ -124,4 +125,11 @@ sub compare_reads
 
   $base_count += $len;
   $num_Ns += $read_Ns;
+}
+
+sub print_covgerage
+{
+  my ($title,$nom,$denom) = @_;
+  print "  $title: ".sprintf("%.1fX",$nom / $denom)." " .
+        "(" . num2str($nom) . "/" . num2str($denom) . ")\n";
 }
