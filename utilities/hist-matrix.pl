@@ -32,7 +32,8 @@ my @arr = (0)x$dim3;
 
 my $fh;
 my $line;
-open($fh, $path) or die("Cannot open file: $path");
+if(-p STDIN) { open($fh, "<&=STDIN") or die("Cannot read pipe"); }
+else         { open($fh, $path) or die("Cannot open file: $path"); }
 
 while(defined($line = <$fh>))
 {
