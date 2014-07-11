@@ -36,6 +36,7 @@ my $fastn = open_fastn_file($reads_path);
 
 # 1) Load ref genome
 
+print "Loading ref...\n";
 my ($genome) = read_all_from_files(@ref_paths);
 
 my $genome_size = 0;
@@ -44,6 +45,9 @@ while(my ($chrom,$chr_seq) = each(%$genome)) {
   print "Chrom: $chrom\n";
   $genome_size += length($chr_seq);
 }
+
+print "Genome size: ".num2str($genome_size)."\n";
+print "Loading reads...\n";
 
 # Stats
 my ($base_count, $base_match, $base_mismatch) = (0,0,0);
@@ -118,6 +122,6 @@ sub compare_reads
     }
   }
 
-  $base_count += $len - $read_Ns;
+  $base_count += $len;
   $num_Ns += $read_Ns;
 }
