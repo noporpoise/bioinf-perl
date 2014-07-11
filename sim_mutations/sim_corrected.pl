@@ -90,17 +90,20 @@ $lc_match = $base_match - $uc_match;
 
 # Print stats
 print "Uppercase:\n";
-print "  total: ".pretty_fraction($uc_count,$base_count)."\n";
-print "  match: ".pretty_fraction($uc_match,$uc_count)."\n";
+print "     total: ".pretty_fraction($uc_count,   $base_count)."\n";
+print "     match: ".pretty_fraction($uc_match,   $uc_count)."\n";
+print "  mismatch: ".pretty_fraction($uc_mismatch,$uc_count)."\n";
 print "Lowercase:\n";
-print "  total: ".pretty_fraction($lc_count,$base_count)."\n";
-print "  match: ".pretty_fraction($lc_match,$lc_count)."\n";
+print "     total: ".pretty_fraction($lc_count,   $base_count)."\n";
+print "     match: ".pretty_fraction($lc_match,   $lc_count)."\n";
+print "  mismatch: ".pretty_fraction($lc_mismatch,$lc_count)."\n";
 print "All:\n";
-print "  N bases: ".pretty_fraction($num_Ns,$base_count)."\n";
+print "     match: ".pretty_fraction($base_match,   $base_count)."\n";
+print "  mismatch: ".pretty_fraction($base_mismatch,$base_count)."\n";
+print "   N bases: ".pretty_fraction($num_Ns,       $base_count)."\n";
+print "     reads: ".num2str($num_reads)."\n";
 print_covgerage('ACGTN coverage', $base_count,         $genome_size);
 print_covgerage('ACGT  coverage', $base_count-$num_Ns, $genome_size);
-print "  match: ".pretty_fraction($uc_match,$uc_count)."\n";
-print "  reads: ".num2str($num_reads)."\n";
 
 close_fastn_file($fastn);
 
