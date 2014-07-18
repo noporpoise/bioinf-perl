@@ -25,6 +25,7 @@ sub print_usage
   Note: The number of hash entries for each file is shown in [x].
         If there is a mismatch between hashes, all hashes and their sources
         are shown.\n";
+  exit(-1);
 }
 
 if(@ARGV < 1)
