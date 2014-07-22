@@ -33,13 +33,16 @@ if(@ARGV < 4) { print_usage(); }
 my ($print_approx, $print_nomatch) = (0,0);
 
 while(@ARGV > 4 && $ARGV[0] =~ /^-/) {
-  if(lc($ARGV[0]) eq "--printapprox") {
+  my $arg = shift;
+  if(lc($arg) eq "--printapprox") {
+    print STDERR "[sim_substrings.pl] Printing approx matches\n";
     $print_approx = 1;
   }
-  elsif(lc($ARGV[0]) eq "--printnomatch") {
+  elsif(lc($arg) eq "--printnomatch") {
+    print STDERR "[sim_substrings.pl] Printing non-matches\n";
     $print_nomatch = 1;
   }
-  else { print_usage("Unknown option: $ARGV[0]"); }
+  else { print_usage("Unknown option: $arg"); }
 }
 
 my $kmer_size = shift;
@@ -98,10 +101,10 @@ while((($title,$seq) = $fastn->read_next()) && defined($title)) {
 }
 close_fastn_file($fastn);
 
-print "[sim_substrings.pl] Perfect matches: " .
-      pretty_fraction($num_pass, $num_reads) . "\n";
-print "[sim_substrings.pl] Perfect or approx [".(100*$approx)."%]: " .
-      pretty_fraction($num_approx+$num_pass, $num_reads) . "\n";
+print STDERR "[sim_substrings.pl] Perfect matches: " .
+             pretty_fraction($num_pass, $num_reads) . "\n";
+print STDERR "[sim_substrings.pl] Perfect or approx [".(100*$approx)."%]: " .
+             pretty_fraction($num_approx+$num_pass, $num_reads) . "\n";
 
 sub find_min_dist_diff
 {
