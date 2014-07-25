@@ -6,6 +6,11 @@ use warnings;
 use List::Util qw(first sum shuffle);
 use File::Path qw(make_path);
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+use lib $FindBin::Bin . '/../lib';
+
 use FASTNFile;
 use GeneticsModule;
 use UsefulModule;

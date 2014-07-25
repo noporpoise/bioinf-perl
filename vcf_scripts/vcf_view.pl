@@ -8,6 +8,7 @@ use List::Util qw(min max sum);
 # Use current directory to find modules
 use FindBin;
 use lib $FindBin::Bin;
+use lib $FindBin::Bin . '/../lib';
 
 use VCFFile;
 use RefGenome;

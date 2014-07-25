@@ -6,6 +6,11 @@
 use strict;
 use warnings;
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+use lib $FindBin::Bin . '/../lib';
+
 use UsefulModule;
 use FASTNFile;
 
