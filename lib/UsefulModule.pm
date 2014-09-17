@@ -49,8 +49,9 @@ sub num2str
 {
   my $num = shift;
   my $sep = shift; # optional: separator between thousands [default: ',']
-  my $num_decimals = shift; # optional
-  
+  my $num_decimals = shift; # optional up to this num decimals (default all)
+  my $force_decimal = shift; # optional if != 0, force $num_decimals
+
   my @places = split(/\./, abs($num));
   my $intDigits = $places[0];
 
@@ -74,19 +75,29 @@ sub num2str
   {
     $strNum = "-" . $strNum;
   }
-  
+
+  my $decStr = "";
+
   if(@places > 1)
   {
     if(!defined($num_decimals) || length($places[1]) <= $num_decimals)
     {
-      $strNum .= "." . $places[1];
+      $decStr = $places[1];
     }
     else
     {
-      $strNum .= "." . substr($places[1], 0, $num_decimals);
+      $decStr = substr($places[1], 0, $num_decimals);
     }
   }
-  
+
+  if(defined($force_decimal) && $force_decimal && length($decStr) < $num_decimals) {
+    $decStr .= $decStr.("0"x($num_decimals-length($decStr)));
+  }
+
+  if(length($decStr) > 0) {
+    $strNum .= ".".$decStr;
+  }
+
   return $strNum;
 }
 
