@@ -72,6 +72,11 @@ sub read_line
   return $temp_line;
 }
 
+sub next {
+  my ($self) = @_;
+  return $self->read_next();
+}
+
 sub read_next
 {
   my ($self) = @_;

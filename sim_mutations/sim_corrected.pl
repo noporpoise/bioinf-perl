@@ -88,6 +88,8 @@ $lc_count = $base_count - $uc_count;
 $lc_mismatch = $base_mismatch - $uc_mismatch;
 $lc_match = $base_match - $uc_match;
 
+# DEV: add number of reads changed
+
 # Print stats
 print "Uppercase:\n";
 print "     total: ".pretty_fraction($uc_count,   $base_count)."\n";
