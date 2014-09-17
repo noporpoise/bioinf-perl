@@ -5,6 +5,11 @@ use warnings;
 
 use List::Util qw(max);
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+use lib $FindBin::Bin . '/../lib';
+
 # open_sdin
 use UsefulModule;
 

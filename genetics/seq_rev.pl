@@ -3,6 +3,11 @@
 use warnings;
 use strict;
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+use lib $FindBin::Bin . '/../lib';
+
 use GeneticsModule;
 
 sub print_usage

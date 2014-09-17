@@ -6,6 +6,11 @@ use warnings;
 use List::Util qw(min max);
 use File::Basename;
 
+# Use current directory to find modules
+use FindBin;
+use lib $FindBin::Bin;
+use lib $FindBin::Bin . '/../lib';
+
 use FASTNFile;
 
 sub print_usage
