@@ -7,9 +7,9 @@ use List::Util qw(sum);
 
 # Use current directory to find modules
 use FindBin;
-use lib $FindBin::Bin $FindBin::Bin/../libs/bioinf-perl;
+use lib $FindBin::Bin;
+use lib $FindBin::Bin . '/../lib';
 
-use CortexScripts;
 use FASTNFile;
 use UsefulModule;
 
