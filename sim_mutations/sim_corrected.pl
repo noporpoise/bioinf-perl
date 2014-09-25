@@ -127,7 +127,6 @@ sub compare_reads
       }
       $uc_count +=  $isupper;
       $lc_count += !$isupper;
-      if(!$isupper) { print "$read\n"; exit(-1); }
     }
   }
 
