@@ -44,6 +44,7 @@ my $genome_size = 0;
 
 while(my ($chrom,$chr_seq) = each(%$genome)) {
   print "Chrom: $chrom\n";
+  # $genome->{$chrom} = uc($chr_seq);
   $genome_size += length($chr_seq);
 }
 
@@ -79,15 +80,14 @@ while((($name,$seq) = $fastn->read_next()) && defined($name))
 }
 
 # Calc total stats
+$base_mismatch = $uc_mismatch + $lc_mismatch;
 $base_match = $base_count - $base_mismatch;
 
 # Calc uppercase stats
 $uc_match = $uc_count - $uc_mismatch;
 
-# Calculate lowercase stats
-$lc_count = $base_count - $uc_count;
-$lc_mismatch = $base_mismatch - $uc_mismatch;
-$lc_match = $base_match - $uc_match;
+# Calc lowercase stats
+$lc_match = $lc_count - $lc_mismatch;
 
 # DEV: add number of reads changed
 
@@ -122,10 +122,12 @@ sub compare_reads
     else {
       my $isupper = (uc($a) eq $a);
       if(uc($a) ne uc($b)) {
-        if($isupper) { $uc_mismatch++; }
-        $base_mismatch++;
+        $uc_mismatch +=  $isupper;
+        $lc_mismatch += !$isupper;
       }
-      $uc_count += $isupper;
+      $uc_count +=  $isupper;
+      $lc_count += !$isupper;
+      if(!$isupper) { print "$read\n"; exit(-1); }
     }
   }
 
