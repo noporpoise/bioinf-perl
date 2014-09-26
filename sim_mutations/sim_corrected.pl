@@ -21,10 +21,21 @@ sub print_usage
   }
 
   print STDERR "" .
-"usage: ./sim_corrected.pl <file.fa> <ref.fa ..>
+"usage: ./sim_corrected.pl [--print-mismatches] <file.fa> <ref.fa ..>
   Prints stats on read match/mismatch rate.
 \n";
   exit(-1);
+}
+
+my $print_mismatches = 0;
+
+while(@ARGV > 0 && $ARGV[0] =~ /^--/) {
+  if($ARGV[0] =~ /^--print-mismatche?s?$/) {
+    shift;
+    $print_mismatches = 1;
+  } else {
+    print_usage("Unknown option: $ARGV[0]");
+  }
 }
 
 if(@ARGV < 2) { print_usage(); }
@@ -37,19 +48,19 @@ my $fastn = open_fastn_file($reads_path);
 
 # 1) Load ref genome
 
-print "Loading ref...\n";
+print STDERR "Loading ref...\n";
 my ($genome) = read_all_from_files(@ref_paths);
 
 my $genome_size = 0;
 
 while(my ($chrom,$chr_seq) = each(%$genome)) {
-  print "Chrom: $chrom\n";
+  print STDERR "Chrom: $chrom\n";
   # $genome->{$chrom} = uc($chr_seq);
   $genome_size += length($chr_seq);
 }
 
-print "Genome size: ".num2str($genome_size)."\n";
-print "Loading reads...\n";
+print STDERR "Genome size: ".num2str($genome_size)."\n";
+print STDERR "Loading reads...\n";
 
 # Stats
 my ($base_count, $base_match, $base_mismatch) = (0,0,0);
@@ -73,7 +84,7 @@ while((($name,$seq) = $fastn->read_next()) && defined($name))
     $truth = substr($genome->{$chrom}, $start, length($seq));
 
     # Compare $seq to $truth
-    compare_reads($seq, $truth);
+    compare_reads($name, $seq, $truth);
   }
   else { die("Bad read: $name"); }
   $num_reads++;
@@ -92,19 +103,19 @@ $lc_match = $lc_count - $lc_mismatch;
 # DEV: add number of reads changed
 
 # Print stats
-print "Uppercase:\n";
-print "     total: ".pretty_fraction($uc_count,   $base_count)."\n";
-print "     match: ".pretty_fraction($uc_match,   $uc_count)."\n";
-print "  mismatch: ".pretty_fraction($uc_mismatch,$uc_count)."\n";
-print "Lowercase:\n";
-print "     total: ".pretty_fraction($lc_count,   $base_count)."\n";
-print "     match: ".pretty_fraction($lc_match,   $lc_count)."\n";
-print "  mismatch: ".pretty_fraction($lc_mismatch,$lc_count)."\n";
-print "All:\n";
-print "     match: ".pretty_fraction($base_match,   $base_count)."\n";
-print "  mismatch: ".pretty_fraction($base_mismatch,$base_count)."\n";
-print "   N bases: ".pretty_fraction($num_Ns,       $base_count)."\n";
-print "     reads: ".num2str($num_reads)."\n";
+print STDERR "Uppercase:\n";
+print STDERR "     total: ".pretty_fraction($uc_count,   $base_count)."\n";
+print STDERR "     match: ".pretty_fraction($uc_match,   $uc_count)."\n";
+print STDERR "  mismatch: ".pretty_fraction($uc_mismatch,$uc_count)."\n";
+print STDERR "Lowercase:\n";
+print STDERR "     total: ".pretty_fraction($lc_count,   $base_count)."\n";
+print STDERR "     match: ".pretty_fraction($lc_match,   $lc_count)."\n";
+print STDERR "  mismatch: ".pretty_fraction($lc_mismatch,$lc_count)."\n";
+print STDERR "All:\n";
+print STDERR "     match: ".pretty_fraction($base_match,   $base_count)."\n";
+print STDERR "  mismatch: ".pretty_fraction($base_mismatch,$base_count)."\n";
+print STDERR "   N bases: ".pretty_fraction($num_Ns,       $base_count)."\n";
+print STDERR "     reads: ".num2str($num_reads)."\n";
 print_covgerage('ACGTN coverage', $base_count,         $genome_size);
 print_covgerage('ACGT  coverage', $base_count-$num_Ns, $genome_size);
 
@@ -112,9 +123,11 @@ close_fastn_file($fastn);
 
 sub compare_reads
 {
-  my ($read,$ref) = @_;
+  my ($title,$read,$ref) = @_;
   my $len = length($read);
   my $read_Ns = 0;
+
+  my $prev_mismatches = $uc_mismatch + $lc_mismatch;
 
   for(my $i = 0; $i < $len; $i++) {
     my ($a,$b) = map {substr($_,$i,1)} ($read,$ref);
@@ -130,6 +143,10 @@ sub compare_reads
     }
   }
 
+  if($print_mismatches && $uc_mismatch + $lc_mismatch > $prev_mismatches) {
+    print ">$title\n$read\n$truth\n";
+  }
+
   $base_count += $len;
   $num_Ns += $read_Ns;
 }
@@ -137,6 +154,6 @@ sub compare_reads
 sub print_covgerage
 {
   my ($title,$nom,$denom) = @_;
-  print "  $title: ".sprintf("%.1fX",$nom / $denom)." " .
-        "(" . num2str($nom) . "/" . num2str($denom) . ")\n";
+  print STDERR "  $title: ".sprintf("%.1fX",$nom / $denom)." " .
+               "(" . num2str($nom) . "/" . num2str($denom) . ")\n";
 }
