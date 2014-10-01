@@ -18,11 +18,22 @@ sub print_usage
   for my $err (@_) { print STDERR "Error: $err\n"; }
 
   print STDERR "" .
-"Usage: ./contig_stats.pl <in.fa|fq>
+"Usage: ./contig_stats.pl [--print-csv] <in.fa|fq>
   Length distribution stats.
 ";
 
   exit(-1);
+}
+
+my $print_csv = 0;
+
+while(@ARGV > 1) {
+  if($ARGV[0] =~ /^--print-csv$/) {
+    shift(@ARGV);
+    $print_csv = 1;
+  } else {
+    print_usage("Bad argument: $ARGV[0]");
+  }
 }
 
 if(@ARGV != 1) { print_usage(); }
@@ -47,28 +58,41 @@ if($ncontigs == 0) { print STDERR "[contig_stats.pl] No sequences\n"; exit -1; }
 my $median = find_median(@lengths);
 my $mode = find_mode(@lengths);
 my $n50 = find_N50($sum,@lengths);
-my $linewidth = 30;
+
+# Printing
+my $lwidth = 7;
+my $rwidth = 15;
+
+if($print_csv) { print "metric,value\n"; }
 
 # Some lines $linewidth+2 for 1 decimal place
-print_cols("contigs:", num2str($ncontigs), $linewidth);
-print_cols(" length:", num2str($sum), $linewidth);
-print_cols("    min:", num2str($lengths[0]), $linewidth);
-print_cols("    max:", num2str($lengths[$ncontigs-1]), $linewidth);
-print_cols("   mean:", num2str($sum/$ncontigs,',',1,1), $linewidth+2);
-print_cols(" median:", num2str($median,',',1,1), $linewidth+2);
-print_cols("   mode:", num2str($mode), $linewidth);
-print_cols("    N50:", num2str($n50), $linewidth);
+print_cols("contigs", $lwidth, num2str($ncontigs),              $rwidth);
+print_cols("length",  $lwidth, num2str($sum),                   $rwidth);
+print_cols("min",     $lwidth, num2str($lengths[0]),            $rwidth);
+print_cols("max",     $lwidth, num2str($lengths[$ncontigs-1]),  $rwidth);
+print_cols("mean",    $lwidth, num2str($sum/$ncontigs,',',1,1), $rwidth+2);
+print_cols("median",  $lwidth, num2str($median,',',1,1),        $rwidth+2);
+print_cols("mode",    $lwidth, num2str($mode),                  $rwidth);
+print_cols("N50",     $lwidth, num2str($n50),                   $rwidth);
 
 sub print_cols
 {
-  my ($ltext,$rtext,$width) = @_;
+  my ($ltext,$lwidth,$rtext,$rwidth) = @_;
   my $llen = length($ltext);
   my $rlen = length($rtext);
-  my ($padding, $gap);
-  if($llen + $rlen < $width) { $padding = $width - $llen - $rlen; }
-  if($padding > 2) { $gap = " ".("."x($padding-2))." "; }
-  else { $gap = " "x$padding; }
-  print "[contig_stats.pl] ".$ltext.$gap.$rtext."\n";
+  my ($lpad,$rpad) = ("","");
+  if($llen < $lwidth) { $lpad = " "x($lwidth - $llen); }
+  if($rlen < $rwidth) {
+    $rpad = "."x($rwidth - $rlen);
+    substr($rpad,0,1) = substr($rpad,-1,1) = ' ';
+  }
+
+  if(!$print_csv) {
+    print "[contig_stats.pl] ".$lpad.$ltext.":".$rpad.$rtext."\n";
+  } else {
+    $rtext =~ s/,//g;
+    print "$ltext,$rtext\n";
+  }
 }
 
 # @_ must be sorted
