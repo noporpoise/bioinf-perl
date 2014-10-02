@@ -102,6 +102,8 @@ while((($title,$seq) = $fastn->read_next()) && defined($title)) {
 }
 close_fastn_file($fastn);
 
+print STDERR "[sim_substrings.pl] $check_path in @ref_paths\n";
+
 print STDERR "[sim_substrings.pl] Perfect matches: " .
              pretty_fraction($num_pass, $num_reads) . "\n";
 print STDERR "[sim_substrings.pl] Perfect or approx [".(100*$approx)."%]: " .
