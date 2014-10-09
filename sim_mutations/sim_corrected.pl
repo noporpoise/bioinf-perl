@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use List::Util qw(reduce);
+use List::Util qw(min max reduce);
 
 # Use current directory to find modules
 use FindBin;
@@ -69,14 +69,17 @@ my ($lc_count,   $lc_match,   $lc_mismatch)   = (0,0,0);
 my $num_Ns = 0;
 my $num_reads++;
 
+my ($orig_len_sum, $orig_len_diff) = (0,0);
+my ($changed_total, $changed_match, $changed_mismatch) = (0,0,0,0);
+
 # 2) Parse reads
 my ($start,$truth);
 my ($name,$seq);
 while((($name,$seq) = $fastn->read_next()) && defined($name))
 {
-  # name is >r2692:genome0:47174:47693/1
-  if($name =~ /^.*?:(.*?):(\d+):(\d+)(\/[12])?/) {
-    my ($chrom,$startr1,$startr2,$rnum) = ($1,$2,$3,$4);
+  # name is >r2692:genome0:47174:47693/1 orig=ACAATCACAGAGATTGTAAGT
+  if($name =~ /^.*?:(.*?):(\d+):(\d+)(\/[12])?(?:.*?orig=(\w+))?/) {
+    my ($chrom,$startr1,$startr2,$rnum,$orig_seq) = ($1,$2,$3,$4,$5);
     if(!defined($rnum)) { $rnum = '/1'; }
     if($rnum eq '/1') { $start = $startr1; }
     else              { $start = $startr2; }
@@ -84,7 +87,8 @@ while((($name,$seq) = $fastn->read_next()) && defined($name))
     $truth = substr($genome->{$chrom}, $start, length($seq));
 
     # Compare $seq to $truth
-    compare_reads($name, $seq, $truth);
+    # $orig_seq may not be defined, as it is not always in the output
+    compare_reads($name, $seq, $truth, $orig_seq);
   }
   else { die("Bad read: $name"); }
   $num_reads++;
@@ -100,22 +104,32 @@ $uc_match = $uc_count - $uc_mismatch;
 # Calc lowercase stats
 $lc_match = $lc_count - $lc_mismatch;
 
-# DEV: add number of reads changed
-
 # Print stats
 print STDERR "Uppercase:\n";
 print STDERR "     total: ".pretty_fraction($uc_count,   $base_count)."\n";
-print STDERR "     match: ".pretty_fraction($uc_match,   $uc_count)."\n";
-print STDERR "  mismatch: ".pretty_fraction($uc_mismatch,$uc_count)."\n";
+print STDERR "     match: ".pretty_fraction($uc_match,   $uc_count)  ."\n";
+print STDERR "  mismatch: ".pretty_fraction($uc_mismatch,$uc_count)  ."\n";
 print STDERR "Lowercase:\n";
 print STDERR "     total: ".pretty_fraction($lc_count,   $base_count)."\n";
-print STDERR "     match: ".pretty_fraction($lc_match,   $lc_count)."\n";
-print STDERR "  mismatch: ".pretty_fraction($lc_mismatch,$lc_count)."\n";
+print STDERR "     match: ".pretty_fraction($lc_match,   $lc_count)  ."\n";
+print STDERR "  mismatch: ".pretty_fraction($lc_mismatch,$lc_count)  ."\n";
 print STDERR "All:\n";
 print STDERR "     match: ".pretty_fraction($base_match,   $base_count)."\n";
 print STDERR "  mismatch: ".pretty_fraction($base_mismatch,$base_count)."\n";
 print STDERR "   N bases: ".pretty_fraction($num_Ns,       $base_count)."\n";
 print STDERR "     reads: ".num2str($num_reads)."\n";
+
+if($orig_len_sum > 0) {
+  print STDERR "Bases Changed:\n";
+  print STDERR "     change info: ".pretty_fraction($orig_len_sum,     $base_count)   ."\n";
+  print STDERR "   bases changed: ".pretty_fraction($changed_total,    $orig_len_sum) ."\n";
+  print STDERR "    change match: ".pretty_fraction($changed_match,    $changed_total)."\n";
+  print STDERR " change mismatch: ".pretty_fraction($changed_mismatch, $changed_total)."\n";
+  print STDERR "   read len diff: ".pretty_fraction($orig_len_diff,    $base_count)   .
+               " (not included in mismatch rate)\n";
+}
+
+print STDERR "Coverage:\n";
 print_covgerage('ACGTN coverage', $base_count,         $genome_size);
 print_covgerage('ACGT  coverage', $base_count-$num_Ns, $genome_size);
 
@@ -123,9 +137,26 @@ close_fastn_file($fastn);
 
 sub compare_reads
 {
-  my ($title,$read,$ref) = @_;
+  my ($title,$read,$ref,$orig_seq) = @_;
   my $len = length($read);
   my $read_Ns = 0;
+
+  # If we have the orignal sequence, gather simple correction stats
+  if(defined($orig_seq)) {
+    my $orig_len = length($orig_seq);
+    $orig_len_sum += $orig_len;
+    my $minlen = min($orig_len, $len);
+    my $maxlen = max($orig_len, $len);
+    for(my $i = 0; $i < $minlen; $i++) {
+      my ($o,$r,$t) = map {uc(substr($_,$i,1))} ($orig_seq,$read,$truth);
+      if($o ne $r) {
+        $changed_total++;
+        if($r eq $t) { $changed_match++;    }
+        else         { $changed_mismatch++; }
+      }
+    }
+    $orig_len_diff += $maxlen - $minlen;
+  }
 
   my $prev_mismatches = $uc_mismatch + $lc_mismatch;
 
