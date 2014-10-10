@@ -63,14 +63,15 @@ print STDERR "Genome size: ".num2str($genome_size)."\n";
 print STDERR "Loading reads...\n";
 
 # Stats
-my ($base_count, $base_match, $base_mismatch) = (0,0,0);
-my ($uc_count,   $uc_match,   $uc_mismatch)   = (0,0,0);
-my ($lc_count,   $lc_match,   $lc_mismatch)   = (0,0,0);
+my ($acgtn_total, $acgtn_match, $acgtn_mismatch) = (0,0,0);
+my ($uc_count,    $uc_match,   $uc_mismatch)     = (0,0,0);
+my ($lc_count,    $lc_match,   $lc_mismatch)     = (0,0,0);
 my $num_Ns = 0;
 my $num_reads++;
 
-my ($orig_len_sum, $orig_len_diff) = (0,0);
+my ($orig_len_sum,  $orig_len_diff) = (0,0);
 my ($changed_total, $changed_match, $changed_mismatch) = (0,0,0,0);
+my ($bases_added,   $bases_lost) = (0,0);
 
 # 2) Parse reads
 my ($start,$truth);
@@ -95,51 +96,52 @@ while((($name,$seq) = $fastn->read_next()) && defined($name))
 }
 
 # Calc total stats
-$base_mismatch = $uc_mismatch + $lc_mismatch;
-$base_match = $base_count - $base_mismatch;
+$acgtn_mismatch = $uc_mismatch + $lc_mismatch;
+$acgtn_match = $uc_match + $lc_match;
+$acgtn_total = $acgtn_match + $acgtn_mismatch + $num_Ns;
 
 # Calc uppercase stats
-$uc_match = $uc_count - $uc_mismatch;
-
-# Calc lowercase stats
-$lc_match = $lc_count - $lc_mismatch;
+$uc_count = $uc_match + $uc_mismatch;
+$lc_count = $lc_match + $lc_mismatch + $num_Ns;
 
 # Print stats
 print STDERR "Uppercase:\n";
-print STDERR "     total: ".pretty_fraction($uc_count,   $base_count)."\n";
-print STDERR "     match: ".pretty_fraction($uc_match,   $uc_count)  ."\n";
-print STDERR "  mismatch: ".pretty_fraction($uc_mismatch,$uc_count)  ."\n";
+print STDERR "     total: ".pretty_fraction($uc_count,  $acgtn_total)."\n";
+print STDERR "     match: ".pretty_fraction($uc_match,    $uc_count)."\n";
+print STDERR "  mismatch: ".pretty_fraction($uc_mismatch, $uc_count)."\n";
 print STDERR "Lowercase:\n";
-print STDERR "     total: ".pretty_fraction($lc_count,   $base_count)."\n";
-print STDERR "     match: ".pretty_fraction($lc_match,   $lc_count)  ."\n";
-print STDERR "  mismatch: ".pretty_fraction($lc_mismatch,$lc_count)  ."\n";
+print STDERR "     total: ".pretty_fraction($lc_count,     $acgtn_total)."\n";
+print STDERR "     match: ".pretty_fraction($lc_match,       $lc_count)."\n";
+print STDERR "  mismatch: ".pretty_fraction($lc_mismatch,    $lc_count)."\n";
+print STDERR "   N bases: ".pretty_fraction($num_Ns,         $lc_count)."\n";
 print STDERR "All:\n";
-print STDERR "     match: ".pretty_fraction($base_match,   $base_count)."\n";
-print STDERR "  mismatch: ".pretty_fraction($base_mismatch,$base_count)."\n";
-print STDERR "   N bases: ".pretty_fraction($num_Ns,       $base_count)."\n";
+print STDERR "     match: ".pretty_fraction($acgtn_match,    $acgtn_total)."\n";
+print STDERR "  mismatch: ".pretty_fraction($acgtn_mismatch, $acgtn_total)."\n";
+print STDERR "   N bases: ".pretty_fraction($num_Ns,         $acgtn_total)."\n";
 print STDERR "     reads: ".num2str($num_reads)."\n";
 
 if($orig_len_sum > 0) {
   print STDERR "Bases Changed:\n";
-  print STDERR "     change info: ".pretty_fraction($orig_len_sum,     $base_count)   ."\n";
+  print STDERR "     change info: ".pretty_fraction($orig_len_sum,     $acgtn_total)   ."\n";
   print STDERR "   bases changed: ".pretty_fraction($changed_total,    $orig_len_sum) ."\n";
   print STDERR "    change match: ".pretty_fraction($changed_match,    $changed_total)."\n";
   print STDERR " change mismatch: ".pretty_fraction($changed_mismatch, $changed_total)."\n";
-  print STDERR "   read len diff: ".pretty_fraction($orig_len_diff,    $base_count)   .
+  print STDERR "   read len diff: ".pretty_fraction($orig_len_diff,    $acgtn_total)   .
                " (not included in mismatch rate)\n";
+  print STDERR "     bases added: ".pretty_fraction($bases_added,$acgtn_total)."\n";
+  print STDERR "      bases lost: ".pretty_fraction($bases_lost, $acgtn_total)."\n";
 }
 
 print STDERR "Coverage:\n";
-print_covgerage('ACGTN coverage', $base_count,         $genome_size);
-print_covgerage('ACGT  coverage', $base_count-$num_Ns, $genome_size);
+print_covgerage('ACGTN coverage', $acgtn_total, $genome_size);
+print_covgerage('ACGT  coverage', $acgtn_total, $genome_size);
 
 close_fastn_file($fastn);
 
 sub compare_reads
 {
-  my ($title,$read,$ref,$orig_seq) = @_;
+  my ($title,$read,$truth,$orig_seq) = @_;
   my $len = length($read);
-  my $read_Ns = 0;
 
   # If we have the orignal sequence, gather simple correction stats
   if(defined($orig_seq)) {
@@ -155,31 +157,30 @@ sub compare_reads
         else         { $changed_mismatch++; }
       }
     }
+    if($orig_len > $len) { $bases_lost  += $orig_len - $len; }
+    if($len > $orig_len) { $bases_added += $len - $orig_len; }
     $orig_len_diff += $maxlen - $minlen;
   }
 
   my $prev_mismatches = $uc_mismatch + $lc_mismatch;
 
   for(my $i = 0; $i < $len; $i++) {
-    my ($a,$b) = map {substr($_,$i,1)} ($read,$ref);
-    if(uc($a) eq 'N') { $read_Ns++; }
-    else {
-      my $isupper = (uc($a) eq $a);
-      if(uc($a) ne uc($b)) {
-        $uc_mismatch +=  $isupper;
-        $lc_mismatch += !$isupper;
-      }
-      $uc_count +=  $isupper;
-      $lc_count += !$isupper;
+    my ($r,$t) = map {substr($_,$i,1)} ($read,$truth);
+    my $isupper = (uc($r) eq $r);
+    if(uc($r) eq uc($t)) {
+      $uc_match +=  $isupper;
+      $lc_match += !$isupper;
+    }
+    elsif(uc($r) eq 'N') { $num_Ns++; }
+    else { # read and truth mismatch
+      $uc_mismatch +=  $isupper;
+      $lc_mismatch += !$isupper;
     }
   }
 
   if($print_mismatches && $uc_mismatch + $lc_mismatch > $prev_mismatches) {
     print ">$title\n$read\n$truth\n";
   }
-
-  $base_count += $len;
-  $num_Ns += $read_Ns;
 }
 
 sub print_covgerage
