@@ -12,7 +12,7 @@ use List::Util qw(min);
 
 use base 'Exporter';
 our @EXPORT = qw(open_fastn_file close_fastn_file read_all_from_files
-                 estimate_fastq_size print_FASTA print_FASTQ);
+                 estimate_fastq_size print_FASTA print_FASTQ fasta_rname_trim);
 
 sub new
 {
@@ -196,6 +196,13 @@ sub read_next_fastq
   return ($title, $sequence, $skip, $quality);
 }
 
+sub fasta_rname_trim
+{
+  my ($name) = @_;
+  $name =~ s/^\s*?(\S*).*/$1/i;
+  return $name;
+}
+
 #
 # load all reads from this file
 # returns hash of name -> (sequence,quality)
@@ -215,6 +222,7 @@ sub read_all
 
   while(defined($name))
   {
+    $name = fasta_rname_trim($name);
     $reads_hashref->{$name} = $seq;
 
     if(defined($self->{_is_fastq})) {
