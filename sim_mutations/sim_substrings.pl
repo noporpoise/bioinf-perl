@@ -55,6 +55,7 @@ if($kmer_size !~ /^\d+$/) { print_usage("Invalid kmer size"); }
 if($approx !~ /^\d*.?\d*$/) { print_usage("Invalid approx value [must be >= 0.0]"); }
 
 my $search_genomes = new IndexedString($kmer_size);
+my $total_genome_bp = 0;
 
 for my $ref_path (@ref_paths)
 {
@@ -64,19 +65,23 @@ for my $ref_path (@ref_paths)
     $seq =~ s/[^ACGT]//gi;
     $seq = uc($seq);
     $search_genomes->add_strings($seq);
+    $total_genome_bp += length($seq);
   }
   close_fastn_file($fastn);
 }
 
 # Read input file
-my ($num_reads, $num_pass, $num_approx) = (0, 0, 0);
+my ($num_reads, $num_bases, $num_pass, $num_pass_bp, $num_approx) = (0,0,0,0,0);
 my $fastn = open_fastn_file($check_path);
 my ($title,$seq);
 
 while((($title,$seq) = $fastn->read_next()) && defined($title)) {
-  $num_reads++;
   $seq =~ s/[^ACGT]//gi;
   $seq = uc($seq);
+
+  my $len = length($seq);
+  $num_reads++;
+  $num_bases += $len;
 
   my ($match, $approx) = (0,0);
   my ($idx,$pos) = $search_genomes->find_index($seq);
@@ -85,7 +90,6 @@ while((($title,$seq) = $fastn->read_next()) && defined($title)) {
 
   if(!$match) {
     # Get approx matches
-    my $len = length($seq);
     if($len > $kmer_size)
     {
       my ($k0, $k1) = (substr($seq, 0, $kmer_size), substr($seq, -$kmer_size));
@@ -96,17 +100,19 @@ while((($title,$seq) = $fastn->read_next()) && defined($title)) {
     }
   }
 
-  if($match) { $num_pass++; }
+  if($match) { $num_pass++; $num_pass_bp += $len; }
   elsif($approx) { $num_approx++; if($print_approx){ print ">$title approx\n$seq\n"; } }
   else { if($print_nomatch){ print ">$title nomatch\n$seq\n"; } }
 }
 close_fastn_file($fastn);
 
-print STDERR "[sim_substrings.pl] $check_path in @ref_paths\n";
+print STDERR "[sim_substrings.pl] $check_path in @ref_paths [".num2str($total_genome_bp)." bp total]\n";
 
-print STDERR "[sim_substrings.pl] Perfect matches: " .
+print STDERR "[sim_substrings.pl] Perfect matches         : " .
              pretty_fraction($num_pass, $num_reads) . "\n";
-print STDERR "[sim_substrings.pl] Perfect or approx [".(100*$approx)."%]: " .
+print STDERR "[sim_substrings.pl] Perfect matches (bp)    : " .
+             pretty_fraction($num_pass_bp, $num_bases) . "\n";
+print STDERR "[sim_substrings.pl] Perfect or approx [".sprintf("%3.0f",100*$approx)."%]: " .
              pretty_fraction($num_approx+$num_pass, $num_reads) . "\n";
 
 sub find_min_dist_diff
