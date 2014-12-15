@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Carp;
+use Scalar::Util qw(looks_like_number);
 
 # Inherit from the "Exporter" module which handles exporting functions.
 # Most procedural modules make use of this.
@@ -13,7 +14,7 @@ use base 'Exporter';
 # When the module is invoked, export, by default, the function "hello" into 
 # the namespace of the using code.
 
-our @EXPORT = qw(num2str mem2str round_int round_decimal
+our @EXPORT = qw(num2str mem2str str2mem str2num round_int round_decimal
                  pretty_fraction binary_search_nearest trim
                  open_stdin);
 
@@ -125,6 +126,33 @@ sub mem2str
 
   return num2str($num_of_units, undef, $decimals) . " " .
          ($full_unit ? $full_units[$unit] : $units[$unit]);
+}
+
+# Parse 3M => 3*(1<<20)
+sub str2mem
+{
+  my ($str) = @_;
+  my $multiple = 1;
+  my %units = ('K'=>1<<10,'M'=>1<<20,'G'=>1<<30,'T'=>1<<40,'P'=>1<<50,'E'=>1<<60);
+  if($str =~ /(([EPTGMK])B?)$/i) {
+    $multiple = $units{$2};
+    $str = substr($str,0,-length($1));
+  }
+  if(!looks_like_number($str)) { die("Not numerical: '$str'"); }
+  return $str * $multiple;
+}
+
+sub str2num
+{
+  my ($str) = @_;
+  my $multiple = 1;
+  my %units = ('K'=>10**3,'M'=>10**6,'G'=>10**9,'T'=>10**12,'P'=>10**15,'E'=>10**18);
+  if($str =~ /([EPTGMK])$/i) {
+    $multiple = $units{$1};
+    $str = substr($str,0,-length($1));
+  }
+  if(!looks_like_number($str)) { die("Not numerical: '$str'"); }
+  return $str * $multiple;
 }
 
 sub pretty_fraction
