@@ -30,7 +30,7 @@ sub print_usage
 if(@ARGV == 0) { print_usage(); }
 if(@ARGV % 2 != 0) { print_usage("Expected odd number of args"); }
 
-my $ref_path = $ARGV[0];
+my $command = "$0 @ARGV";
 
 #
 # Load and merge mask files
@@ -48,7 +48,8 @@ print STDERR "".@genomes." Genome and mask pairs loaded\n";
 #
 print "##fileformat=VCFv4.1\n";
 print "##fileDate=20130930\n";
-print "##reference=file://$ref_path\n";
+print "##reference=unknown\n";
+print "##cmd=$command\n";
 print "##FILTER=<ID=PASS,Description=\"All filters passed\">\n";
 print "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n";
 print "##contig=<ID=un,length=1000000,assembly=None>\n";
