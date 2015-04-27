@@ -102,7 +102,7 @@ for(my $var = 0; ; $var++)
   # my $info = "L=$start:$end;D=".join(',', @m);
 
   print join("\t", $chrname, $varpos+1, "truth$var", $r, $alt, '.', "PASS",
-             $info, "GT", "0/1")."\n";
+             $info, "GT", "./.")."\n";
 }
 
 sub next_var
