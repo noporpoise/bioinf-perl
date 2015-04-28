@@ -172,7 +172,7 @@ sub load_genome_mask_files
   my @files = @_;
   my @genomes = ();
   my @masks = ();
-  my ($chrname,$len,$title,$seq);
+  my ($chrname,$alnlen,$title,$seq);
   my $fastn;
 
   while(@files > 0)
@@ -184,9 +184,9 @@ sub load_genome_mask_files
       ($title,$seq) = $fastn->read_next();
       close_fastn_file($fastn);
       if(!defined($title)) { die("Empty file: $file\n"); }
-      if(!defined($chrname)) { $chrname = $title; $len = length($seq); }
-      elsif(length($seq) != $len) {
-        die("Genomes diff lengths [file: $file $len vs ".length($seq)."]");
+      if(!defined($chrname)) { $chrname = $title; $alnlen = length($seq); }
+      elsif(length($seq) != $alnlen) {
+        die("Genomes diff lengths [file: $file $alnlen vs ".length($seq)."]");
       }
       if($file eq $genome_file) { push(@genomes, uc($seq)); }
       else { push(@masks, $seq); }
@@ -195,7 +195,7 @@ sub load_genome_mask_files
 
   # Remove fasta/fastq 'comments' (only take chars upto first whitespace)
   $chrname =~ s/\s.*$//g;
-  return ($chrname, $len, \@genomes, \@masks);
+  return (\@genomes, \@masks, $chrname, $alnlen);
 }
 
 1;

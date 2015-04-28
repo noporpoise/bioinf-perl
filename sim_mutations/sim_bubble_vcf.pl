@@ -39,7 +39,7 @@ if(scalar(@ARGV) % 2 != 0) { print_usage(); }
 #
 # Load and merge mask files
 #
-my ($chrname,$len,$genarr,$mskarr) = load_genome_mask_files(@ARGV);
+my ($genarr,$mskarr,$chrname,$len) = load_genome_mask_files(@ARGV);
 my @seq = @$genarr;
 my @masks = @$mskarr;
 

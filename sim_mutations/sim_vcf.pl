@@ -22,22 +22,42 @@ sub print_usage
   }
 
   print STDERR "" .
-"Usage: ./sim_decomp_vcf.pl [<sample1.fa> <sample1.mask> ..]\n";
+"Usage: ./sim_vcf.pl <ref.fa> [<sample1.fa> <sample1.mask> ..]\n";
 
   exit(-1);
 }
 
-if(@ARGV == 0) { print_usage(); }
-if(@ARGV % 2 != 0) { print_usage("Expected odd number of args"); }
-
 my $command = "$0 @ARGV";
+# my $user_chrname;
+
+# while(@ARGV && $ARGV[0] =~ /^-/) {
+#   my $cmd = shift;
+#   if($cmd eq "-n") { $user_chrname = shift; }
+#   else { print_usage("Unknown command: $cmd"); }
+# }
+
+if(@ARGV == 0) { print_usage(); }
+if(@ARGV % 2 != 1) { print_usage("Expected odd number of args"); }
+
+my $ref = shift;
+my @files = @ARGV;
 
 #
 # Load and merge mask files
 #
-my ($chrname,$len,$genarr,$mskarr) = load_genome_mask_files(@ARGV);
+my $fastn = open_fastn_file($ref);
+my ($ref_chrom, $ref_seq) = $fastn->read_next();
+if(!defined($ref_seq)) { die("Couldn't read a sequence from ref: $ref"); }
+close_fastn_file($fastn);
+$ref_seq = uc($ref_seq);
+
+my ($genarr,$mskarr,undef,$chrlen) = load_genome_mask_files(@files);
 my @genomes = @$genarr;
 my @masks = @$mskarr;
+
+if($chrlen != length($ref_seq)) { die("Ref seq len mismatch"); }
+
+# if(defined($user_chrname)) { $chrname = $user_chrname; }
 
 print STDERR "".@genomes." Genome and mask pairs loaded\n";
 
@@ -49,35 +69,31 @@ print STDERR "".@genomes." Genome and mask pairs loaded\n";
 print "##fileformat=VCFv4.1\n";
 print "##fileDate=20130930\n";
 print "##reference=unknown\n";
-print "##cmd=$command\n";
+print "##cmd=$ref\n";
 print "##FILTER=<ID=PASS,Description=\"All filters passed\">\n";
 print "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n";
 print "##contig=<ID=un,length=1000000,assembly=None>\n";
-print "##contig=<ID=$chrname,length=$len>\n";
+print "##contig=<ID=$ref_chrom,length=$chrlen>\n";
 print "#".join("\t", qw(CHROM POS ID REF ALT QUAL FILTER INFO FORMAT SAMPLE))."\n";
 
-my ($start, $end, $refpos) = (0,0,0);
+my ($start, $end) = (0,0,0);
 my $c;
 my @alleles;
 my %hsh;
+
 for(my $var = 0; ; $var++)
 {
-  # Move refpos forward
-  for(; $start < $end; $start++) {
-    if(substr($genomes[0],$start,1) ne '-') { $refpos++; }
-  }
-
-  ($start,$end,$refpos) = next_var($end, $refpos);
+  ($start,$end) = next_var($end,$chrlen);
   if(!defined($start)) { last; }
-  if($start == 0) { next; }
+  # if($start == 0) { next; } # Don't report events at the very start of the chrom
 
   # Get alleles, remove deletions ('-')
   @alleles = map {substr($_, $start, $end-$start)} @genomes;
   map {$alleles[$_] =~ s/\-//g} 0..$#alleles;
 
-  my @m = map {substr($masks[$_], $start, $end-$start)} 0..$#masks;
+  # my @m = map {substr($masks[$_], $start, $end-$start)} 0..$#masks;
 
-  my $r = $alleles[0];
+  my $r = substr($ref_seq, $start, $end-$start);
 
   # Remove duplicates
   %hsh = ();
@@ -88,7 +104,7 @@ for(my $var = 0; ; $var++)
   if(@alleles == 0) { next; }
 
   # Add padding base
-  my $varpos = $refpos;
+  my $varpos = $start;
   if(defined(first {length($_) != 1} ($r,@alleles))) {
     $varpos--;
     my $pos = $start-1;
@@ -101,7 +117,7 @@ for(my $var = 0; ; $var++)
   my $info = ".";
   # my $info = "L=$start:$end;D=".join(',', @m);
 
-  print join("\t", $chrname, $varpos+1, "truth$var", $r, $alt, '.', "PASS",
+  print join("\t", $ref_chrom, $varpos+1, "truth$var", $r, $alt, '.', "PASS",
              $info, "GT", "./.")."\n";
 }
 
@@ -110,7 +126,7 @@ sub next_var
   # In mask files, variants start with lower case letters
   # s = SNPs; i = insert; d = deletion; v = inversion
   # Assume no overlapping variants; see sim_mutation.pl
-  my ($pos,$refpos) = @_;
+  my ($pos,$len) = @_;
   my ($m,$n,$c,$end);
 
   for(; $pos < $len; $pos++)
@@ -124,10 +140,9 @@ sub next_var
       {
         $c = uc($c);
         for($end = $pos+1; $end < $len && substr($masks[$m],$end,1) eq $c; $end++) {}
-        return ($pos,$end,$refpos);
+        return ($pos,$end);
       }
     }
-    if(substr($genomes[0],$pos,1) ne '-') { $refpos++; }
   }
   return ();
 }
