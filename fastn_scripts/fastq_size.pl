@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # Redundant
 # Now moved into ~/perl/lib/FastaModule.pm
