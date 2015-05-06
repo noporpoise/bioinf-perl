@@ -35,10 +35,12 @@ open(TXT, ">$out_txt_path") or die("Cannot open $out_txt_path");
 # Load sequence
 my $fastn = open_fastn_file($ref_path);
 my ($title,$seq) = $fastn->read_next();
-close_fastn_file($fastn);
-$seq = uc($seq);
-
 if(!defined($title)) { die("Woops, can't read sequence: $ref_path"); }
+close_fastn_file($fastn);
+
+$seq = uc($seq);
+($title) = ($title =~ /^(\S*)/);
+print STDERR "ref: '$title'\n";
 
 my $ref_len = length($seq);
 
@@ -74,36 +76,16 @@ for my $b (@mix) {
 print FA "\n";
 
 # Save description
-# for my $b (@blocks) {
-#   print "$b->{'start'} $b->{'end'} $b->{'fw'}\n";
-# }
-
-# print breakpoint from block i to i+1
-# for(my $i = 0; $i+1 < @mix; $i++) {
-#   my $b = $mix[$i];
-#   my $c = $mix[$i+1];
-#   my $x = breakpoint_str($b->{'start'}+1, $b->{'end'}+1,    $b->{'strand'},
-#                          $c->{'start'}+1, $c->{'end'}+1,    $c->{'strand'});
-#   my $y = breakpoint_str($c->{'end'}+1,   $c->{'start'}+1, !$c->{'strand'},
-#                          $b->{'end'}+1,   $b->{'start'}+1, !$b->{'strand'});
-#   print TXT "$x or $y\n";
-# }
-
 # Print 1-based coord file
-for my $b (@mix) {
-  print TXT ($b->{'start'}+1)."\t".($b->{'end'}+1)."\t".($b->{'strand'}?'-':'+')."\n";
+for(my $i = 0; $i+1<@mix; $i++) {
+  my $b = $mix[$i];
+  my $c = $mix[$i+1];
+  print TXT "$title:".($b->{'strand'} ? $b->{'start'}+1 : $b->{'end'}+1  ).":".($b->{'strand'}?'-':'+')."\t".
+            "$title:".($c->{'strand'} ? $c->{'end'}+1   : $c->{'start'}+1).":".($c->{'strand'}?'-':'+')."\t"."\n";
 }
 
 close(FA);
 close(TXT);
-
-sub breakpoint_str
-{
-  my ($start0,$end0,$rev0,$start1,$end1,$rev1) = @_;
-  my $txt = ($rev0 ? ".*-$start0:-" : ".*-$end0:+") . " " .
-            ($rev1 ? "$end1-.*:-" : "$start1-.*:-");
-  return $txt;
-}
 
 sub make_block
 {
