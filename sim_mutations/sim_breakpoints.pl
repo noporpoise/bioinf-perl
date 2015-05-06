@@ -51,6 +51,20 @@ my @blocks = ();
 my $start = 0;
 my $min_block = 40;
 
+# Remove blocks too short
+print STDERR "Removing blocks shorter than $min_block\n";
+my @points_tmp = ();
+for(my $i = 0; $i < @points; $i++) {
+  if($points[$i] - $start + 1 >= $min_block &&
+     $ref_len - $points[$i] >= $min_block)
+  {
+    push(@points_tmp, $points[$i]);
+    $start = $points[$i]+1;
+  }
+}
+@points = @points_tmp;
+
+# Make blocks
 for(my $i = 0; $i < @points && $start < $ref_len; $i++) {
   push(@blocks, make_block($start, $points[$i]));
   $start = $points[$i]+1;
