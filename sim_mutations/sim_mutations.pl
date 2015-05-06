@@ -102,8 +102,8 @@ close_fastn_file($fastn);
 $seq =~ s/[^ACGT]//gi;
 $seq = uc($seq);
 # Remove comments after title (everything after first whitespace)
-($ref_chrom) = ($ref_chrom =~ /^(\S*)/);
-print STDERR "ref: '$ref_chrom'\n";
+($title) = ($title =~ /^(\S*)/);
+print STDERR "ref: '$title'\n";
 
 my $reflen = length($seq);
 print "Genome size: ".num2str($reflen)."\n";
