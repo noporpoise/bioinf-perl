@@ -94,19 +94,18 @@ if(!(-e $outdir)) {
 # Load genome
 #
 my $fastn = open_fastn_file($genome_file);
-my $ref = "";
-my ($title,$seq);
-
-while((($title,$seq) = $fastn->read_next()) && defined($title))
-{
-  $seq =~ s/[^ACGT]//gi;
-  $ref .= uc($seq);
-}
-
+my ($title,$seq) = $fastn->read_next();
+if(!defined($title)) { die("No read to simulate mutations on"); }
 close_fastn_file($fastn);
 
+# Remove non-ACGT
+$seq =~ s/[^ACGT]//gi;
+$seq = uc($seq);
+# Remove comments after title (everything after first whitespace)
+($ref_chrom) = ($ref_chrom =~ /^(\S*)/);
+print STDERR "ref: '$ref_chrom'\n";
 
-my $reflen = length($ref);
+my $reflen = length($seq);
 print "Genome size: ".num2str($reflen)."\n";
 
 if($READMP && $reflen < 2*$READLEN+$READMPSIZE) {
@@ -120,7 +119,7 @@ if($reflen <= $NUM_SNPS+$NUM_INDELS+$NUM_INV) {
 }
 
 # In the mask: . = ref, N = variant
-my @genomes = ($ref) x $num_of_samples;
+my @genomes = ($seq) x $num_of_samples;
 my @masks = ('.' x $reflen) x $num_of_samples;
 my $mask = '.' x $reflen;
 
@@ -154,7 +153,7 @@ for(my $i = 0; $i < $NUM_SNPS; $i++)
   if(substr($mask, $pos, 1) eq ".")
   {
     # Pick a random nonref base (ACGT)
-    my $ref_base = substr($ref, $pos, 1);
+    my $ref_base = substr($seq, $pos, 1);
     my @bases = grep {$_ ne $ref_base} qw(A C G T);
     my $snp = $bases[int(rand(3))];
 
@@ -256,7 +255,7 @@ for(my $i = 0; $i < $NUM_INV; $i++)
       @inv_samples = @samples[0..($N-1)];
     }
 
-    my $inv = rev_comp(substr($ref, $pos, $len));
+    my $inv = rev_comp(substr($seq, $pos, $len));
     my $mut = 'v'.('V'x($len-1));
     for my $s (@inv_samples)
     {

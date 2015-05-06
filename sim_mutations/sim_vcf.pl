@@ -49,7 +49,11 @@ my $fastn = open_fastn_file($ref);
 my ($ref_chrom, $ref_seq) = $fastn->read_next();
 if(!defined($ref_seq)) { die("Couldn't read a sequence from ref: $ref"); }
 close_fastn_file($fastn);
+
 $ref_seq = uc($ref_seq);
+# Remove comments after title (everything after first whitespace)
+($ref_chrom) = ($ref_chrom =~ /^(\S*)/);
+print STDERR "ref: '$ref_chrom'\n";
 
 my ($genarr,$mskarr,undef,$chrlen) = load_genome_mask_files(@files);
 my @genomes = @$genarr;
