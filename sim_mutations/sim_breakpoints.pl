@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use List::Util qw(first sum shuffle);
+use List::Util qw(max min first sum shuffle);
 
 # Use current directory to find modules
 use FindBin;
@@ -13,6 +13,8 @@ use lib $FindBin::Bin . '/../lib';
 use FASTNFile;
 use GeneticsModule;
 use UsefulModule;
+
+use constant { FORWARD => 0, REVERSE => 1 };
 
 sub print_usage
 {
@@ -76,14 +78,13 @@ if($start < $ref_len) {
 }
 
 # Shuffle blocks
-# strand: 0 => FORWARD; 1 => REVERSE
 my @mix = shuffle(@blocks);
-for my $b (@mix) { $b->{'strand'} = rand(100) < 50 ? 1 : 0; }
+for my $b (@mix) { $b->{'strand'} = rand(100) < 50 ? REVERSE : FORWARD; }
 
 # Save FASTA
 print FA ">$title shuffled\n";
 for my $b (@mix) {
-  my $seq = substr($seq, $b->{'start'}, $b->{'len'});
+  my $seq = substr($seq,  $b->{'start'}, $b->{'len'});
   if($b->{'strand'}) { $seq = rev_comp($seq); }
   print FA "$seq";
 }
@@ -94,8 +95,13 @@ print FA "\n";
 for(my $i = 0; $i+1<@mix; $i++) {
   my $b = $mix[$i];
   my $c = $mix[$i+1];
-  print TXT "$title:".($b->{'strand'} ? $b->{'start'}+1 : $b->{'end'}+1  ).":".($b->{'strand'}?'-':'+')."\t".
-            "$title:".($c->{'strand'} ? $c->{'end'}+1   : $c->{'start'}+1).":".($c->{'strand'}?'-':'+')."\t"."\n";
+  # Print in both directions
+  print_breakpoint($b->{'strand'} ? $b->{'start'} : $b->{'end'},   $b->{'strand'},
+                   $c->{'strand'} ? $c->{'end'}   : $c->{'start'}, $c->{'strand'});
+  print TXT "\t";
+  print_breakpoint($c->{'strand'} ? $c->{'end'}   : $c->{'start'}, !$c->{'strand'},
+                   $b->{'strand'} ? $b->{'start'} : $b->{'end'},   !$b->{'strand'});
+  print TXT "\n";
 }
 
 close(FA);
@@ -106,4 +112,30 @@ sub make_block
   my ($start,$end) = @_;
   my $len = $end-$start+1;
   return {'start' => $start, 'end' => $end, 'len' => $len};
+}
+
+# Shift breakpoints to the right due to matching sequence
+sub print_breakpoint
+{
+  my ($pos0, $strand0, $pos1, $strand1) = @_;
+  while($strand0 == FORWARD && $pos0+1 < $ref_len &&
+        get_ref_base($pos0+1, $strand0) eq get_ref_base($pos1, $strand1)) {
+    $pos0++;
+    if($strand1 == FORWARD) { $pos1++; } else { $pos1--; }
+  }
+  while($strand0 == REVERSE && $pos0 > 0 &&
+        get_ref_base($pos0-1, $strand0) eq get_ref_base($pos1, $strand1)) {
+    $pos0--;
+    if($strand1 == FORWARD) { $pos1++; } else { $pos1--; }
+  }
+  # Print 1-based coords
+  print TXT "$title:".($pos0+1).":".($strand0?'-':'+')."\t".
+            "$title:".($pos1+1).":".($strand1?'-':'+')."\t";
+}
+
+sub get_ref_base
+{
+  my ($pos, $strand) = @_;
+  my $c = substr($seq, $pos, 1);
+  return $strand == FORWARD ? $c : rev_comp($c);
 }
