@@ -41,7 +41,9 @@ while(@ARGV > 1 && $ARGV[0] =~ /^-/) {
 
 if(@ARGV != 1) { print_usage(); }
 
-print STDERR "Genome size: $genome_size\n";
+if(defined($genome_size)) {
+  print STDERR "Genome size: $genome_size\n";
+}
 
 my $path = shift(@ARGV);
 my @lengths = ();
