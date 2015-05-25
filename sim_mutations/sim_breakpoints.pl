@@ -47,6 +47,7 @@ print STDERR "ref: '$title'\n";
 my $ref_len = length($seq);
 
 # Generate N breakpoints
+# each point is the start of a new block
 my @points = sort {$a <=> $b} map {int(rand($ref_len-1))} 1..$N;
 
 my @blocks = ();
@@ -57,51 +58,64 @@ my $min_block = 40;
 print STDERR "Removing blocks shorter than $min_block\n";
 my @points_tmp = ();
 for(my $i = 0; $i < @points; $i++) {
-  if($points[$i] - $start + 1 >= $min_block &&
+  if($points[$i] - $start >= $min_block &&
      $ref_len - $points[$i] >= $min_block)
   {
     push(@points_tmp, $points[$i]);
-    $start = $points[$i]+1;
+    $start = $points[$i];
   }
 }
 @points = @points_tmp;
 
 # Make blocks
-for(my $i = 0; $i < @points && $start < $ref_len; $i++) {
+$start = 0;
+for(my $i = 0; $i < @points; $i++) {
   push(@blocks, make_block($start, $points[$i]));
-  $start = $points[$i]+1;
+  $start = $points[$i];
 }
 
 # Last block
 if($start < $ref_len) {
-  push(@blocks, make_block($start, $ref_len-1));
+  push(@blocks, make_block($start, $ref_len));
 }
 
 # Shuffle blocks
-my @mix = shuffle(@blocks);
-for my $b (@mix) { $b->{'strand'} = rand(100) < 50 ? REVERSE : FORWARD; }
+my @tmp_mix = shuffle(@blocks);
+for my $b (@tmp_mix) { $b->{'strand'} = rand(100) < 50 ? REVERSE : FORWARD; }
+
+# Merge adjacent blocks
+my @mix = ($tmp_mix[0]);
+for(my $i = 1; $i < @tmp_mix; $i++) {
+  my ($b,$c) = ($tmp_mix[$i-1],$tmp_mix[$i]);
+  my $same_strand = ($b->{'strand'} == $c->{'strand'});
+  if($same_strand && $c->{'strand'} == FORWARD && $b->{'end'}+1 == $c->{'start'})
+  {
+    $mix[$#mix]->{'end'} = $c->{'end'};
+  }
+  elsif($same_strand && $c->{'strand'} == REVERSE && $b->{'start'} == $c->{'end'}+1)
+  {
+    $mix[$#mix]->{'start'} = $c->{'start'};
+  }
+  else {
+    push(@mix, $c);
+  }
+}
 
 # Save FASTA
 print FA ">$title shuffled\n";
 for my $b (@mix) {
-  my $seq = substr($seq,  $b->{'start'}, $b->{'len'});
+  my $seq = substr($seq,  $b->{'start'}, $b->{'length'});
   if($b->{'strand'}) { $seq = rev_comp($seq); }
   print FA "$seq";
 }
 print FA "\n";
 
-# Save description
-# Print 1-based coord file
-for(my $i = 0; $i+1<@mix; $i++) {
-  my $b = $mix[$i];
-  my $c = $mix[$i+1];
-  # Print in both directions
-  print_breakpoint($b->{'strand'} ? $b->{'start'} : $b->{'end'},   $b->{'strand'},
-                   $c->{'strand'} ? $c->{'end'}   : $c->{'start'}, $c->{'strand'});
-  print TXT "\t";
-  print_breakpoint($c->{'strand'} ? $c->{'end'}   : $c->{'start'}, !$c->{'strand'},
-                   $b->{'strand'} ? $b->{'start'} : $b->{'end'},   !$b->{'strand'});
-  print TXT "\n";
+# Save block order
+print TXT "# start  end  strand  (1-based coords)\n";
+for my $m (@mix) {
+  print TXT "".($m->{'start'}+1)."\t".
+               ($m->{'end'}+1)."\t".
+               ($m->{'strand'} == FORWARD ? '+' : '-')."\n";
 }
 
 close(FA);
@@ -109,33 +123,8 @@ close(TXT);
 
 sub make_block
 {
-  my ($start,$end) = @_;
-  my $len = $end-$start+1;
-  return {'start' => $start, 'end' => $end, 'len' => $len};
-}
-
-# Shift breakpoints to the right due to matching sequence
-sub print_breakpoint
-{
-  my ($pos0, $strand0, $pos1, $strand1) = @_;
-  while($strand0 == FORWARD && $pos0+1 < $ref_len &&
-        get_ref_base($pos0+1, $strand0) eq get_ref_base($pos1, $strand1)) {
-    $pos0++;
-    if($strand1 == FORWARD) { $pos1++; } else { $pos1--; }
-  }
-  while($strand0 == REVERSE && $pos0 > 0 &&
-        get_ref_base($pos0-1, $strand0) eq get_ref_base($pos1, $strand1)) {
-    $pos0--;
-    if($strand1 == FORWARD) { $pos1++; } else { $pos1--; }
-  }
-  # Print 1-based coords
-  print TXT "$title:".($pos0+1).":".($strand0?'-':'+')."\t".
-            "$title:".($pos1+1).":".($strand1?'-':'+')."\t";
-}
-
-sub get_ref_base
-{
-  my ($pos, $strand) = @_;
-  my $c = substr($seq, $pos, 1);
-  return $strand == FORWARD ? $c : rev_comp($c);
+  my ($start,$next) = @_;
+  my $end = $next - 1;
+  my $length = $end - $start + 1;
+  return {'start' => $start, 'end' => $end, 'length' => $length};
 }
