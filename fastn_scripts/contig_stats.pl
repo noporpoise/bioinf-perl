@@ -57,7 +57,7 @@ close_fastn_file($fastn);
 
 # min max median mode n50
 @lengths = sort{$a <=> $b} @lengths;
-if(@lengths > 1 && $lengths[0] < $lengths[1]) { die("Sort failed"); }
+if(@lengths > 1 && $lengths[0] > $lengths[1]) { die("Sort failed"); }
 my $ncontigs = scalar(@lengths);
 my $sum = sum(@lengths);
 
