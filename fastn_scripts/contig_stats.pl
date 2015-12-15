@@ -22,6 +22,7 @@ sub print_usage
   Length distribution stats.
 
 Options:
+  -n, --nums        Input is list of numbers not FASTA/Q
   -c, --print-csv   Print output as CSV
   -g, --genome <G>  calculate NG50 with genome size of <G> e.g. 3.1G
 ";
@@ -29,12 +30,14 @@ Options:
   exit(-1);
 }
 
+my $input_is_nums = 0;
 my $print_csv = 0;
 my $genome_size;
 
 while(@ARGV > 1 && $ARGV[0] =~ /^-/) {
   my $arg = shift;
-  if($arg =~ /^(-c|--print-csv)$/) { $print_csv = 1; }
+  if($arg =~ /^(-n|--nums)$/) { $input_is_nums = 1; }
+  elsif($arg =~ /^(-c|--print-csv)$/) { $print_csv = 1; }
   elsif($arg =~ /^(-g|--genome)$/) { $genome_size = str2num(shift(@ARGV)); }
   else { print_usage("Bad argument: $arg"); }
 }
@@ -48,12 +51,23 @@ if(defined($genome_size)) {
 my $path = shift(@ARGV);
 my @lengths = ();
 
-my $fastn = open_fastn_file($path);
-my ($title,$seq);
-while((($title,$seq) = $fastn->read_next()) && defined($title)) {
-  push(@lengths, length($seq));
+if($input_is_nums) {
+  my $fh = open_file($path);
+  while(defined(my $line = <$fh>)) {
+    chomp($line);
+    if($line !~ /^\d+$/) { die("Bad line: $line"); }
+    push(@lengths, $line);
+  }
+  close($fh);
 }
-close_fastn_file($fastn);
+else {
+  my $fastn = open_fastn_file($path);
+  my ($title,$seq);
+  while((($title,$seq) = $fastn->read_next()) && defined($title)) {
+    push(@lengths, length($seq));
+  }
+  close_fastn_file($fastn);
+}
 
 # min max median mode n50
 @lengths = sort{$a <=> $b} @lengths;
@@ -152,4 +166,13 @@ sub find_N50
   }
 
   return $_[$i];
+}
+
+sub open_file
+{
+  my ($file) = @_;
+  my $fh;
+  if((!defined($file) || $file eq "-") && -p STDIN) { $file = "<&=STDIN"; }
+  open($fh, $file) or die("Cannot open file: $file");
+  return $fh;
 }
